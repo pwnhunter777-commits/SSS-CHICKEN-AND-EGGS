@@ -1,0 +1,7 @@
+{
+  "name": "Chicken Agency",
+  "description": "Mobile Chicken Wholesale & Retail Billing & Agency application featuring daily price synchronization, quick counter billing, ledger tracking, Bluetooth thermal printing, and UPI payments.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

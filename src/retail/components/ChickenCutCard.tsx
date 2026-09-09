@@ -1,0 +1,701 @@
+import React from 'react';
+import {
+  ChevronDown,
+  ChevronUp,
+  Scale,
+  Plus,
+  Minus,
+  Trash2,
+  Egg,
+} from 'lucide-react';
+import { Product, ChickenVariant, Language, getProductName } from '../types';
+import { TRANSLATIONS } from '../utils/translations';
+
+export interface ChickenCutItemData {
+  productId: string;
+  variant: ChickenVariant;
+  baseRate: number;
+  adjustedRate: number;
+  kg: string; // Used for Kg when chicken, or Quantity when egg
+  price: string;
+  numericKg: number; // Used for numeric Kg when chicken, or numeric Quantity when egg
+  numericAmount: number;
+  isExpanded: boolean;
+}
+
+interface ChickenCutCardProps {
+  product: Product;
+  baseRate: number;
+  eggRate?: number;
+  withoutSkinOffset?: number;
+  data: ChickenCutItemData;
+  language?: Language;
+  onUpdate: (data: Partial<ChickenCutItemData>) => void;
+  onRemove: () => void;
+  onSaveWithoutSkinOffset?: (newOffset: number) => void;
+}
+
+export const ChickenCutCard: React.FC<ChickenCutCardProps> = ({
+  product,
+  baseRate,
+  eggRate = 6,
+  data,
+  language = 'en',
+  onUpdate,
+  onRemove,
+}) => {
+  const t = TRANSLATIONS[language] || TRANSLATIONS.en;
+
+  // Rate With Skin (e.g. ₹220/Kg)
+  const rateWithSkin = baseRate > 0 ? baseRate : 220;
+  // Actual Egg Rate (e.g. ₹6/Egg)
+  const actualEggRate = eggRate > 0 ? eggRate : 6;
+
+  // Variant is either 'with_skin' or 'egg'
+  // If variant was legacy 'without_skin', treat as 'egg'
+  const isEgg =
+    data.variant === 'egg' ||
+    data.variant === 'without_skin' ||
+    product.id === 'p_egg' ||
+    (product.nameEn || product.name || '').trim().toLowerCase() === 'egg';
+
+  const activeVariant: 'with_skin' | 'egg' = isEgg ? 'egg' : 'with_skin';
+  const currentAdjustedRate = isEgg ? actualEggRate : rateWithSkin;
+
+  // Handle Variant Selection
+  const handleSelectVariant = (variant: 'with_skin' | 'egg') => {
+    const nextRate = variant === 'egg' ? actualEggRate : rateWithSkin;
+    let newPrice = data.price;
+    let newKg = data.kg;
+    let numericAmt = data.numericAmount;
+    let numericKg = data.numericKg;
+
+    if (variant === 'egg') {
+      // If switching to egg, calculate egg quantity from price or current kg
+      if (numericAmt > 0 && nextRate > 0) {
+        const calculatedQty = numericAmt / nextRate;
+        numericKg = calculatedQty;
+        newKg =
+          calculatedQty % 1 === 0
+            ? String(calculatedQty)
+            : String(Number(calculatedQty.toFixed(2)));
+      } else if (numericKg > 0) {
+        const qty = Math.round(numericKg);
+        numericKg = qty;
+        newKg = String(qty);
+        numericAmt = Math.round(qty * nextRate);
+        newPrice = String(numericAmt);
+      }
+    } else {
+      // If switching to chicken with skin
+      if (numericKg > 0) {
+        numericAmt = Math.round(numericKg * nextRate);
+        newPrice = String(numericAmt);
+      }
+    }
+
+    onUpdate({
+      variant,
+      adjustedRate: nextRate,
+      price: newPrice,
+      kg: newKg,
+      numericAmount: numericAmt,
+      numericKg: numericKg,
+    });
+  };
+
+  // Handle Egg Quantity or Chicken KG Input Change
+  const handleKgOrQtyChange = (rawVal: string) => {
+    const num = parseFloat(rawVal);
+    if (!isNaN(num) && num > 0) {
+      const amt = isEgg
+        ? Math.round(num * currentAdjustedRate)
+        : Math.round(num * currentAdjustedRate);
+      onUpdate({
+        kg: rawVal,
+        price: String(amt),
+        numericKg: num,
+        numericAmount: amt,
+      });
+    } else {
+      onUpdate({
+        kg: rawVal,
+        price: '',
+        numericKg: 0,
+        numericAmount: 0,
+      });
+    }
+  };
+
+  // Handle Price Input Change
+  // SPECIFIC REQUIREMENT:
+  // "if the price of 1egg is 6 as per the daily price and if the user enter the price as 12 the quantity must be 2"
+  const handlePriceChange = (rawPrice: string) => {
+    const priceNum = parseFloat(rawPrice);
+    if (!isNaN(priceNum) && priceNum > 0 && currentAdjustedRate > 0) {
+      if (isEgg) {
+        const qty = priceNum / currentAdjustedRate;
+        const formattedQty =
+          qty % 1 === 0 ? String(qty) : String(Number(qty.toFixed(2)));
+        onUpdate({
+          price: rawPrice,
+          kg: formattedQty,
+          numericKg: qty,
+          numericAmount: priceNum,
+        });
+      } else {
+        const kgCalculated = Number((priceNum / currentAdjustedRate).toFixed(3));
+        onUpdate({
+          price: rawPrice,
+          kg: String(kgCalculated),
+          numericKg: kgCalculated,
+          numericAmount: priceNum,
+        });
+      }
+    } else {
+      onUpdate({
+        price: rawPrice,
+        kg: '',
+        numericKg: 0,
+        numericAmount: 0,
+      });
+    }
+  };
+
+  // Quick Quantity Presets for Egg
+  const handleQuickEggQty = (qty: number) => {
+    const amt = Math.round(qty * actualEggRate);
+    onUpdate({
+      kg: String(qty),
+      price: String(amt),
+      numericKg: qty,
+      numericAmount: amt,
+    });
+  };
+
+  // Quick KG Presets for Chicken
+  const handleQuickKg = (kgVal: number) => {
+    const amt = Math.round(kgVal * currentAdjustedRate);
+    onUpdate({
+      kg: String(kgVal),
+      price: String(amt),
+      numericKg: kgVal,
+      numericAmount: amt,
+    });
+  };
+
+  // Quick Amount Presets
+  const handleQuickAmount = (amount: number) => {
+    if (isEgg) {
+      const qty = amount / actualEggRate;
+      const formattedQty =
+        qty % 1 === 0 ? String(qty) : String(Number(qty.toFixed(2)));
+      onUpdate({
+        price: String(amount),
+        kg: formattedQty,
+        numericKg: qty,
+        numericAmount: amount,
+      });
+    } else {
+      const kgCalculated = Number((amount / currentAdjustedRate).toFixed(3));
+      onUpdate({
+        price: String(amount),
+        kg: String(kgCalculated),
+        numericKg: kgCalculated,
+        numericAmount: amount,
+      });
+    }
+  };
+
+  // Stepper for Egg Quantity (+1 / -1) or Chicken KG (+0.25 / -0.25)
+  const handleStepQtyOrKg = (delta: number) => {
+    const current = data.numericKg || 0;
+    const next = Math.max(0, isEgg ? Math.round(current + delta) : Number((current + delta).toFixed(3)));
+    if (next === 0) {
+      handleKgOrQtyChange('');
+    } else {
+      handleKgOrQtyChange(String(next));
+    }
+  };
+
+  // Stepper for Price (for Egg: + / - actualEggRate, for Chicken: + / - ₹10)
+  const handleStepPrice = (delta: number) => {
+    const current = data.numericAmount || 0;
+    const next = Math.max(0, current + delta);
+    if (next === 0) {
+      handlePriceChange('');
+    } else {
+      handlePriceChange(String(next));
+    }
+  };
+
+  const isExpanded = data.isExpanded ?? true;
+  const displayName = isEgg
+    ? language === 'ta'
+      ? 'முட்டை'
+      : 'Egg'
+    : getProductName(product, language);
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden mb-3.5 transition-all">
+      {/* Top Header Row */}
+      <div className="p-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-base sm:text-lg font-black text-gray-900 leading-snug truncate">
+                {displayName}
+              </h3>
+              <span
+                className={`text-xs font-extrabold px-2 py-0.5 rounded-full shrink-0 border ${
+                  isEgg
+                    ? 'text-amber-900 bg-amber-100 border-amber-300'
+                    : 'text-emerald-800 bg-emerald-100/90 border-emerald-300'
+                }`}
+              >
+                {isEgg ? (language === 'ta' ? 'முட்டை' : 'Egg') : t.withSkin}
+              </span>
+            </div>
+            <p className="text-xs font-semibold text-slate-500 tracking-tight mt-0.5">
+              {isEgg ? (
+                data.numericKg > 0 ? (
+                  `${data.numericKg} ${language === 'ta' ? 'முட்டை' : 'Eggs'} @ ₹${actualEggRate.toFixed(2)}`
+                ) : (
+                  `${language === 'ta' ? '1 முட்டை விலை' : '1 Egg Price'}: ₹${actualEggRate.toFixed(2)}`
+                )
+              ) : data.numericKg > 0 ? (
+                `${data.numericKg.toFixed(3)} ${language === 'ta' ? 'கிலோ' : 'Kg'} @ ₹${currentAdjustedRate.toFixed(2)}`
+              ) : (
+                `${t.rateWithSkin}: ₹${baseRate.toFixed(2)} / ${language === 'ta' ? 'கிலோ' : 'Kg'}`
+              )}
+            </p>
+          </div>
+        </div>
+
+        {/* Right Header: Item Total & Chevron */}
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-base sm:text-lg font-black text-gray-900 tracking-tight">
+            ₹{data.numericAmount > 0 ? data.numericAmount.toFixed(2) : '0.00'}
+          </span>
+          <button
+            type="button"
+            onClick={() => onUpdate({ isExpanded: !isExpanded })}
+            className="p-1.5 bg-slate-100 hover:bg-slate-200 text-gray-600 rounded-lg transition-colors active:scale-95 cursor-pointer"
+            aria-label="Toggle details"
+          >
+            {isExpanded ? (
+              <ChevronUp className="w-4 h-4" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Expanded Details Body */}
+      {isExpanded && (
+        <div className="px-4 pb-4 pt-1 border-t border-slate-100">
+          {/* Variant Selector: With Skin vs Egg */}
+          <div className="mt-2.5">
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs font-bold text-gray-800">
+                {language === 'ta' ? 'வகை' : 'Item Type'}
+              </label>
+            </div>
+
+            {/* 2-Column Variant Selector: With Skin vs Egg */}
+            <div className="grid grid-cols-2 gap-2.5">
+              {/* 1. With Skin */}
+              <button
+                type="button"
+                onClick={() => handleSelectVariant('with_skin')}
+                className={`py-2.5 px-3 rounded-xl flex flex-col items-center justify-center transition-all cursor-pointer ${
+                  activeVariant === 'with_skin'
+                    ? 'border-2 border-emerald-700 bg-emerald-50/30 ring-2 ring-emerald-600/15 shadow-xs'
+                    : 'border border-slate-200 bg-white hover:border-slate-300'
+                }`}
+              >
+                <span
+                  className={`text-xs font-bold ${
+                    activeVariant === 'with_skin'
+                      ? 'text-emerald-950 font-extrabold'
+                      : 'text-slate-700'
+                  }`}
+                >
+                  {t.withSkin}
+                </span>
+                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md mt-1 max-w-full truncate text-center">
+                  ₹{rateWithSkin.toFixed(2)} / {language === 'ta' ? 'கிலோ' : 'Kg'}
+                </span>
+              </button>
+
+              {/* 2. Egg (Replaced Without Skin) */}
+              <button
+                type="button"
+                onClick={() => handleSelectVariant('egg')}
+                className={`py-2.5 px-3 rounded-xl flex flex-col items-center justify-center transition-all cursor-pointer ${
+                  activeVariant === 'egg'
+                    ? 'border-2 border-amber-600 bg-amber-50/40 ring-2 ring-amber-500/20 shadow-xs'
+                    : 'border border-slate-200 bg-white hover:border-slate-300'
+                }`}
+              >
+                <div className="flex items-center gap-1 flex-wrap justify-center">
+                  <Egg className="w-3.5 h-3.5 text-amber-700" />
+                  <span
+                    className={`text-xs font-bold ${
+                      activeVariant === 'egg'
+                        ? 'text-amber-950 font-extrabold'
+                        : 'text-slate-700'
+                    }`}
+                  >
+                    {language === 'ta' ? 'முட்டை' : 'Egg'}
+                  </span>
+                </div>
+                <span className="text-xs font-bold text-amber-900 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-md mt-1 max-w-full truncate text-center">
+                  ₹{actualEggRate.toFixed(2)} / {language === 'ta' ? 'முட்டை' : 'Egg'}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Current Rate Strip */}
+          <div className="mt-2 py-1.5 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs flex items-center justify-between">
+            <span className="text-slate-600 font-medium">
+              {isEgg
+                ? (language === 'ta' ? '1 முட்டை விலை' : '1 Egg Price')
+                : t.baseWithSkinRate}
+            </span>
+            <span className="font-extrabold text-emerald-900">
+              {isEgg
+                ? `₹${actualEggRate.toFixed(2)} / ${language === 'ta' ? 'முட்டை' : 'Egg'}`
+                : `₹${currentAdjustedRate.toFixed(2)} / ${language === 'ta' ? 'கிலோ' : 'Kg'}`}
+            </span>
+          </div>
+
+          {/* Input Cards:
+              REQUIREMENT:
+              "in the billing page instead of without skin change it to egg and instead of weight ask for egg quantity"
+              "if the price of 1egg is 6 as per the daily price and if the user enter the price as 12 the quantity must be 2 and give the price in lift and quantity in right"
+          */}
+          <div className="mt-3.5">
+            <label className="block text-xs font-bold text-gray-800 mb-2">
+              {isEgg
+                ? (language === 'ta' ? 'தொகை (₹) அல்லது முட்டை எண்ணிக்கை' : 'Enter Price (₹) OR Egg Quantity')
+                : t.enterWeightOrPrice}
+            </label>
+
+            {/* Layout:
+                If Egg: Price in LEFT, Egg Quantity in RIGHT.
+                If Chicken: Weight (Kg) in LEFT, Price in RIGHT.
+            */}
+            {isEgg ? (
+              /* EGG LAYOUT: LEFT = PRICE (₹), RIGHT = QUANTITY */
+              <div className="grid grid-cols-2 gap-2.5">
+                {/* 1. LEFT: Price (₹) */}
+                <div className="bg-white border-2 border-slate-200 focus-within:border-amber-600 rounded-xl p-2.5 min-h-[4.25rem] flex items-center justify-between transition-colors shadow-xs">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div className="text-amber-700 font-extrabold text-base shrink-0">
+                      ₹
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-bold text-slate-400 block uppercase tracking-wider">
+                        {t.priceRs}
+                      </span>
+                      <input
+                        type="number"
+                        step="1"
+                        min="0"
+                        value={data.price}
+                        onChange={(e) => handlePriceChange(e.target.value)}
+                        placeholder="0"
+                        className="w-full text-base font-black text-slate-900 outline-none bg-transparent placeholder:text-slate-300"
+                      />
+                    </div>
+                  </div>
+                  {/* Price Steppers (+ / - actualEggRate) */}
+                  <div className="flex flex-col gap-1 shrink-0 ml-1">
+                    <button
+                      type="button"
+                      onClick={() => handleStepPrice(actualEggRate)}
+                      className="p-1.5 bg-slate-100 hover:bg-amber-100 hover:text-amber-900 text-slate-600 rounded-md transition-colors active:scale-90 cursor-pointer"
+                      title={`+₹${actualEggRate}`}
+                    >
+                      <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleStepPrice(-actualEggRate)}
+                      className="p-1.5 bg-slate-100 hover:bg-red-100 hover:text-red-900 text-slate-600 rounded-md transition-colors active:scale-90 cursor-pointer"
+                      title={`-₹${actualEggRate}`}
+                    >
+                      <Minus className="w-3.5 h-3.5 stroke-[2.5]" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. RIGHT: Egg Quantity */}
+                <div className="bg-white border-2 border-slate-200 focus-within:border-amber-600 rounded-xl p-2.5 min-h-[4.25rem] flex items-center justify-between transition-colors shadow-xs">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div className="text-amber-600 shrink-0">
+                      <Egg className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-bold text-slate-400 block uppercase tracking-wider">
+                        {language === 'ta' ? 'முட்டை எண்ணிக்கை' : 'Egg Quantity'}
+                      </span>
+                      <input
+                        type="number"
+                        step="1"
+                        min="0"
+                        value={data.kg}
+                        onChange={(e) => handleKgOrQtyChange(e.target.value)}
+                        placeholder="0"
+                        className="w-full text-base font-black text-slate-900 outline-none bg-transparent placeholder:text-slate-300"
+                      />
+                    </div>
+                  </div>
+                  {/* Quantity Steppers (+1 / -1) */}
+                  <div className="flex flex-col gap-1 shrink-0 ml-1">
+                    <button
+                      type="button"
+                      onClick={() => handleStepQtyOrKg(1)}
+                      className="p-1.5 bg-slate-100 hover:bg-amber-100 hover:text-amber-900 text-slate-600 rounded-md transition-colors active:scale-90 cursor-pointer"
+                      title="+1 Egg"
+                    >
+                      <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleStepQtyOrKg(-1)}
+                      className="p-1.5 bg-slate-100 hover:bg-red-100 hover:text-red-900 text-slate-600 rounded-md transition-colors active:scale-90 cursor-pointer"
+                      title="-1 Egg"
+                    >
+                      <Minus className="w-3.5 h-3.5 stroke-[2.5]" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* CHICKEN LAYOUT: LEFT = WEIGHT (KG), RIGHT = PRICE */
+              <div className="grid grid-cols-2 gap-2.5">
+                {/* Weight Card */}
+                <div className="bg-white border-2 border-slate-200 focus-within:border-emerald-600 rounded-xl p-2.5 min-h-[4.25rem] flex items-center justify-between transition-colors shadow-xs">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div className="text-emerald-700 shrink-0">
+                      <Scale className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-bold text-slate-400 block uppercase tracking-wider">
+                        {t.weightKg}
+                      </span>
+                      <input
+                        type="number"
+                        step="0.001"
+                        min="0"
+                        value={data.kg}
+                        onChange={(e) => handleKgOrQtyChange(e.target.value)}
+                        placeholder="0.000"
+                        className="w-full text-base font-black text-slate-900 outline-none bg-transparent placeholder:text-slate-300"
+                      />
+                    </div>
+                  </div>
+                  {/* Weight Steppers */}
+                  <div className="flex flex-col gap-1 shrink-0 ml-1">
+                    <button
+                      type="button"
+                      onClick={() => handleStepQtyOrKg(0.25)}
+                      className="p-1.5 bg-slate-100 hover:bg-emerald-100 hover:text-emerald-900 text-slate-600 rounded-md transition-colors active:scale-90 cursor-pointer"
+                      title="+0.25 Kg"
+                    >
+                      <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleStepQtyOrKg(-0.25)}
+                      className="p-1.5 bg-slate-100 hover:bg-red-100 hover:text-red-900 text-slate-600 rounded-md transition-colors active:scale-90 cursor-pointer"
+                      title="-0.25 Kg"
+                    >
+                      <Minus className="w-3.5 h-3.5 stroke-[2.5]" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Amount Card */}
+                <div className="bg-white border-2 border-slate-200 focus-within:border-emerald-600 rounded-xl p-2.5 min-h-[4.25rem] flex items-center justify-between transition-colors shadow-xs">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div className="text-emerald-700 font-extrabold text-base shrink-0">
+                      ₹
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-bold text-slate-400 block uppercase tracking-wider">
+                        {t.priceRs}
+                      </span>
+                      <input
+                        type="number"
+                        step="1"
+                        min="0"
+                        value={data.price}
+                        onChange={(e) => handlePriceChange(e.target.value)}
+                        placeholder="0"
+                        className="w-full text-base font-black text-slate-900 outline-none bg-transparent placeholder:text-slate-300"
+                      />
+                    </div>
+                  </div>
+                  {/* Price Steppers */}
+                  <div className="flex flex-col gap-1 shrink-0 ml-1">
+                    <button
+                      type="button"
+                      onClick={() => handleStepPrice(10)}
+                      className="p-1.5 bg-slate-100 hover:bg-emerald-100 hover:text-emerald-900 text-slate-600 rounded-md transition-colors active:scale-90 cursor-pointer"
+                      title="+₹10"
+                    >
+                      <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleStepPrice(-10)}
+                      className="p-1.5 bg-slate-100 hover:bg-red-100 hover:text-red-900 text-slate-600 rounded-md transition-colors active:scale-90 cursor-pointer"
+                      title="-₹10"
+                    >
+                      <Minus className="w-3.5 h-3.5 stroke-[2.5]" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Quick Preset Chips */}
+          {isEgg ? (
+            /* EGG PRESETS: Quantity chips & Price chips */
+            <>
+              {/* Quick Egg Quantity Chips */}
+              <div className="mt-3">
+                <span className="text-xs font-bold text-slate-500 block mb-1.5">
+                  {language === 'ta' ? 'விரைவு முட்டை எண்ணிக்கை' : 'Quick Egg Quantity'}
+                </span>
+                <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
+                  {[1, 2, 5, 10, 12, 20, 30].map((val) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => handleQuickEggQty(val)}
+                      className={`py-2 px-1 rounded-xl text-xs font-extrabold transition-all border text-center whitespace-nowrap cursor-pointer ${
+                        parseFloat(data.kg) === val
+                          ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                          : 'bg-amber-50/60 hover:bg-amber-100 text-amber-950 border-amber-200'
+                      }`}
+                    >
+                      {val} {language === 'ta' ? (val === 1 ? 'முட்டை' : 'முட்டைகள்') : (val === 1 ? 'Egg' : 'Eggs')}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Quick Price Chips for Egg */}
+              <div className="mt-2.5">
+                <span className="text-xs font-bold text-slate-500 block mb-1.5">
+                  {language === 'ta' ? 'விரைவு தொகை தேர்வுகள்' : 'Quick Price Presets'}
+                </span>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                  {[
+                    actualEggRate * 1,
+                    actualEggRate * 2,
+                    actualEggRate * 5,
+                    actualEggRate * 10,
+                    actualEggRate * 20,
+                    actualEggRate * 30,
+                  ].map((val) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => handleQuickAmount(val)}
+                      className={`py-2 px-1 rounded-xl text-xs font-extrabold transition-all border text-center whitespace-nowrap cursor-pointer ${
+                        parseFloat(data.price) === val
+                          ? 'bg-emerald-700 text-white border-emerald-700 shadow-xs'
+                          : 'bg-slate-50 hover:bg-emerald-50 text-slate-700 border-slate-200'
+                      }`}
+                    >
+                      ₹{val}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            /* CHICKEN PRESETS: KG chips & Amount chips */
+            <>
+              {/* Quick KG Selector Chips */}
+              <div className="mt-3">
+                <span className="text-xs font-bold text-slate-500 block mb-1.5">
+                  {t.quickWeightPresets}
+                </span>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                  {[0.25, 0.5, 1, 1.5, 2, 5].map((val) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => handleQuickKg(val)}
+                      className={`py-2 px-1 rounded-xl text-xs font-extrabold transition-all border text-center whitespace-nowrap cursor-pointer ${
+                        parseFloat(data.kg) === val
+                          ? 'bg-[#0f3d2e] text-white border-[#0f3d2e] shadow-xs'
+                          : 'bg-slate-50 hover:bg-emerald-50 text-slate-700 border-slate-200'
+                      }`}
+                    >
+                      {val >= 1
+                        ? `${val} ${language === 'ta' ? 'கிலோ' : 'Kg'}`
+                        : `${val * 1000}${language === 'ta' ? 'கி' : 'g'}`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Quick Amount Selector Chips */}
+              <div className="mt-2.5">
+                <span className="text-xs font-bold text-slate-500 block mb-1.5">
+                  {t.quickPricePresets}
+                </span>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                  {[50, 100, 150, 200, 500, 1000].map((val) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => handleQuickAmount(val)}
+                      className={`py-2 px-1 rounded-xl text-xs font-extrabold transition-all border text-center whitespace-nowrap cursor-pointer ${
+                        parseFloat(data.price) === val
+                          ? 'bg-emerald-700 text-white border-emerald-700 shadow-xs'
+                          : 'bg-slate-50 hover:bg-emerald-50 text-slate-700 border-slate-200'
+                      }`}
+                    >
+                      ₹{val}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Card Footer: Remove Cut & Item Total */}
+          <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={onRemove}
+              className="text-xs font-bold text-red-600 hover:text-red-700 hover:bg-red-50 px-2.5 py-1.5 rounded-xl flex items-center gap-1.5 transition-colors active:scale-95 cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>{t.clearRemove}</span>
+            </button>
+            <div className="text-right">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                {t.itemTotal}
+              </span>
+              <span className="text-base sm:text-lg font-black text-slate-900 whitespace-nowrap">
+                ₹{data.numericAmount > 0 ? data.numericAmount.toFixed(2) : '0.00'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
