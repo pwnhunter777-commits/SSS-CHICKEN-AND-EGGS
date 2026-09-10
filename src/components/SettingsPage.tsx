@@ -17,10 +17,24 @@ import {
   Type,
   Bold,
   Store,
+  Smartphone,
+  Database,
+  Calendar,
+  Download,
+  Upload,
+  ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 import { appLogo } from '../assets/logo';
 import { Bill, DEFAULT_HOTELS, getHotelName, HotelItem, LanguageCode, ShopSettings } from '../types';
-import { saveOrUpdateHotelPhone } from '../utils/storage';
+import {
+  saveOrUpdateHotelPhone,
+  execute31DayDataCleanup,
+  getStorageStats,
+  RETENTION_DAYS,
+  exportAllDataToFile,
+  importDataFromFile,
+} from '../utils/storage';
 import { TRANSLATIONS } from '../utils/translations';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
@@ -69,6 +83,72 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   const [hotelSearchQuery, setHotelSearchQuery] = useState('');
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [fileStatus, setFileStatus] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [storageStats, setStorageStats] = useState(() => getStorageStats());
+  const [isCleaning, setIsCleaning] = useState(false);
+
+  const handleManualCleanup = () => {
+    setIsCleaning(true);
+    setTimeout(() => {
+      const res = execute31DayDataCleanup();
+      setStorageStats(getStorageStats());
+      setIsCleaning(false);
+      if (res.totalRemoved > 0) {
+        setFileStatus({
+          type: 'success',
+          text:
+            language === 'ta'
+              ? `31 நாட்களுக்கு முந்தைய ${res.totalRemoved} பழைய பதிவுகள் வெற்றிகரமாக நீக்கப்பட்டன.`
+              : `Cleaned ${res.totalRemoved} records older than 31 days from phone storage!`,
+        });
+      } else {
+        setFileStatus({
+          type: 'success',
+          text:
+            language === 'ta'
+              ? '31 நாட்களுக்கு முந்தைய பழைய பதிவுகள் எதுவும் இல்லை. அனைத்து செயலில் உள்ள தரவுகளும் போனில் பாதுகாப்பாக உள்ளன!'
+              : 'No records older than 31 days found. All active transactions are safely stored on this phone!',
+        });
+      }
+      if (onDataRestored) {
+        onDataRestored();
+      }
+    }, 400);
+  };
+
+  const handleExportBackup = () => {
+    exportAllDataToFile();
+    setFileStatus({
+      type: 'success',
+      text:
+        language === 'ta'
+          ? 'காப்பு கோப்பு (JSON) உங்கள் போன் பதிவிறக்கங்கள் (Downloads) கோப்புறையில் சேமிக்கப்பட்டது!'
+          : 'Backup file (JSON) saved directly into your phone Downloads folder!',
+    });
+  };
+
+  const handleImportBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const res = await importDataFromFile(file);
+    if (res.success) {
+      setStorageStats(getStorageStats());
+      setFileStatus({
+        type: 'success',
+        text:
+          language === 'ta'
+            ? 'போன் கோப்பிலிருந்து தரவு வெற்றிகரமாக மீட்டமைக்கப்பட்டது!'
+            : 'Data restored successfully from phone file!',
+      });
+      if (onDataRestored) {
+        onDataRestored();
+      }
+    } else {
+      setFileStatus({
+        type: 'error',
+        text: res.message,
+      });
+    }
+  };
 
   const handleChange = (field: keyof ShopSettings, value: string | number | boolean) => {
     setFormData((prev) => ({
@@ -599,7 +679,144 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         </div>
       </div>
 
-      {/* Delete Phone Confirmation Modal */}
+      {/* 5. Phone Local Storage & 31-Day Retention Engine Card */}
+      <div className="bg-white border border-emerald-200 rounded-3xl p-4 sm:p-5 shadow-xs space-y-4">
+        <div className="flex items-center justify-between pb-2 border-b border-emerald-100 flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <Smartphone className="w-5 h-5 text-emerald-700" />
+            <h3 className="text-sm sm:text-base font-bold text-emerald-950">
+              {language === 'ta' ? 'போன் சேமிப்பகம் & 31 நாட்கள் தானியங்கி நீக்கம்' : 'Phone Local Storage & 31-Day Retention'}
+            </h3>
+          </div>
+          <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-900 px-2.5 py-1 rounded-full flex items-center gap-1 border border-emerald-300/60">
+            <ShieldCheck className="w-3 h-3 text-emerald-700" />
+            <span>{language === 'ta' ? 'இந்த போனில் மட்டுமே' : '100% On-Device'}</span>
+          </span>
+        </div>
+
+        {/* Security & Offline Guarantee Pill */}
+        <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl space-y-1.5">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
+            <Database className="w-4 h-4 text-emerald-700 flex-shrink-0" />
+            <span>
+              {language === 'ta'
+                ? 'அனைத்து தரவுகளும் இந்த போனின் உள்ளமைந்த நினைவகத்தில் பாதுகாப்பாக உள்ளன.'
+                : 'All bills, hotel ledgers, and prices are saved inside this phone.'}
+            </span>
+          </div>
+          <p className="text-[11px] text-slate-600 leading-relaxed pl-6">
+            {language === 'ta'
+              ? 'வெளிப்புற சர்வர்கள் தேவையில்லை. போனில் இடம் நிரம்புவதை தடுக்கவும், வேகம் குறையாமல் இருக்கவும் 31 நாட்களுக்கு முந்தைய பழைய பதிவுகள் தானாகவே நீக்கப்படும்.'
+              : 'Zero external cloud tracking. To protect phone storage and keep billing blazing fast, records older than 31 days are automatically pruned.'}
+          </p>
+        </div>
+
+        {/* Live Storage & Retention Status Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <div className="bg-emerald-50/60 border border-emerald-200/80 p-2.5 rounded-xl">
+            <span className="text-[10px] text-emerald-800 font-bold block uppercase tracking-wider">
+              {language === 'ta' ? 'தானியங்கி நீக்கம்' : 'Retention Window'}
+            </span>
+            <span className="text-sm font-black text-emerald-950 flex items-center gap-1 mt-0.5">
+              <Calendar className="w-3.5 h-3.5 text-emerald-700" />
+              <span>31 {language === 'ta' ? 'நாட்கள்' : 'Days'}</span>
+            </span>
+          </div>
+
+          <div className="bg-emerald-50/60 border border-emerald-200/80 p-2.5 rounded-xl">
+            <span className="text-[10px] text-emerald-800 font-bold block uppercase tracking-wider">
+              {language === 'ta' ? 'நீக்கப்படும் எல்லை' : 'Cutoff Date'}
+            </span>
+            <span className="text-xs font-black text-emerald-950 mt-0.5 block truncate">
+              {storageStats.cutoffDate}
+            </span>
+          </div>
+
+          <div className="bg-emerald-50/60 border border-emerald-200/80 p-2.5 rounded-xl col-span-2 sm:col-span-1">
+            <span className="text-[10px] text-emerald-800 font-bold block uppercase tracking-wider">
+              {language === 'ta' ? 'போன் சேமிப்பக அளவு' : 'Phone Storage'}
+            </span>
+            <span className="text-xs font-black text-emerald-950 mt-0.5 block">
+              {storageStats.totalStorageKb} KB
+            </span>
+          </div>
+        </div>
+
+        {/* Active Records Counters */}
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 divide-y divide-slate-200 text-xs">
+          <div className="flex items-center justify-between py-1.5">
+            <span className="text-slate-600 font-medium">
+              {language === 'ta' ? 'மொத்த பில் பதிவுகள் (கடந்த 31 நாட்கள்)' : 'Active Wholesale Bills (≤31 days)'}
+            </span>
+            <span className="font-extrabold text-emerald-900 bg-emerald-100 px-2 py-0.5 rounded-md">
+              {storageStats.wholesaleBillsCount}
+            </span>
+          </div>
+          <div className="flex items-center justify-between py-1.5">
+            <span className="text-slate-600 font-medium">
+              {language === 'ta' ? 'ஹோட்டல் வரவு/செலவு பதிவுகள்' : 'Active Hotel Payments (≤31 days)'}
+            </span>
+            <span className="font-extrabold text-emerald-900 bg-emerald-100 px-2 py-0.5 rounded-md">
+              {storageStats.wholesalePaymentsCount}
+            </span>
+          </div>
+          <div className="flex items-center justify-between py-1.5">
+            <span className="text-slate-600 font-medium">
+              {language === 'ta' ? 'சில்லறை விற்பனை பில்கள்' : 'Active Retail Bills (≤31 days)'}
+            </span>
+            <span className="font-extrabold text-emerald-900 bg-emerald-100 px-2 py-0.5 rounded-md">
+              {storageStats.retailBillsCount}
+            </span>
+          </div>
+        </div>
+
+        {/* Manual 31-day Cleanup Action */}
+        <button
+          type="button"
+          onClick={handleManualCleanup}
+          disabled={isCleaning}
+          className="w-full py-3 px-4 bg-slate-800 hover:bg-slate-900 active:bg-slate-950 disabled:opacity-60 text-white rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition-all active:scale-98 cursor-pointer"
+        >
+          <Sparkles className="w-4 h-4 text-amber-300" />
+          <span>
+            {isCleaning
+              ? language === 'ta'
+                ? 'சரிபார்க்கிறது...'
+                : 'Cleaning...'
+              : language === 'ta'
+              ? '31 நாட்களுக்கு முந்தைய பதிவுகளை உடனே நீக்கு'
+              : 'Run 31-Day Cleanup Now'}
+          </span>
+        </button>
+
+        {/* Download Backup & Restore from Phone */}
+        <div className="pt-2 border-t border-emerald-100 space-y-2">
+          <span className="text-xs font-bold text-gray-800 block">
+            {language === 'ta' ? 'போன் காப்பு நகல் (Backup & Restore)' : 'Phone Backup & Restore'}
+          </span>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={handleExportBackup}
+              className="py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-900 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-700" />
+              <span>{language === 'ta' ? 'போனில் சேமி (JSON)' : 'Save to Phone'}</span>
+            </button>
+
+            <label className="py-2.5 px-3 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-900 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer text-center">
+              <Upload className="w-3.5 h-3.5 text-slate-700" />
+              <span>{language === 'ta' ? 'கோப்பிலிருந்து ஏற்று' : 'Restore File'}</span>
+              <input
+                type="file"
+                accept=".json,application/json"
+                onChange={handleImportBackup}
+                className="hidden"
+              />
+            </label>
+          </div>
+        </div>
+      </div>
       <ConfirmDeleteModal
         isOpen={!!phoneToDelete}
         title={language === 'ta' ? 'போன் எண்ணை நீக்கவா?' : 'Delete phone number?'}

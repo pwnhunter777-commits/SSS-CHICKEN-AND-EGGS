@@ -1,6 +1,7 @@
 import { InvestmentDayData, InvestmentItemType } from '../types';
 import { loadBills as loadWholesaleBills } from '../../utils/storage';
 import { loadBills as loadRetailBills } from '../../retail/utils/storage';
+import { isOlderThan31Days } from '../../utils/retention';
 
 const STORAGE_KEY_PREFIX = 'apex_investment_daily_';
 
@@ -47,6 +48,10 @@ export function getDefaultInvestmentData(dateStr: string): InvestmentDayData {
 
 export function loadInvestmentData(dateStr: string = getTodayDateKey()): InvestmentDayData {
   try {
+    if (isOlderThan31Days(dateStr)) {
+      localStorage.removeItem(`${STORAGE_KEY_PREFIX}${dateStr}`);
+      return getDefaultInvestmentData(dateStr);
+    }
     const raw = localStorage.getItem(`${STORAGE_KEY_PREFIX}${dateStr}`);
     if (raw) {
       const parsed = JSON.parse(raw);

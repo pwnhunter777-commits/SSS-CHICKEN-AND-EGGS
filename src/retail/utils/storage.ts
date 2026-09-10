@@ -1,4 +1,5 @@
 import { Product, DailyPriceMap, ShopSettings, Bill, Language, DailyReport } from '../types';
+import { isOlderThan31Days } from '../../utils/retention';
 
 export const DEFAULT_PRODUCTS: Product[] = [
   { id: 'p0', name: 'Chicken', nameEn: 'Chicken', nameTa: 'கோழி (உயிருடன்)', defaultPrice: 220 },
@@ -156,7 +157,20 @@ export function loadDailyPrices(): DailyPriceMap {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.DAILY_PRICES);
     if (raw) {
-      return JSON.parse(raw);
+      const parsed: DailyPriceMap = JSON.parse(raw);
+      let changed = false;
+      const filtered: DailyPriceMap = {};
+      for (const [dateKey, val] of Object.entries(parsed)) {
+        if (!isOlderThan31Days(dateKey)) {
+          filtered[dateKey] = val;
+        } else {
+          changed = true;
+        }
+      }
+      if (changed) {
+        localStorage.setItem(STORAGE_KEYS.DAILY_PRICES, JSON.stringify(filtered));
+      }
+      return filtered;
     }
   } catch (e) {
     console.error('Error loading daily prices from localStorage', e);
@@ -166,7 +180,13 @@ export function loadDailyPrices(): DailyPriceMap {
 
 export function saveDailyPrices(prices: DailyPriceMap): void {
   try {
-    localStorage.setItem(STORAGE_KEYS.DAILY_PRICES, JSON.stringify(prices));
+    const filtered: DailyPriceMap = {};
+    for (const [dateKey, val] of Object.entries(prices)) {
+      if (!isOlderThan31Days(dateKey)) {
+        filtered[dateKey] = val;
+      }
+    }
+    localStorage.setItem(STORAGE_KEYS.DAILY_PRICES, JSON.stringify(filtered));
   } catch (e) {
     console.error('Error saving daily prices to localStorage', e);
   }
@@ -310,7 +330,12 @@ export function loadBills(): Bill[] {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        return parsed;
+        // Automatically prune any bill older than 31 days
+        const retained = parsed.filter((b) => !isOlderThan31Days(b.timestamp || b.date));
+        if (retained.length !== parsed.length) {
+          localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(retained));
+        }
+        return retained;
       }
     }
   } catch (e) {
@@ -321,7 +346,8 @@ export function loadBills(): Bill[] {
 
 export function saveBills(bills: Bill[]): void {
   try {
-    localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(bills));
+    const retained = bills.filter((b) => !isOlderThan31Days(b.timestamp || b.date));
+    localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(retained));
   } catch (e) {
     console.error('Error saving bills to localStorage', e);
   }

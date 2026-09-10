@@ -65,7 +65,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   return (
     <nav
       id="bottom-navigation-bar"
-      className="sticky bottom-0 z-40 w-full bg-white/95 backdrop-blur-md border-t-2 border-emerald-100 shadow-[0_-4px_25px_rgba(5,150,105,0.08)] safe-area-pb"
+      className="sticky bottom-0 z-40 w-full bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(0,0,0,0.04)] safe-area-pb"
     >
       <div className="max-w-md mx-auto grid grid-cols-6 items-center px-1.5 py-2 gap-1 select-none">
         {navItems.map((item) => {
@@ -78,16 +78,16 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               onClick={() => handleNavigation(item.id)}
               className={`relative flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all duration-200 cursor-pointer active:scale-95 touch-manipulation ${
                 isActive
-                  ? 'text-emerald-950 font-black'
-                  : 'text-slate-600 hover:text-emerald-800 font-semibold'
+                  ? 'text-emerald-900 font-black'
+                  : 'text-slate-500 hover:text-slate-800 font-semibold'
               }`}
             >
               {/* Active / Inactive Icon Pill */}
               <div
                 className={`flex items-center justify-center w-10 h-7 rounded-full mb-0.5 transition-all duration-150 ${
                   isActive
-                    ? 'bg-emerald-700 text-white scale-105 shadow-sm shadow-emerald-700/40 ring-2 ring-emerald-500/30'
-                    : 'text-slate-600 hover:bg-emerald-50 hover:text-emerald-800'
+                    ? 'bg-emerald-700 text-white scale-105 shadow-sm shadow-emerald-700/25'
+                    : 'text-slate-500 hover:bg-slate-100/80 hover:text-slate-800'
                 }`}
               >
                 {item.icon}
@@ -96,8 +96,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               <span
                 className={`text-[9px] sm:text-[10px] leading-tight text-center truncate max-w-full px-0.5 tracking-tight ${
                   isActive
-                    ? 'text-emerald-950 font-black'
-                    : 'text-slate-600 font-bold'
+                    ? 'text-emerald-900 font-black'
+                    : 'text-slate-500 font-bold'
                 }`}
               >
                 {item.label}

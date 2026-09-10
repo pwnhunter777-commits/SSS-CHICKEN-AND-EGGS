@@ -160,7 +160,6 @@ export const DailyPricePage: React.FC<DailyPricePageProps> = ({
           onClick={() => setShowAddModal(true)}
           className="bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 active:scale-95 text-white text-xs font-black px-3.5 py-1.5 rounded-2xl flex items-center gap-1.5 shadow-md shadow-emerald-700/20 transition-all cursor-pointer"
         >
-          <Plus className="w-4 h-4" />
           <span>{t.addProduct}</span>
         </button>
       </div>
@@ -170,27 +169,21 @@ export const DailyPricePage: React.FC<DailyPricePageProps> = ({
         {products.map((product, index) => {
           const currentPrice = priceMap[product.id] ?? '';
           const displayName = getProductName(product, language);
-          const secondaryName = language === 'ta' ? product.nameEn : product.nameTa;
           return (
             <div
               key={product.id}
               id={`product-card-${product.id}`}
-              className="bg-white border-2 border-emerald-100 hover:border-emerald-300 rounded-2xl px-4 py-3.5 shadow-2xs transition-all flex items-center justify-between gap-2.5"
+              className="bg-white border border-slate-200/90 hover:border-emerald-400 rounded-2xl px-4 py-3 shadow-xs transition-all flex items-center justify-between gap-2.5"
             >
               {/* Product Info */}
               <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                <span className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-800 text-xs font-black flex items-center justify-center flex-shrink-0">
+                <span className="w-7 h-7 rounded-full bg-slate-100 text-slate-600 text-xs font-black flex items-center justify-center flex-shrink-0">
                   {index + 1}
                 </span>
                 <div className="min-w-0">
-                  <h4 className="text-sm sm:text-base font-black text-emerald-950 truncate uppercase tracking-tight leading-tight">
+                  <h4 className="text-sm sm:text-base font-black text-slate-900 truncate uppercase tracking-tight leading-tight">
                     {displayName}
                   </h4>
-                  {secondaryName && secondaryName !== displayName && (
-                    <span className="text-xs text-emerald-800/80 font-bold block truncate leading-tight">
-                      {secondaryName}
-                    </span>
-                  )}
                 </div>
               </div>
 
@@ -205,7 +198,7 @@ export const DailyPricePage: React.FC<DailyPricePageProps> = ({
                     value={currentPrice}
                     onChange={(e) => handlePriceChange(product.id, e.target.value)}
                     placeholder="0"
-                    className="w-24 sm:w-28 min-h-[46px] pl-7 pr-3 py-2 bg-white border-2 border-emerald-300 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 rounded-xl text-right text-base sm:text-lg font-black text-emerald-950 outline-none transition-all shadow-2xs placeholder:text-emerald-300 leading-normal"
+                    className="w-24 sm:w-28 min-h-[46px] pl-7 pr-3 py-2 bg-slate-50 hover:bg-white focus:bg-white border-2 border-slate-200 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 rounded-xl text-right text-base sm:text-lg font-black text-slate-900 outline-none transition-all shadow-2xs placeholder:text-slate-300 leading-normal"
                   />
                 </div>
                 <button
@@ -213,9 +206,9 @@ export const DailyPricePage: React.FC<DailyPricePageProps> = ({
                   type="button"
                   onClick={() => setProductToDelete(product)}
                   title={t.deleteProduct}
-                  className="w-10 h-10 min-h-[40px] rounded-xl bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white shadow-xs flex items-center justify-center transition-all active:scale-95 cursor-pointer"
+                  className="w-10 h-10 min-h-[40px] rounded-xl bg-rose-50 hover:bg-rose-600 hover:text-white active:bg-rose-700 text-rose-700 border border-rose-200/90 shadow-2xs flex items-center justify-center transition-all active:scale-95 cursor-pointer"
                 >
-                  <Trash2 className="w-4 h-4 text-white" />
+                  <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             </div>

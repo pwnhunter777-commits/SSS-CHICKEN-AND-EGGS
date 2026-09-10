@@ -187,7 +187,7 @@ export const HotelGiveDuesView: React.FC<HotelGiveDuesViewProps> = ({
       billCount: item.hotelBills.length,
       paymentCount: item.hotelPayments.filter((p) => p.type !== 'balance_add').length,
       recentBills: item.hotelBills.slice(0, 3).map((b) => ({
-        billNumber: b.billNumber,
+        billNumber: parseInt(b.billNumber, 10) || 0,
         date: formatDisplayDate(b.date),
         amount: b.totalAmount,
         kg: b.totalKg,
@@ -195,11 +195,11 @@ export const HotelGiveDuesView: React.FC<HotelGiveDuesViewProps> = ({
       recentPayments: item.hotelPayments.slice(0, 3).map((p) => ({
         date: formatDisplayDate(p.date),
         amount: p.amount,
-        mode: p.mode,
+        mode: p.paymentMode,
       })),
     };
 
-    const text = generateHotelBalanceWhatsAppText(shareData, settings, language);
+    const text = generateHotelBalanceWhatsAppText(shareData, settings, language as LanguageCode);
 
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
@@ -236,11 +236,11 @@ export const HotelGiveDuesView: React.FC<HotelGiveDuesViewProps> = ({
       )}
 
       {/* Top Banner: Total Bal Amount & Count */}
-      <div className="bg-gradient-to-br from-rose-800 via-rose-900 to-neutral-950 text-white rounded-3xl p-5 shadow-sm border border-rose-700/50">
-        <div className="flex items-center justify-between pb-2 border-b border-rose-700/40">
-          <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-rose-300" />
-            <span className="text-xs font-black uppercase tracking-wider text-rose-200">
+      <div className="bg-gradient-to-br from-rose-800 via-rose-900 to-neutral-950 text-white rounded-2xl p-3.5 sm:p-4 shadow-sm border border-rose-700/50">
+        <div className="flex items-center justify-between pb-1.5 border-b border-rose-700/40">
+          <div className="flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5 text-rose-300" />
+            <span className="text-[11px] font-black uppercase tracking-wider text-rose-200">
               {language === 'ta' ? 'ஹோட்டல் பாக்கி மொத்தம் (Give)' : 'Total Hotel Balance (Give)'}
             </span>
           </div>
@@ -248,26 +248,15 @@ export const HotelGiveDuesView: React.FC<HotelGiveDuesViewProps> = ({
             type="button"
             onClick={loadAllData}
             title="Refresh"
-            className="p-1.5 rounded-lg bg-rose-800/60 hover:bg-rose-700/80 text-rose-200 transition-colors cursor-pointer"
+            className="p-1 rounded-lg bg-rose-800/60 hover:bg-rose-700/80 text-rose-200 transition-colors cursor-pointer"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
+            <RefreshCw className="w-3 h-3" />
           </button>
         </div>
 
-        <div className="mt-3 flex items-baseline justify-between gap-2">
-          <div>
-            <div className="text-3xl sm:text-4xl font-black tracking-tight text-white">
-              ₹{Math.round(overallPendingBalance).toLocaleString('en-IN')}
-            </div>
-            <div className="text-xs font-bold text-rose-300 mt-1">
-              {pendingHotelsCount} {language === 'ta' ? 'ஹோட்டல்களில் பாக்கி உள்ளது' : 'hotels with pending dues'}
-            </div>
-          </div>
-
-          <div className="text-right">
-            <span className="text-[11px] font-bold text-rose-200 block">
-              {language === 'ta' ? 'மொத்த ஹோட்டல்கள்' : 'Total Hotels'}: {allHotelsWithStats.length}
-            </span>
+        <div className="mt-2 text-center sm:text-left">
+          <div className="text-3xl sm:text-4xl font-black tracking-tight text-white">
+            ₹{Math.round(overallPendingBalance).toLocaleString('en-IN')}
           </div>
         </div>
       </div>
@@ -275,13 +264,13 @@ export const HotelGiveDuesView: React.FC<HotelGiveDuesViewProps> = ({
       {/* Search & Filter Controls */}
       <div className="space-y-2">
         <div className="relative">
-          <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={language === 'ta' ? 'ஹோட்டல் பெயர் / போன் எண் தேட...' : 'Search hotel name / phone...'}
-            className="w-full bg-white border border-neutral-300 focus:border-emerald-700 rounded-2xl pl-10 pr-4 py-2.5 text-xs font-bold text-neutral-900 outline-hidden transition-all shadow-2xs"
+            className="w-full bg-white border border-neutral-300 focus:border-emerald-700 rounded-xl pl-9 pr-4 py-2 text-xs font-bold text-neutral-900 outline-hidden transition-all shadow-2xs"
           />
           {searchQuery && (
             <button
@@ -299,7 +288,7 @@ export const HotelGiveDuesView: React.FC<HotelGiveDuesViewProps> = ({
           <button
             type="button"
             onClick={() => setFilterMode('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
               filterMode === 'all'
                 ? 'bg-neutral-900 text-white shadow-2xs'
                 : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
@@ -310,7 +299,7 @@ export const HotelGiveDuesView: React.FC<HotelGiveDuesViewProps> = ({
           <button
             type="button"
             onClick={() => setFilterMode('pending')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
               filterMode === 'pending'
                 ? 'bg-rose-700 text-white shadow-2xs'
                 : 'bg-rose-50 text-rose-800 hover:bg-rose-100'
@@ -321,7 +310,7 @@ export const HotelGiveDuesView: React.FC<HotelGiveDuesViewProps> = ({
           <button
             type="button"
             onClick={() => setFilterMode('settled')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
               filterMode === 'settled'
                 ? 'bg-emerald-700 text-white shadow-2xs'
                 : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
@@ -333,10 +322,10 @@ export const HotelGiveDuesView: React.FC<HotelGiveDuesViewProps> = ({
       </div>
 
       {/* Hotel Cards List */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         {filteredHotels.length === 0 ? (
-          <div className="bg-white rounded-3xl p-8 text-center border border-neutral-200 shadow-2xs">
-            <Building2 className="w-8 h-8 text-neutral-300 mx-auto mb-2" />
+          <div className="bg-white rounded-2xl p-6 text-center border border-neutral-200 shadow-2xs">
+            <Building2 className="w-6 h-6 text-neutral-300 mx-auto mb-1.5" />
             <p className="text-xs font-bold text-neutral-500">
               {language === 'ta' ? 'ஹோட்டல்கள் எதுவும் கிடைக்கவில்லை' : 'No hotels match the filter'}
             </p>
@@ -354,114 +343,46 @@ export const HotelGiveDuesView: React.FC<HotelGiveDuesViewProps> = ({
               <div
                 key={item.hotel.id}
                 id={`hotel-give-card-${item.hotel.id}`}
-                className="bg-white rounded-3xl p-4 sm:p-5 border-2 border-neutral-200 hover:border-emerald-300 shadow-2xs transition-all space-y-3"
+                className="bg-white rounded-xl sm:rounded-2xl px-3 py-2.5 sm:px-3.5 sm:py-3 border border-neutral-200 hover:border-emerald-300 shadow-2xs transition-all flex items-center justify-between gap-2.5"
               >
-                {/* Header: Hotel Name & Balance */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-base font-black text-neutral-950 truncate tracking-tight">
-                        {displayName}
-                      </h3>
-                      {isSettled && (
-                        <span className="shrink-0 inline-flex items-center gap-0.5 text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                          <CheckCircle2 className="w-3 h-3" />
-                          {language === 'ta' ? 'முடிந்தது' : 'Settled'}
-                        </span>
-                      )}
-                    </div>
-
-                    {item.hotel.phone ? (
-                      <a
-                        href={`tel:${item.hotel.phone}`}
-                        className="inline-flex items-center gap-1 text-xs font-bold text-neutral-500 hover:text-emerald-700 mt-0.5"
-                      >
-                        <Phone className="w-3 h-3" />
-                        <span>{item.hotel.phone}</span>
-                      </a>
-                    ) : (
-                      <span className="text-[11px] font-medium text-neutral-400 block mt-0.5">
-                        {language === 'ta' ? 'தொலைபேசி இல்லை' : 'No phone saved'}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Balance Amount Pill */}
-                  <div className="text-right shrink-0">
-                    <div className="text-[10px] font-black uppercase tracking-wider text-neutral-500">
-                      {language === 'ta' ? 'பாக்கி தொகை' : 'Balance'}
-                    </div>
-                    <div
-                      className={`text-xl sm:text-2xl font-black tracking-tight ${
-                        isDue
-                          ? 'text-rose-600'
-                          : isSettled
-                          ? 'text-emerald-700'
-                          : 'text-sky-700'
-                      }`}
-                    >
-                      ₹{Math.round(Math.abs(item.balance)).toLocaleString('en-IN')}
-                    </div>
-                    {item.balance < 0 && (
-                      <span className="text-[10px] font-bold text-sky-700 block">
-                        ({language === 'ta' ? 'முன்பணம்' : 'Advance'})
-                      </span>
-                    )}
-                  </div>
+                {/* Hotel Name */}
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-xs sm:text-sm font-black text-neutral-900 truncate uppercase tracking-tight">
+                    {displayName}
+                  </h3>
                 </div>
 
-                {/* Sub-details: Billed vs Paid */}
-                <div className="grid grid-cols-2 gap-2 bg-neutral-50 rounded-2xl p-2.5 border border-neutral-100 text-xs">
-                  <div>
-                    <span className="text-[10px] font-bold text-neutral-500 block">
-                      {language === 'ta' ? 'மொத்த பில்' : 'Total Billed'}
-                    </span>
-                    <span className="font-black text-neutral-800">
-                      ₹{Math.round(item.totalBilled).toLocaleString('en-IN')}
-                    </span>
-                    <span className="text-[10px] text-neutral-400 block">
-                      {item.hotelBills.length} {language === 'ta' ? 'பில்கள்' : 'bills'}
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[10px] font-bold text-neutral-500 block">
-                      {language === 'ta' ? 'செலுத்தியது' : 'Total Paid'}
-                    </span>
-                    <span className="font-black text-emerald-800">
-                      ₹{Math.round(item.totalPaid).toLocaleString('en-IN')}
-                    </span>
-                    <span className="text-[10px] text-neutral-400 block">
-                      {item.hotelPayments.filter((p) => p.type !== 'balance_add').length}{' '}
-                      {language === 'ta' ? 'வரவுகள்' : 'payments'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Action Buttons: Share & View Slip */}
-                <div className="flex items-center gap-2 pt-1">
-                  {/* Share Button (Primary) */}
-                  <button
-                    type="button"
-                    id={`btn-share-hotel-${item.hotel.id}`}
-                    onClick={() => handleShareHotel(item)}
-                    className="flex-1 min-h-[44px] bg-emerald-700 hover:bg-emerald-800 active:scale-98 text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 px-3 py-2.5 shadow-2xs transition-all cursor-pointer"
+                {/* Big Balance Amount */}
+                <div className="text-right shrink-0">
+                  <div
+                    className={`text-base sm:text-lg font-black tracking-tight ${
+                      isDue
+                        ? 'text-rose-600'
+                        : isSettled
+                        ? 'text-emerald-700'
+                        : 'text-sky-700'
+                    }`}
                   >
-                    <Share2 className="w-4 h-4" />
-                    <span>{language === 'ta' ? 'வாட்ஸ்அப் பகிர்' : 'Share'}</span>
-                  </button>
-
-                  {/* View Statement Slip Modal */}
-                  <button
-                    type="button"
-                    id={`btn-slip-hotel-${item.hotel.id}`}
-                    onClick={() => setActiveModalHotel(item)}
-                    title={language === 'ta' ? 'பில் சீட்டு பார்க்க' : 'View Statement Slip'}
-                    className="min-h-[44px] px-3.5 bg-neutral-100 hover:bg-neutral-200 active:scale-98 text-neutral-800 rounded-2xl font-bold text-xs flex items-center justify-center gap-1.5 border border-neutral-300 transition-all cursor-pointer"
-                  >
-                    <Receipt className="w-4 h-4 text-neutral-700" />
-                    <span>{language === 'ta' ? 'சீட்டு' : 'Slip'}</span>
-                  </button>
+                    ₹{Math.round(Math.abs(item.balance)).toLocaleString('en-IN')}
+                  </div>
+                  {item.balance < 0 && (
+                    <span className="text-[9px] font-bold text-sky-700 block leading-none text-right">
+                      ({language === 'ta' ? 'முன்பணம்' : 'Advance'})
+                    </span>
+                  )}
                 </div>
+
+                {/* Share Button (in the same line) */}
+                <button
+                  type="button"
+                  id={`btn-share-hotel-${item.hotel.id}`}
+                  onClick={() => handleShareHotel(item)}
+                  title={language === 'ta' ? 'வாட்ஸ்அப் பகிர்' : 'Share on WhatsApp'}
+                  className="shrink-0 h-8 px-2.5 sm:px-3 bg-emerald-700 hover:bg-emerald-800 active:scale-98 text-white rounded-lg font-bold text-xs flex items-center justify-center gap-1 shadow-2xs transition-all cursor-pointer"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span>{language === 'ta' ? 'பகிர்' : 'Share'}</span>
+                </button>
               </div>
             );
           })

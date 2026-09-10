@@ -200,32 +200,58 @@ export const MainScreen: React.FC<MainScreenProps> = ({
 
       {/* Three Large Rounded Rectangular Navigation Cards Arranged Vertically with Equal Spacing */}
       <div id="navigation-cards-container" className="flex flex-col space-y-3.5 my-auto w-full">
-        {SECTORS.map((sector) => (
-          <button
-            key={sector.id}
-            id={`nav-card-${sector.id}`}
-            type="button"
-            onClick={() => handleCardClick(sector.id as 'investment' | 'wholesale' | 'retail')}
-            className="group w-full text-left px-5 py-4 sm:py-4.5 rounded-2xl bg-white border-2 border-neutral-200/90 shadow-xs hover:border-emerald-600 hover:shadow-md hover:shadow-emerald-950/5 active:scale-[0.985] transition-all duration-200 flex items-center justify-between gap-4 select-none cursor-pointer"
-            aria-label={`Open ${sector.title} division`}
-          >
-            <div className="flex items-center gap-3.5 min-w-0">
-              <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200/70 text-emerald-800 group-hover:bg-emerald-700 group-hover:text-white flex items-center justify-center transition-all duration-200 shadow-2xs flex-shrink-0">
-                {sector.id === 'investment' && <TrendingUp size={22} className="transition-transform group-hover:scale-110" />}
-                {sector.id === 'wholesale' && <Truck size={22} className="transition-transform group-hover:scale-110" />}
-                {sector.id === 'retail' && <Store size={22} className="transition-transform group-hover:scale-110" />}
+        {SECTORS.map((sector) => {
+          const isWholesale = sector.id === 'wholesale';
+          return (
+            <button
+              key={sector.id}
+              id={`nav-card-${sector.id}`}
+              type="button"
+              onClick={() => handleCardClick(sector.id as 'investment' | 'wholesale' | 'retail')}
+              className={`group w-full text-left px-5 py-4 sm:py-4.5 rounded-2xl bg-white shadow-xs active:scale-[0.985] transition-all duration-200 flex items-center justify-between gap-4 select-none cursor-pointer border-2 ${
+                isWholesale
+                  ? 'border-emerald-600/60 hover:border-emerald-700 hover:shadow-md hover:shadow-emerald-900/10'
+                  : 'border-slate-200/90 hover:border-emerald-500 hover:shadow-md hover:shadow-slate-300/40'
+              }`}
+              aria-label={`Open ${sector.title} division`}
+            >
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div
+                  className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200 shadow-2xs flex-shrink-0 ${
+                    isWholesale
+                      ? 'bg-emerald-700 text-white group-hover:bg-emerald-800'
+                      : 'bg-emerald-50 text-emerald-800 group-hover:bg-emerald-700 group-hover:text-white'
+                  }`}
+                >
+                  {sector.id === 'investment' && <TrendingUp size={22} className="transition-transform group-hover:scale-110" />}
+                  {sector.id === 'wholesale' && <Truck size={22} className="transition-transform group-hover:scale-110" />}
+                  {sector.id === 'retail' && <Store size={22} className="transition-transform group-hover:scale-110" />}
+                </div>
+                <div>
+                  <h2 className="text-lg sm:text-xl font-black text-slate-900 group-hover:text-emerald-950 transition-colors tracking-tight">
+                    {sector.title}
+                  </h2>
+                  {isWholesale && (
+                    <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">
+                      Active POS & Invoicing
+                    </span>
+                  )}
+                </div>
               </div>
-              <h2 className="text-lg sm:text-xl font-black text-neutral-900 group-hover:text-emerald-950 transition-colors tracking-tight">
-                {sector.title}
-              </h2>
-            </div>
 
-            {/* Right-facing arrow */}
-            <div className="shrink-0 w-10 h-10 rounded-xl bg-neutral-100 text-neutral-600 group-hover:bg-emerald-700 group-hover:text-white flex items-center justify-center transition-all duration-200 shadow-2xs">
-              <ArrowRight size={18} className="transform group-hover:translate-x-1 transition-transform" />
-            </div>
-          </button>
-        ))}
+              {/* Right-facing arrow */}
+              <div
+                className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 shadow-2xs ${
+                  isWholesale
+                    ? 'bg-emerald-50 text-emerald-800 group-hover:bg-emerald-700 group-hover:text-white'
+                    : 'bg-slate-100 text-slate-600 group-hover:bg-emerald-700 group-hover:text-white'
+                }`}
+              >
+                <ArrowRight size={18} className="transform group-hover:translate-x-1 transition-transform" />
+              </div>
+            </button>
+          );
+        })}
       </div>
 
       {/* Informative Division Modal for Investment / Retail */}

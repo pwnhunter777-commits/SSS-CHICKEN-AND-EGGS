@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { InvestmentDayData, SummarySubTab } from '../types';
 import { TotalPage as WholesaleTotalView } from '../../components/TotalPage';
 import { TotalPage as RetailTotalView } from '../../retail/pages/TotalPage';
+import { HotelGiveDuesView } from '../components/HotelGiveDuesView';
 import { loadBills as loadWholesaleBills, loadProducts as loadWholesaleProducts } from '../../utils/storage';
 import { fetchDailyBillsSummary } from '../utils/storage';
 import { Bill, ProductItem, LanguageCode } from '../../types';
@@ -84,13 +85,14 @@ export const StockRemainingPage: React.FC<StockRemainingPageProps> = ({
 
   return (
     <div className="flex flex-col flex-1 w-full max-w-md mx-auto px-4 py-3 select-none">
-      {/* Top 3 Sub-Tabs */}
-      <div className="grid grid-cols-3 rounded-2xl bg-emerald-100/70 p-1 mb-5 border border-emerald-200/80 shadow-xs">
+      {/* Top 4 Sub-Tabs */}
+      <div className="grid grid-cols-4 gap-1 rounded-2xl bg-emerald-100/70 p-1 mb-5 border border-emerald-200/80 shadow-xs">
         {/* Main Summary / Stock remaining */}
         <button
           type="button"
+          id="btn-subtab-summary"
           onClick={() => setSubTab('summary')}
-          className={`py-2 px-2 rounded-xl font-bold text-xs transition-all flex items-center justify-center cursor-pointer ${
+          className={`py-2 px-1 rounded-xl font-bold text-xs transition-all flex items-center justify-center cursor-pointer ${
             subTab === 'summary'
               ? 'bg-emerald-700 text-white shadow-sm shadow-emerald-700/30 ring-2 ring-emerald-500/20'
               : 'text-emerald-950 hover:bg-emerald-200/60'
@@ -102,8 +104,9 @@ export const StockRemainingPage: React.FC<StockRemainingPageProps> = ({
         {/* Wholesale Total Page */}
         <button
           type="button"
+          id="btn-subtab-wholesale"
           onClick={() => setSubTab('wholesale-total')}
-          className={`py-2 px-2 rounded-xl font-bold text-xs transition-all flex items-center justify-center cursor-pointer ${
+          className={`py-2 px-1 rounded-xl font-bold text-xs transition-all flex items-center justify-center cursor-pointer ${
             subTab === 'wholesale-total'
               ? 'bg-emerald-700 text-white shadow-sm shadow-emerald-700/30 ring-2 ring-emerald-500/20'
               : 'text-emerald-950 hover:bg-emerald-200/60'
@@ -115,14 +118,29 @@ export const StockRemainingPage: React.FC<StockRemainingPageProps> = ({
         {/* Retail Total Page */}
         <button
           type="button"
+          id="btn-subtab-retail"
           onClick={() => setSubTab('retail-total')}
-          className={`py-2 px-2 rounded-xl font-bold text-xs transition-all flex items-center justify-center cursor-pointer ${
+          className={`py-2 px-1 rounded-xl font-bold text-xs transition-all flex items-center justify-center cursor-pointer ${
             subTab === 'retail-total'
               ? 'bg-emerald-700 text-white shadow-sm shadow-emerald-700/30 ring-2 ring-emerald-500/20'
               : 'text-emerald-950 hover:bg-emerald-200/60'
           }`}
         >
           <span className="truncate">{language === 'ta' ? 'ரீடெய்ல்' : 'Retail'}</span>
+        </button>
+
+        {/* Hotel Balance Give */}
+        <button
+          type="button"
+          id="btn-subtab-hotel-dues"
+          onClick={() => setSubTab('hotel-dues')}
+          className={`py-2 px-1 rounded-xl font-bold text-xs transition-all flex items-center justify-center cursor-pointer ${
+            subTab === 'hotel-dues'
+              ? 'bg-emerald-700 text-white shadow-sm shadow-emerald-700/30 ring-2 ring-emerald-500/20'
+              : 'text-emerald-950 hover:bg-emerald-200/60'
+          }`}
+        >
+          <span className="truncate">{language === 'ta' ? 'Give (பாக்கி)' : 'Give'}</span>
         </button>
       </div>
 
@@ -247,6 +265,13 @@ export const StockRemainingPage: React.FC<StockRemainingPageProps> = ({
             language={language}
           />
         </div>
+      )}
+
+      {/* VIEW D: Hotel Balance / Give (Wholesale Dues) */}
+      {subTab === 'hotel-dues' && (
+        <HotelGiveDuesView
+          language={language}
+        />
       )}
     </div>
   );

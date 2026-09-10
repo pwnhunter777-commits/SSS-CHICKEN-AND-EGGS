@@ -10,6 +10,9 @@ import {
   ProductItem,
   ShopSettings,
 } from '../types';
+import { isOlderThan31Days, execute31DayDataCleanup, getStorageStats, RETENTION_DAYS } from './retention';
+
+export { execute31DayDataCleanup, getStorageStats, RETENTION_DAYS };
 
 const STORAGE_KEYS = {
   SETTINGS: 'chicken_app_settings',
@@ -158,7 +161,20 @@ export function loadAllDailyPrices(): Record<string, DailyPriceRecord> {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.DAILY_PRICES);
     if (data) {
-      return JSON.parse(data);
+      const parsed: Record<string, DailyPriceRecord> = JSON.parse(data);
+      let changed = false;
+      const filtered: Record<string, DailyPriceRecord> = {};
+      for (const [dateKey, record] of Object.entries(parsed)) {
+        if (!isOlderThan31Days(dateKey)) {
+          filtered[dateKey] = record;
+        } else {
+          changed = true;
+        }
+      }
+      if (changed) {
+        localStorage.setItem(STORAGE_KEYS.DAILY_PRICES, JSON.stringify(filtered));
+      }
+      return filtered;
     }
   } catch (e) {
     console.error('Error loading daily prices:', e);
@@ -182,21 +198,33 @@ export function saveTodayDailyPrices(prices: Record<string, number>): DailyPrice
   };
   all[today] = record;
   try {
-    localStorage.setItem(STORAGE_KEYS.DAILY_PRICES, JSON.stringify(all));
+    // Keep only records within 31 days
+    const filtered: Record<string, DailyPriceRecord> = {};
+    for (const [dateKey, rec] of Object.entries(all)) {
+      if (!isOlderThan31Days(dateKey)) {
+        filtered[dateKey] = rec;
+      }
+    }
+    localStorage.setItem(STORAGE_KEYS.DAILY_PRICES, JSON.stringify(filtered));
   } catch (e) {
     console.error('Error saving daily prices:', e);
   }
   return record;
 }
 
-// 4. Bills
+// 4. Bills (with 31-day local phone storage auto-retention)
 export function loadBills(): Bill[] {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.BILLS);
     if (data) {
       const parsed = JSON.parse(data);
       if (Array.isArray(parsed)) {
-        return parsed;
+        // Automatically prune any bill older than 31 days from phone storage
+        const retainedBills = parsed.filter((b) => !isOlderThan31Days(b.date || b.createdAt));
+        if (retainedBills.length !== parsed.length) {
+          localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(retainedBills));
+        }
+        return retainedBills;
       }
     }
   } catch (e) {
@@ -207,7 +235,9 @@ export function loadBills(): Bill[] {
 
 export function saveBills(bills: Bill[]): void {
   try {
-    localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(bills));
+    // Enforce 31-day retention before writing to phone storage
+    const activeBills = bills.filter((b) => !isOlderThan31Days(b.date || b.createdAt));
+    localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(activeBills));
   } catch (e) {
     console.error('Error saving bills:', e);
   }
@@ -324,14 +354,19 @@ export function getHotelPhone(hotelIdOrName: string, hotelsList?: HotelItem[]): 
   return match?.phone || '';
 }
 
-// 6. Hotel Payments
+// 6. Hotel Payments (with 31-day local phone storage auto-retention)
 export function loadHotelPayments(): HotelPayment[] {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.HOTEL_PAYMENTS);
     if (data) {
       const parsed = JSON.parse(data);
       if (Array.isArray(parsed)) {
-        return parsed;
+        // Automatically prune any payment older than 31 days from phone storage
+        const retainedPayments = parsed.filter((p) => !isOlderThan31Days(p.date || p.createdAt));
+        if (retainedPayments.length !== parsed.length) {
+          localStorage.setItem(STORAGE_KEYS.HOTEL_PAYMENTS, JSON.stringify(retainedPayments));
+        }
+        return retainedPayments;
       }
     }
   } catch (e) {
@@ -342,7 +377,8 @@ export function loadHotelPayments(): HotelPayment[] {
 
 export function saveHotelPayments(payments: HotelPayment[]): void {
   try {
-    localStorage.setItem(STORAGE_KEYS.HOTEL_PAYMENTS, JSON.stringify(payments));
+    const activePayments = payments.filter((p) => !isOlderThan31Days(p.date || p.createdAt));
+    localStorage.setItem(STORAGE_KEYS.HOTEL_PAYMENTS, JSON.stringify(activePayments));
   } catch (e) {
     console.error('Error saving hotel payments:', e);
   }

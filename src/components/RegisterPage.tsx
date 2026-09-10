@@ -102,6 +102,21 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
         )}
       </div>
 
+      {/* 31-Day Phone Storage Notice */}
+      <div className="mb-3 px-3 py-1.5 bg-emerald-50/80 border border-emerald-200/80 rounded-xl flex items-center justify-between text-[11px] text-emerald-900 font-semibold">
+        <span className="flex items-center gap-1.5">
+          <Calendar className="w-3.5 h-3.5 text-emerald-700 flex-shrink-0" />
+          <span>
+            {language === 'ta'
+              ? 'கடந்த 31 நாட்கள் பில்கள் இந்த போனில் சேமிக்கப்பட்டுள்ளன'
+              : 'Showing bills from last 31 days (saved on this phone)'}
+          </span>
+        </span>
+        <span className="text-[10px] font-bold bg-emerald-200/70 text-emerald-950 px-1.5 py-0.5 rounded-md">
+          31d Auto-Delete
+        </span>
+      </div>
+
       {/* Date Filter Chips */}
       {uniqueDates.length > 0 && (
         <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-3 scrollbar-none">

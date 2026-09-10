@@ -123,14 +123,14 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
   return (
     <div className="flex flex-col flex-1 w-full max-w-md mx-auto px-4 py-3 select-none">
       {/* Top Switcher - Chicken / Egg */}
-      <div className="grid grid-cols-2 rounded-2xl bg-emerald-100/70 p-1 mb-4 border border-emerald-200/80 shadow-xs">
+      <div className="grid grid-cols-2 rounded-2xl bg-slate-200/80 p-1 mb-4 border border-slate-300 shadow-2xs">
         <button
           type="button"
           onClick={() => handleSelectType('chicken')}
           className={`py-2.5 px-4 rounded-xl font-black text-xs sm:text-sm transition-all flex items-center justify-center cursor-pointer ${
             isChicken
-              ? 'bg-emerald-700 text-white shadow-md shadow-emerald-700/30 ring-2 ring-emerald-500/20'
-              : 'text-emerald-950 hover:bg-emerald-200/60 font-bold'
+              ? 'bg-emerald-700 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 font-bold'
           }`}
         >
           <span>{language === 'ta' ? 'சிக்கன் (கிலோ)' : 'Chicken (KG)'}</span>
@@ -141,8 +141,8 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
           onClick={() => handleSelectType('egg')}
           className={`py-2.5 px-4 rounded-xl font-black text-xs sm:text-sm transition-all flex items-center justify-center cursor-pointer ${
             !isChicken
-              ? 'bg-emerald-700 text-white shadow-md shadow-emerald-700/30 ring-2 ring-emerald-500/20'
-              : 'text-emerald-950 hover:bg-emerald-200/60 font-bold'
+              ? 'bg-emerald-700 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 font-bold'
           }`}
         >
           <span>{language === 'ta' ? 'முட்டை (தட்டு)' : 'Egg (Tare)'}</span>
@@ -153,10 +153,10 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
       {!isChicken ? (
         <div id="egg-tare-load-form" className="space-y-4 animate-in fade-in">
           {/* Main Card: Only ask Total Tare Income & Price of a Tare */}
-          <div className="bg-white rounded-3xl p-5 border-2 border-emerald-200 shadow-xs space-y-4">
+          <div className="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-xs space-y-4">
             {/* Header: Title and Tare Info */}
-            <div className="flex items-center justify-between gap-2 pb-2 border-b border-emerald-100">
-              <h2 className="text-lg font-black text-neutral-900 tracking-tight">
+            <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100">
+              <h2 className="text-lg font-black text-slate-900 tracking-tight">
                 {language === 'ta' ? 'முட்டை லோடு (தட்டு)' : 'Egg Inward (Tare)'}
               </h2>
 
@@ -170,7 +170,7 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
               {/* Total Tare Income */}
               <div className="space-y-1.5">
-                <label className="text-xs font-black text-emerald-950 block">
+                <label className="text-xs font-black text-slate-800 block">
                   {language === 'ta' ? 'மொத்த தட்டு' : 'Total Tares'}
                 </label>
                 <div className="relative">
@@ -181,11 +181,11 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
                     min="0"
                     value={eggTareIncome === 0 ? '' : eggTareIncome}
                     onChange={(e) => handleUpdateEgg('tareIncome', parseFloat(e.target.value))}
-                    placeholder="0"
-                    className="w-full font-black text-2xl bg-amber-50/40 hover:bg-amber-50/70 focus:bg-white text-neutral-900 border-2 border-emerald-300 focus:border-emerald-700 rounded-2xl py-3 px-4 outline-hidden transition-all shadow-2xs"
+                    placeholder="000.00"
+                    className="w-full font-black text-2xl bg-slate-50 hover:bg-white focus:bg-white text-slate-900 border-2 border-slate-200 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 rounded-2xl py-3 px-4 outline-hidden transition-all shadow-2xs"
                   />
                   <div className="absolute right-3.5 top-3.5 flex items-center gap-1 pointer-events-none">
-                    <span className="text-xs font-black text-amber-800 uppercase">
+                    <span className="text-xs font-black text-slate-500 uppercase">
                       {language === 'ta' ? 'தட்டு' : 'Tares'}
                     </span>
                   </div>
@@ -194,7 +194,7 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
 
               {/* Price of a Tare */}
               <div className="space-y-1.5">
-                <label className="text-xs font-black text-emerald-950 block">
+                <label className="text-xs font-black text-slate-800 block">
                   {language === 'ta' ? 'ஒரு தட்டு விலை' : 'Price per Tare'}
                 </label>
                 <div className="relative">
@@ -208,7 +208,7 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
                     min="0"
                     value={eggPricePerTare === 0 ? '' : eggPricePerTare}
                     onChange={(e) => handleUpdateEgg('pricePerTare', parseFloat(e.target.value))}
-                    placeholder="0"
+                    placeholder="000.00"
                     className="w-full font-black text-2xl bg-neutral-50 hover:bg-neutral-100 focus:bg-white text-neutral-900 border-2 border-emerald-300 focus:border-emerald-700 rounded-2xl py-3 pl-8 pr-16 outline-hidden transition-all shadow-2xs"
                   />
                   <span className="absolute right-3 top-3.5 text-xs font-black text-emerald-800 pointer-events-none">
@@ -282,32 +282,29 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
       ) : (
         /* ======================= CHICKEN FORM ======================= */
         <div id="chicken-load-form" className="space-y-4 animate-in fade-in">
-          {/* Main Form Area for Chicken */}
-          <div className="bg-white rounded-3xl p-5 border border-emerald-100 shadow-xs space-y-4">
-            {/* Title and Wastage */}
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-black text-neutral-900 tracking-tight">
-                  {language === 'ta' ? 'சிக்கன் லோடு வரவு' : 'Chicken Load'}
-                </h2>
-              </div>
+          {/* Main Card: Ask Total Weight & Price per KG (Identical structure to Egg form) */}
+          <div className="bg-white rounded-3xl p-5 border-2 border-emerald-200 shadow-xs space-y-4">
+            {/* Header: Title and Wastage pill */}
+            <div className="flex items-center justify-between gap-2 pb-2 border-b border-emerald-100">
+              <h2 className="text-lg font-black text-neutral-900 tracking-tight">
+                {language === 'ta' ? 'சிக்கன் லோடு (கிலோ)' : 'Chicken Inward (KG)'}
+              </h2>
 
-              {/* Percentage of wastage */}
-              <div className="flex flex-col items-end">
-                <div className="relative w-24">
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="100"
-                    value={chickenWastage === 0 ? '' : chickenWastage}
-                    onChange={(e) => handleUpdateChicken('wastage', parseFloat(e.target.value))}
-                    placeholder="0"
-                    aria-label={language === 'ta' ? 'வேஸ்டேஜ் %' : 'Wastage %'}
-                    className="w-full text-center font-bold text-base bg-neutral-50 hover:bg-neutral-100 focus:bg-white text-neutral-900 border-2 border-neutral-300 focus:border-emerald-700 rounded-xl py-1.5 px-2 outline-hidden transition-all"
-                  />
-                  <span className="absolute right-2.5 top-2 text-xs font-bold text-neutral-400 pointer-events-none">%</span>
-                </div>
+              {/* Wastage input pill styled like Tare pill */}
+              <div className="px-2.5 py-1 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-center gap-1.5 shadow-2xs">
+                <span className="text-xs font-bold">{language === 'ta' ? 'வேஸ்டேஜ்' : 'Wastage'}:</span>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="100"
+                  value={chickenWastage === 0 ? '' : chickenWastage}
+                  onChange={(e) => handleUpdateChicken('wastage', parseFloat(e.target.value))}
+                  placeholder="0"
+                  aria-label={language === 'ta' ? 'வேஸ்டேஜ் %' : 'Wastage %'}
+                  className="w-10 text-center font-black text-xs bg-white text-neutral-900 border border-amber-300 rounded-lg py-0.5 outline-hidden"
+                />
+                <span className="text-xs font-bold text-amber-800">%</span>
               </div>
             </div>
 
@@ -315,7 +312,7 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
               {/* Total KG Income */}
               <div className="space-y-1.5">
-                <label htmlFor="input-chicken-kg" className="text-xs font-black text-emerald-950 block">
+                <label htmlFor="input-chicken-kg" className="text-xs font-black text-slate-800 block">
                   {language === 'ta' ? 'மொத்த எடை (கிலோ)' : 'Total Weight (KG)'}
                 </label>
                 <div className="relative">
@@ -326,26 +323,24 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
                     min="0"
                     value={chickenQuantity === 0 ? '' : chickenQuantity}
                     onChange={(e) => handleUpdateChicken('quantity', parseFloat(e.target.value))}
-                    placeholder="800.00"
-                    className="w-full font-black text-2xl bg-amber-50/40 hover:bg-amber-50/70 focus:bg-white text-neutral-900 border-2 border-emerald-300 focus:border-emerald-700 rounded-2xl py-3 pl-4 pr-12 outline-hidden transition-all shadow-2xs"
+                    placeholder="000.00"
+                    className="w-full font-black text-2xl bg-slate-50 hover:bg-white focus:bg-white text-slate-900 border-2 border-slate-200 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 rounded-2xl py-3 px-4 outline-hidden transition-all shadow-2xs"
                   />
-                  <div className="absolute right-3.5 top-3.5 flex items-center pointer-events-none">
-                    <span className="text-xs font-black text-amber-800 uppercase">
+                  <div className="absolute right-3.5 top-3.5 flex items-center gap-1 pointer-events-none">
+                    <span className="text-xs font-black text-slate-500 uppercase">
                       kg
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* KG Price in ₹/kg (Target Element) */}
+              {/* KG Price in ₹/kg */}
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label htmlFor="input-chicken-total-amount" className="text-xs font-black text-emerald-950 block">
-                    {language === 'ta' ? 'கிலோ விலை (ரூபாய்)' : 'KG Price (₹ / kg)'}
-                  </label>
-                </div>
+                <label htmlFor="input-chicken-total-amount" className="text-xs font-black text-slate-800 block">
+                  {language === 'ta' ? 'கிலோ விலை (ரூபாய்)' : 'Price per KG'}
+                </label>
                 <div className="relative">
-                  <div className="absolute left-3.5 top-3.5 text-base font-black text-neutral-500 pointer-events-none">
+                  <div className="absolute left-3.5 top-3.5 text-base font-black text-slate-400 pointer-events-none">
                     ₹
                   </div>
                   <input
@@ -355,23 +350,42 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
                     min="0"
                     value={chickenRate === 0 ? '' : chickenRate}
                     onChange={(e) => handleUpdateChicken('rate', parseFloat(e.target.value))}
-                    placeholder="0.00"
-                    className="w-full font-black text-2xl bg-neutral-50 hover:bg-neutral-100 focus:bg-white text-neutral-900 border-2 border-emerald-400 focus:border-emerald-700 focus:ring-4 focus:ring-emerald-500/20 rounded-2xl py-3 pl-8 pr-16 outline-hidden transition-all shadow-2xs"
+                    placeholder="000.00"
+                    className="w-full font-black text-2xl bg-slate-50 hover:bg-white focus:bg-white text-slate-900 border-2 border-slate-200 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 rounded-2xl py-3 pl-8 pr-16 outline-hidden transition-all shadow-2xs"
                   />
-                  <div className="absolute right-3.5 top-3.5 flex items-center pointer-events-none">
-                    <span className="text-xs font-bold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-lg uppercase">
-                      / kg
-                    </span>
+                  <span className="absolute right-3 top-3.5 text-xs font-black text-slate-500 pointer-events-none">
+                    {language === 'ta' ? '/ கிலோ' : '/ kg'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Multiplied Calculation Bar (identical to Egg form) */}
+            <div className="pt-2">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-black text-slate-800">
+                  {language === 'ta' ? 'லோடு தொகை' : 'Load Cost'}
+                </span>
+              </div>
+              <div className="w-full rounded-2xl border border-emerald-700 bg-emerald-800 text-white p-4 shadow-md shadow-emerald-950/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-xs font-semibold text-emerald-200 font-mono">
+                      {chickenQuantity || 0} kg × ₹{chickenRate || 0}
+                    </div>
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+                    ₹{chickenNetCost.toLocaleString('en-IN')}
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Two Large Summary Cards at Bottom */}
-          <div className="grid grid-cols-2 gap-3 mb-4">
+          {/* Two Large Summary Cards at Bottom (identical to Egg form) */}
+          <div className="grid grid-cols-2 gap-3">
             {/* Total KG after reducing wastage */}
-            <div className="bg-white rounded-3xl p-5 border-2 border-emerald-200 shadow-xs flex flex-col justify-between min-h-[140px]">
+            <div className="bg-white rounded-3xl p-5 border-2 border-emerald-200 shadow-xs flex flex-col justify-between min-h-[145px]">
               <div className="mb-2">
                 <span className="text-xs font-bold text-neutral-700 uppercase tracking-wide">
                   {language === 'ta' ? 'நிகர எடை' : 'Net Weight'}
@@ -379,15 +393,24 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
               </div>
 
               <div className="my-auto">
-                <div className="text-3xl font-black text-neutral-900 tracking-tight">
+                <div className="text-3xl font-black text-emerald-950 tracking-tight">
                   {chickenNetKg}
                   <span className="text-xs font-bold text-amber-700 ml-1">kg</span>
+                </div>
+                <div className="text-xs font-bold text-neutral-600 mt-1">
+                  {chickenWastage > 0 ? (
+                    <span>
+                      {chickenQuantity} kg - {wastageKg} kg ({chickenWastage}%)
+                    </span>
+                  ) : (
+                    <span>{chickenQuantity} kg {language === 'ta' ? 'மொத்தம்' : 'Total'}</span>
+                  )}
                 </div>
               </div>
             </div>
 
             {/* Total Price Spend based on net kg after reducing wastage */}
-            <div className="bg-white rounded-3xl p-5 border-2 border-emerald-600 shadow-xs bg-emerald-50/20 flex flex-col justify-between min-h-[140px]">
+            <div className="bg-white rounded-3xl p-5 border-2 border-emerald-600 shadow-xs bg-emerald-50/25 flex flex-col justify-between min-h-[145px]">
               <div className="mb-2">
                 <span className="text-xs font-bold text-emerald-950 uppercase tracking-wide">
                   {language === 'ta' ? 'மொத்த தொகை' : 'Total Amount'}

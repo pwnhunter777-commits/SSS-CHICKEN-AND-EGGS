@@ -43,6 +43,7 @@ import {
   saveProducts,
   saveSettings,
   saveTodayDailyPrices,
+  execute31DayDataCleanup,
 } from './utils/storage';
 
 const DEFAULT_STORE_CONFIG: StoreConfig = {
@@ -77,6 +78,20 @@ export default function App() {
   const [bills, setBills] = useState<Bill[]>(() => loadBills());
   const [hotels, setHotels] = useState<HotelItem[]>(() => loadHotels());
   const [payments, setPayments] = useState<HotelPayment[]>(() => loadHotelPayments());
+
+  // Automatic 31-day data cleanup on application startup
+  useEffect(() => {
+    try {
+      const cleanup = execute31DayDataCleanup();
+      if (cleanup.totalRemoved > 0) {
+        setBills(loadBills());
+        setPayments(loadHotelPayments());
+        setDailyPrices(getTodayDailyPrices());
+      }
+    } catch (e) {
+      console.error('Initial 31-day data retention cleanup error:', e);
+    }
+  }, []);
 
   // Receipt Modal State (for Print / WhatsApp Share / Reprint)
   const [receiptState, setReceiptState] = useState<{
@@ -280,11 +295,10 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-start p-0 font-sans">
-      {/* Container sizing: if in main/login, max-w-md; if in wholesale, full width responsive max-w-md */}
+    <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-start p-0 font-sans">
       <div
         id="mobile-app-container"
-        className="w-full max-w-md min-h-screen bg-[#F8F9FA] sm:rounded-2xl sm:border sm:border-neutral-200/80 sm:shadow-xs flex flex-col relative transition-all"
+        className="w-full max-w-md min-h-screen bg-slate-50 sm:rounded-3xl sm:my-3 sm:border sm:border-slate-200/90 sm:shadow-lg sm:shadow-slate-300/40 flex flex-col relative transition-all overflow-hidden"
       >
         {/* VIEW 1: Main Sector Portal Screen */}
         {activeScreen === 'main' && (
