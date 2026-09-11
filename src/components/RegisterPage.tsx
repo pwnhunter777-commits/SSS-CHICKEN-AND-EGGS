@@ -54,7 +54,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
   };
 
   return (
-    <div id="page-register" className="pb-28 pt-3 px-4 max-w-md mx-auto animate-in fade-in">
+    <div id="page-register" className="pb-8 pt-3 px-4 max-w-md mx-auto animate-in fade-in">
       {/* Page Header Title */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">

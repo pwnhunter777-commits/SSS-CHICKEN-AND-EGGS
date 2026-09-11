@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Pencil, Check, ArrowRight, SlidersHorizontal, RotateCcw, X, Info, ChevronRight, TrendingUp, Truck, Store } from 'lucide-react';
 import { ChickenLogo } from './ChickenLogo';
-import { PWAInstallButton } from './PWAInstallButton';
 import { SECTORS } from '../data/sectors';
 import { StoreConfig } from '../types';
 
@@ -61,7 +60,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({
   };
 
   return (
-    <div id="main-mobile-screen" className="flex flex-col flex-1 w-full max-w-md mx-auto px-6 py-6 sm:py-8 justify-between">
+    <div id="main-mobile-screen" className="flex flex-col flex-1 w-full max-w-md mx-auto px-6 py-6 sm:py-8 justify-between overflow-y-auto">
       {/* Center Branding Section */}
       <div className="flex flex-col items-center text-center mb-6 pt-1">
         {/* Rooster Medallion Emblem Logo */}
@@ -92,11 +91,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({
           >
             <Pencil size={15} />
           </button>
-        </div>
-
-        {/* Quick PWA Install / Status Chip */}
-        <div className="mt-2.5 flex items-center justify-center">
-          <PWAInstallButton />
         </div>
 
         {/* Unobtrusive Clean Edit Panel */}

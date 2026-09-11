@@ -46,25 +46,27 @@ export const RetailApp: React.FC<RetailAppProps> = ({ onBackToPortal }) => {
 
   return (
     <div
-      className="min-h-screen bg-slate-100 text-slate-900 flex flex-col font-sans transition-all selection:bg-emerald-200 selection:text-emerald-950"
+      className="h-full min-h-0 bg-slate-100 text-slate-900 flex flex-col font-sans transition-all selection:bg-emerald-200 selection:text-emerald-950 overflow-hidden"
       style={{
         fontSize: `${fontScale * 100}%`,
       }}
     >
       {/* Retail Mobile/Desktop Centered Viewport Container */}
-      <div className="w-full max-w-lg mx-auto min-h-screen bg-slate-50 flex flex-col shadow-2xl relative border-x border-slate-200">
-        {/* App Header */}
-        <Header
-          settings={settings}
-          currentLanguage={language}
-          onLanguageChange={handleLanguageChange}
-          onInstallClick={() => setShowInstallModal(true)}
-          onFontSizeChange={handleFontSizeChange}
-          onExitToPortal={onBackToPortal}
-        />
+      <div className="w-full max-w-lg mx-auto h-full min-h-0 bg-slate-50 flex flex-col relative border-x border-slate-200 overflow-hidden">
+        {/* App Header - Fixed at Top */}
+        <div className="flex-shrink-0 z-30">
+          <Header
+            settings={settings}
+            currentLanguage={language}
+            onLanguageChange={handleLanguageChange}
+            onInstallClick={() => setShowInstallModal(true)}
+            onFontSizeChange={handleFontSizeChange}
+            onExitToPortal={onBackToPortal}
+          />
+        </div>
 
-        {/* Page Content Switcher */}
-        <main className="flex-1 overflow-y-auto">
+        {/* Page Content Switcher - Scrollable */}
+        <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
           {currentPage === 'daily-price' && (
             <DailyPricePage
               products={products}
@@ -100,12 +102,14 @@ export const RetailApp: React.FC<RetailAppProps> = ({ onBackToPortal }) => {
           )}
         </main>
 
-        {/* Bottom Navigation Bar */}
-        <BottomNav
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          language={language}
-        />
+        {/* Bottom Navigation Bar - Pinned at Bottom */}
+        <div className="flex-shrink-0 z-40">
+          <BottomNav
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+            language={language}
+          />
+        </div>
 
         {/* PWA / Install Application Modal */}
         <InstallAppModal

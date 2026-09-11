@@ -281,7 +281,7 @@ export const HotelPage: React.FC<HotelPageProps> = ({
   };
 
   return (
-    <div id="page-hotel" className="pb-28 pt-3 px-4 max-w-md mx-auto space-y-3.5 animate-in fade-in duration-200">
+    <div id="page-hotel" className="pb-8 pt-3 px-4 max-w-md mx-auto space-y-3.5 animate-in fade-in duration-200">
       {/* Top Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">

@@ -295,10 +295,10 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-start p-0 font-sans">
+    <div className="h-screen h-[100dvh] bg-slate-100 flex flex-col items-center justify-center p-0 font-sans overflow-hidden">
       <div
         id="mobile-app-container"
-        className="w-full max-w-md min-h-screen bg-slate-50 sm:rounded-3xl sm:my-3 sm:border sm:border-slate-200/90 sm:shadow-lg sm:shadow-slate-300/40 flex flex-col relative transition-all overflow-hidden"
+        className="w-full max-w-md h-full h-[100dvh] bg-slate-50 sm:rounded-3xl sm:h-[95vh] sm:max-h-[920px] sm:my-auto sm:border sm:border-slate-200/90 sm:shadow-lg sm:shadow-slate-300/40 flex flex-col relative transition-all overflow-hidden"
       >
         {/* VIEW 1: Main Sector Portal Screen */}
         {activeScreen === 'main' && (
@@ -329,29 +329,31 @@ export default function App() {
 
         {/* VIEW 3: Wholesale Billing System */}
         {activeScreen === 'wholesale' && (
-          <div id="wholesale-billing-app" className="flex-1 flex flex-col w-full">
-            {/* Global Wholesale Header */}
-            <AppHeader
-              settings={settings}
-              language={language}
-              currentPage={currentPage}
-              onLanguageChange={(newLang) => {
-                setLanguage(newLang);
-                saveLanguage(newLang);
-              }}
-              onToggleLanguage={handleToggleLanguage}
-              onToggleBold={handleToggleBold}
-              onIncreaseFontSize={handleIncreaseFontSize}
-              onDecreaseFontSize={handleDecreaseFontSize}
-              onSetFontSize={handleSetFontSize}
-              onBackToMain={() => setCurrentPage('billing')}
-              onExitToPortal={() => setActiveScreen('main')}
-              onBackToPortal={() => setActiveScreen('main')}
-              onNavigateToSettings={() => setCurrentPage('settings')}
-            />
+          <div id="wholesale-billing-app" className="flex-1 flex flex-col w-full h-full min-h-0 overflow-hidden">
+            {/* Global Wholesale Header - Fixed at Top */}
+            <div className="flex-shrink-0 z-30">
+              <AppHeader
+                settings={settings}
+                language={language}
+                currentPage={currentPage}
+                onLanguageChange={(newLang) => {
+                  setLanguage(newLang);
+                  saveLanguage(newLang);
+                }}
+                onToggleLanguage={handleToggleLanguage}
+                onToggleBold={handleToggleBold}
+                onIncreaseFontSize={handleIncreaseFontSize}
+                onDecreaseFontSize={handleDecreaseFontSize}
+                onSetFontSize={handleSetFontSize}
+                onBackToMain={() => setCurrentPage('billing')}
+                onExitToPortal={() => setActiveScreen('main')}
+                onBackToPortal={() => setActiveScreen('main')}
+                onNavigateToSettings={() => setCurrentPage('settings')}
+              />
+            </div>
 
-            {/* Wholesale Pages */}
-            <main className="flex-1 pb-4">
+            {/* Wholesale Pages - Scrollable Middle Area */}
+            <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-4">
               {currentPage === 'daily-price' && (
                 <DailyPricePage
                   products={products}
@@ -431,27 +433,29 @@ export default function App() {
               )}
             </main>
 
-            {/* Fixed Bottom Navigation Bar */}
-            <BottomNav
-              currentPage={currentPage}
-              activePage={currentPage}
-              language={language}
-              onPageChange={(page) => setCurrentPage(page)}
-              onSelectPage={(page) => setCurrentPage(page)}
-            />
+            {/* Fixed Bottom Navigation Bar - Pinned at Bottom */}
+            <div className="flex-shrink-0 z-40">
+              <BottomNav
+                currentPage={currentPage}
+                activePage={currentPage}
+                language={language}
+                onPageChange={(page) => setCurrentPage(page)}
+                onSelectPage={(page) => setCurrentPage(page)}
+              />
+            </div>
           </div>
         )}
 
         {/* VIEW 4: Retail Billing & POS System */}
         {activeScreen === 'retail' && (
-          <div id="retail-billing-app" className="flex-1 flex flex-col w-full">
+          <div id="retail-billing-app" className="flex-1 flex flex-col w-full h-full min-h-0 overflow-hidden">
             <RetailApp onBackToPortal={() => setActiveScreen('main')} />
           </div>
         )}
 
         {/* VIEW 5: Investment & Stock Module */}
         {activeScreen === 'investment' && (
-          <div id="investment-billing-app" className="flex-1 flex flex-col w-full">
+          <div id="investment-billing-app" className="flex-1 flex flex-col w-full h-full min-h-0 overflow-hidden">
             <InvestmentApp onBackToPortal={() => setActiveScreen('main')} />
           </div>
         )}

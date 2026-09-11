@@ -95,7 +95,7 @@ export const DailyPricePage: React.FC<DailyPricePageProps> = ({
   };
 
   return (
-    <div id="page-daily-price" className="pb-28 pt-3 px-4 max-w-md mx-auto animate-in fade-in">
+    <div id="page-daily-price" className="pb-8 pt-3 px-4 max-w-md mx-auto animate-in fade-in">
       {/* Top Banner / Today Status Indicator */}
       <div className="mb-4">
         {isSavedForToday ? (

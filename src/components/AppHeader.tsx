@@ -60,7 +60,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   const currentLangObj = languages.find((l) => l.code === language) || languages[0];
 
   return (
-    <header id="app-header" className="relative bg-gradient-to-r from-emerald-800 via-emerald-800 to-emerald-900 text-white shadow-md shadow-emerald-950/20 rounded-b-3xl px-4 pt-3.5 pb-3.5 z-30 border-b border-emerald-700/60">
+    <header id="app-header" className="relative flex-shrink-0 w-full bg-gradient-to-r from-emerald-800 via-emerald-800 to-emerald-900 text-white shadow-md shadow-emerald-950/20 rounded-b-3xl px-4 pt-3.5 pb-3.5 z-30 border-b border-emerald-700/60">
       <div className="flex items-center justify-between gap-2">
         {/* Back Button (if on subpage) / Home button to Agency Interface & Company Logo & Name */}
         <div className="flex items-center gap-2.5 min-w-0 flex-1">

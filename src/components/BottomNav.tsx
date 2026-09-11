@@ -65,7 +65,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   return (
     <nav
       id="bottom-navigation-bar"
-      className="sticky bottom-0 z-40 w-full bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(0,0,0,0.04)] safe-area-pb"
+      className="w-full bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(0,0,0,0.04)] safe-area-pb select-none"
     >
       <div className="max-w-md mx-auto grid grid-cols-6 items-center px-1.5 py-2 gap-1 select-none">
         {navItems.map((item) => {

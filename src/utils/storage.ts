@@ -264,6 +264,7 @@ export function incrementBillNumber(): void {
 }
 
 export function addBill(bill: Bill): Bill[] {
+  execute31DayDataCleanup();
   const bills = loadBills();
   const updated = [bill, ...bills];
   saveBills(updated);
@@ -385,6 +386,7 @@ export function saveHotelPayments(payments: HotelPayment[]): void {
 }
 
 export function addHotelPayment(payment: HotelPayment): HotelPayment[] {
+  execute31DayDataCleanup();
   const payments = loadHotelPayments();
   const updated = [payment, ...payments];
   saveHotelPayments(updated);

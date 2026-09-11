@@ -33,31 +33,49 @@ export const DailyPricePage: React.FC<DailyPricePageProps> = ({
   const [newProductPrice, setNewProductPrice] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [tarePriceMap, setTarePriceMap] = useState<{ [productId: string]: string }>({});
 
   // Initialize prices on mount or when products change
   useEffect(() => {
     const allPrices = loadDailyPrices();
     const todaySaved = allPrices[todayKey];
     const initialPrices: { [productId: string]: number | string } = {};
+    const initialTarePrices: { [productId: string]: string } = {};
 
     if (todaySaved && Object.keys(todaySaved).length > 0) {
       setIsSavedToday(true);
       products.forEach((p) => {
-        initialPrices[p.id] = todaySaved[p.id] !== undefined ? todaySaved[p.id] : p.defaultPrice || 200;
+        const isEgg = p.id === 'p_egg' || (p.nameEn || p.name || '').trim().toLowerCase() === 'egg';
+        const priceVal = todaySaved[p.id] !== undefined ? todaySaved[p.id] : p.defaultPrice || (isEgg ? 6 : 200);
+        initialPrices[p.id] = priceVal;
+        if (isEgg) {
+          const num = typeof priceVal === 'number' ? priceVal : parseFloat(priceVal as string);
+          if (!isNaN(num) && num > 0) {
+            initialTarePrices[p.id] = String(Math.round(num * 30 * 100) / 100);
+          }
+        }
       });
     } else {
       setIsSavedToday(false);
       const dates = Object.keys(allPrices).sort().reverse();
       const latestPrices = dates.length > 0 ? allPrices[dates[0]] : null;
       products.forEach((p) => {
+        const isEgg = p.id === 'p_egg' || (p.nameEn || p.name || '').trim().toLowerCase() === 'egg';
+        let priceVal: number | string = p.defaultPrice || (isEgg ? 6 : 200);
         if (latestPrices && latestPrices[p.id] !== undefined) {
-          initialPrices[p.id] = latestPrices[p.id];
-        } else {
-          initialPrices[p.id] = p.defaultPrice || 200;
+          priceVal = latestPrices[p.id];
+        }
+        initialPrices[p.id] = priceVal;
+        if (isEgg) {
+          const num = typeof priceVal === 'number' ? priceVal : parseFloat(priceVal as string);
+          if (!isNaN(num) && num > 0) {
+            initialTarePrices[p.id] = String(Math.round(num * 30 * 100) / 100);
+          }
         }
       });
     }
     setPriceMap(initialPrices);
+    setTarePriceMap(initialTarePrices);
   }, [products, todayKey]);
 
   const handlePriceChange = (productId: string, value: string) => {
@@ -65,6 +83,49 @@ export const DailyPricePage: React.FC<DailyPricePageProps> = ({
       ...prev,
       [productId]: value,
     }));
+  };
+
+  // When user enters 1-egg price: updates 1 egg price AND automatically calculates tare price (egg * 30)
+  const handleEggPriceChange = (productId: string, value: string) => {
+    setPriceMap((prev) => ({
+      ...prev,
+      [productId]: value,
+    }));
+    if (value === '' || isNaN(Number(value))) {
+      setTarePriceMap((prev) => ({
+        ...prev,
+        [productId]: '',
+      }));
+    } else {
+      const num = parseFloat(value);
+      const tare = Math.round(num * 30 * 100) / 100;
+      setTarePriceMap((prev) => ({
+        ...prev,
+        [productId]: String(tare),
+      }));
+    }
+  };
+
+  // When user enters Tare price: updates tare price AND automatically calculates 1-egg price (tare / 30)
+  const handleTarePriceChange = (productId: string, value: string) => {
+    setTarePriceMap((prev) => ({
+      ...prev,
+      [productId]: value,
+    }));
+    if (value === '' || isNaN(Number(value))) {
+      setPriceMap((prev) => ({
+        ...prev,
+        [productId]: '',
+      }));
+    } else {
+      const tareNum = parseFloat(value);
+      // 1 tare has 30 eggs -> 1 egg = tare / 30
+      const perEgg = Math.round((tareNum / 30) * 100) / 100;
+      setPriceMap((prev) => ({
+        ...prev,
+        [productId]: String(perEgg),
+      }));
+    }
   };
 
   const handleSavePrices = () => {
@@ -204,14 +265,94 @@ export const DailyPricePage: React.FC<DailyPricePageProps> = ({
           const primaryDisplay = getProductName(product, language);
           const secondaryDisplay = language === 'ta' ? (product.nameEn || product.name) : product.nameTa;
 
+          // If this product is Egg, render dedicated dual-input (1 Egg & Tare) card
+          if (isEgg) {
+            const currentTarePrice =
+              tarePriceMap[product.id] !== undefined
+                ? tarePriceMap[product.id]
+                : currentPrice !== '' && !isNaN(Number(currentPrice))
+                ? String(Math.round(Number(currentPrice) * 30 * 100) / 100)
+                : '';
+
+            return (
+              <div
+                key={product.id}
+                className="bg-white rounded-2xl p-3.5 sm:p-4 shadow-xs border-2 border-amber-400 ring-2 ring-amber-500/10 transition-all space-y-3"
+              >
+                {/* Product Header */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl shrink-0">🥚</span>
+                    <span className="font-black text-gray-900 text-sm sm:text-base">
+                      {primaryDisplay}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Dual Inputs: 1 Egg Price AND Tare Price */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-0.5">
+                  {/* INPUT 1: 1 Egg Price */}
+                  <div className="bg-amber-50/70 border-2 border-amber-300 focus-within:border-amber-600 focus-within:bg-white rounded-xl p-2.5 flex items-center justify-between gap-2 transition-all shadow-2xs">
+                    <div className="min-w-0 flex-1">
+                      <label className="text-xs font-black text-amber-950 block leading-tight">
+                        {language === 'ta' ? '1 முட்டை விலை' : '1 Egg Price'}
+                      </label>
+                      <span className="text-[10px] text-amber-700 font-bold block mt-0.5">
+                        ₹ / {language === 'ta' ? 'முட்டை' : 'Egg'}
+                      </span>
+                    </div>
+                    <div className="relative flex items-center w-28 sm:w-32 shrink-0">
+                      <span className="absolute left-2.5 text-amber-700 font-black text-sm">
+                        ₹
+                      </span>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        step="any"
+                        value={currentPrice}
+                        onChange={(e) => handleEggPriceChange(product.id, e.target.value)}
+                        placeholder="6"
+                        className="w-full bg-white border-2 border-amber-300 focus:border-amber-600 rounded-xl text-right font-black text-amber-950 text-base py-1.5 pl-6 pr-2.5 outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  {/* INPUT 2: Tare Price (30 Eggs) */}
+                  <div className="bg-amber-50/70 border-2 border-amber-300 focus-within:border-amber-600 focus-within:bg-white rounded-xl p-2.5 flex items-center justify-between gap-2 transition-all shadow-2xs">
+                    <div className="min-w-0 flex-1">
+                      <label className="text-xs font-black text-amber-950 block leading-tight">
+                        {language === 'ta' ? 'தட்டு விலை (30 முட்டை)' : 'Tare Price (30 Eggs)'}
+                      </label>
+                      <span className="text-[10px] text-amber-700 font-bold block mt-0.5">
+                        ₹ / {language === 'ta' ? 'தட்டு (30)' : 'Tare (30)'}
+                      </span>
+                    </div>
+                    <div className="relative flex items-center w-28 sm:w-32 shrink-0">
+                      <span className="absolute left-2.5 text-amber-700 font-black text-sm">
+                        ₹
+                      </span>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        step="any"
+                        value={currentTarePrice}
+                        onChange={(e) => handleTarePriceChange(product.id, e.target.value)}
+                        placeholder="180"
+                        className="w-full bg-white border-2 border-amber-300 focus:border-amber-600 rounded-xl text-right font-black text-amber-950 text-base py-1.5 pl-6 pr-2.5 outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
           return (
             <div
               key={product.id}
               className={`bg-white rounded-2xl p-3.5 shadow-xs border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 min-h-[4rem] ${
                 isChicken
                   ? 'border-emerald-500 ring-2 ring-emerald-600/10 shadow-xs'
-                  : isEgg
-                  ? 'border-amber-400 ring-2 ring-amber-500/10 shadow-xs'
                   : 'border-emerald-100 hover:border-emerald-300'
               }`}
             >
@@ -221,26 +362,9 @@ export const DailyPricePage: React.FC<DailyPricePageProps> = ({
                   <span className="font-black text-gray-900 text-sm truncate">
                     {primaryDisplay}
                   </span>
-                  {secondaryDisplay && secondaryDisplay !== primaryDisplay && (
-                    <span className="text-xs text-gray-400 font-medium truncate">
-                      ({secondaryDisplay})
-                    </span>
-                  )}
-                  {isChicken && (
-                    <span className="text-xs font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-full shrink-0">
-                      {t.mainCut}
-                    </span>
-                  )}
-                  {isEgg && (
-                    <span className="text-xs font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-full shrink-0">
-                      {language === 'ta' ? 'முட்டை' : 'EGG'}
-                    </span>
-                  )}
                 </div>
                 <div className="text-xs text-emerald-800 font-semibold mt-0.5">
-                  {isEgg
-                    ? (language === 'ta' ? '1 முட்டை விலை (₹ / முட்டை)' : 'Price of 1 Egg (₹ / Egg)')
-                    : isChicken
+                  {isChicken
                     ? `${t.rateWithSkin} (₹ / ${language === 'ta' ? 'கிலோ' : 'Kg'})`
                     : `₹ / ${language === 'ta' ? 'கிலோ' : 'Kg'}`}
                 </div>
@@ -257,16 +381,12 @@ export const DailyPricePage: React.FC<DailyPricePageProps> = ({
                     inputMode="decimal"
                     value={currentPrice}
                     onChange={(e) => handlePriceChange(product.id, e.target.value)}
-                    placeholder={isEgg ? '6' : '220'}
-                    className={`w-full sm:w-28 border-2 text-right font-black text-emerald-950 text-base py-1.5 pl-7 pr-3 rounded-xl outline-none transition-all min-h-[2.5rem] ${
-                      isEgg
-                        ? 'bg-amber-50/50 border-amber-300 focus:border-amber-600 focus:bg-white'
-                        : 'bg-emerald-50/50 border-emerald-300 focus:border-emerald-600 focus:bg-white'
-                    }`}
+                    placeholder="220"
+                    className="w-full sm:w-28 border-2 text-right font-black text-emerald-950 text-base py-1.5 pl-7 pr-3 rounded-xl outline-none transition-all min-h-[2.5rem] bg-emerald-50/50 border-emerald-300 focus:border-emerald-600 focus:bg-white"
                   />
                 </div>
-                {/* Delete Product Button (Hidden for standard Chicken and Egg) */}
-                {!isChicken && !isEgg ? (
+                {/* Delete Product Button (Hidden for standard Chicken) */}
+                {!isChicken ? (
                   <button
                     type="button"
                     onClick={() => setDeleteConfirmId(product.id)}

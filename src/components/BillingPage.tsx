@@ -12,6 +12,7 @@ import {
   ArrowRight,
   Trash2,
   Send,
+  ShieldCheck,
 } from 'lucide-react';
 import {
   Bill,
@@ -361,7 +362,18 @@ export const BillingPage: React.FC<BillingPageProps> = ({
   };
 
   return (
-    <div id="page-billing" className="pb-32 pt-2 px-4 max-w-md mx-auto animate-in fade-in">
+    <div id="page-billing" className="pb-6 pt-2 px-4 max-w-md mx-auto animate-in fade-in">
+      {/* Phone Storage & 31-Day Policy Info */}
+      <div className="flex items-center justify-between px-1 mb-2.5 text-[11px] font-semibold text-slate-500">
+        <span className="flex items-center gap-1 text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-md font-bold text-[11px]">
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+          <span>{language === 'ta' ? 'மொபைலில் சேமிப்பு • 31 நாள் தானியங்கி நீக்கம்' : 'Saved on Phone • 31-Day Auto-Delete'}</span>
+        </span>
+        <span className="text-slate-500 font-mono text-[10px] bg-slate-100 px-1.5 py-0.5 rounded">
+          #{getNextBillNumber()}
+        </span>
+      </div>
+
       {/* Missing Daily Prices Banner */}
       {!dailyPrices && (
         <div className="mb-3 bg-amber-50 border border-amber-300 rounded-2xl p-3 flex items-center justify-between gap-2 shadow-xs">
@@ -695,7 +707,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({
       )}
 
       {/* Chicken Products List */}
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {products.map((product) => {
           const defaultRate = getProductRate(product);
           const prodDisplayName = getProductName(product, language);
@@ -710,7 +722,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({
             <div
               key={product.id}
               id={`billing-card-${product.id}`}
-              className={`rounded-2xl p-3 transition-all border flex flex-col gap-2 ${
+              className={`rounded-xl p-2 sm:p-2.5 transition-all border flex flex-col gap-1.5 ${
                 isItemActive
                   ? 'bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/40 border-2 border-emerald-600 shadow-sm ring-1 ring-emerald-500/20'
                   : 'bg-white border-slate-200/90 hover:border-emerald-300 shadow-2xs'
@@ -718,14 +730,14 @@ export const BillingPage: React.FC<BillingPageProps> = ({
             >
               {/* TOP ROW: PRODUCT NAME (LEFT) & DELETE BUTTON (RIGHT) */}
               <div className="flex items-center justify-between gap-1.5">
-                <div className="min-w-0 flex-1 flex items-center gap-2">
+                <div className="min-w-0 flex-1 flex items-center gap-1.5">
                   <span
-                    className={`w-2.5 h-2.5 rounded-full flex-shrink-0 transition-colors ${
+                    className={`w-2 h-2 rounded-full flex-shrink-0 transition-colors ${
                       isItemActive ? 'bg-emerald-600 ring-2 ring-emerald-200' : 'bg-slate-300'
                     }`}
                   />
                   <div className="min-w-0 flex-1">
-                    <h4 className="text-sm sm:text-base font-black text-slate-900 truncate uppercase tracking-tight leading-tight">
+                    <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 truncate uppercase tracking-tight leading-tight">
                       {prodDisplayName}
                     </h4>
                   </div>
@@ -735,10 +747,10 @@ export const BillingPage: React.FC<BillingPageProps> = ({
                   id={`btn-delete-${product.id}`}
                   type="button"
                   onClick={() => setItemToDelete(product)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 min-h-[36px] rounded-xl text-xs font-bold transition-all active:scale-95 touch-manipulation shadow-2xs bg-rose-50 hover:bg-rose-600 hover:text-white active:bg-rose-700 text-rose-700 border border-rose-200/90 flex-shrink-0 cursor-pointer"
+                  className="flex items-center gap-1 px-2 py-1 min-h-[28px] rounded-lg text-[10px] font-bold transition-all active:scale-95 touch-manipulation shadow-2xs bg-rose-50 hover:bg-rose-600 hover:text-white active:bg-rose-700 text-rose-700 border border-rose-200/90 flex-shrink-0 cursor-pointer"
                   title={language === 'ta' ? 'பொருளை நீக்கு' : 'Delete / Clear item'}
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="w-3 h-3" />
                   <span className="uppercase tracking-wider font-bold">
                     {language === 'ta' ? 'நீக்கு' : 'DELETE'}
                   </span>
@@ -746,12 +758,12 @@ export const BillingPage: React.FC<BillingPageProps> = ({
               </div>
 
               {/* BOTTOM ROW: 3 INPUTS [ KG ] [ PRICE ] [ KG PRICE ] */}
-              <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5 pt-0.5">
+              <div className="grid grid-cols-3 gap-1.5 pt-0.5">
                 {/* 1. KG INPUT */}
                 <div className="flex flex-col">
                   <label
                     htmlFor={`input-kg-${product.id}`}
-                    className={`text-[11px] sm:text-xs font-bold uppercase py-1 px-1 rounded-lg mb-1 text-center tracking-wider block leading-none truncate ${
+                    className={`text-[10px] font-bold uppercase py-0.5 px-1 rounded mb-0.5 text-center tracking-wider block leading-none truncate ${
                       isItemActive ? 'text-emerald-900 bg-emerald-100/70 font-black' : 'text-slate-600 bg-slate-100'
                     }`}
                   >
@@ -764,7 +776,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({
                     value={currentKg}
                     onChange={(e) => handleKgChange(product.id, e.target.value)}
                     placeholder="KG"
-                    className={`w-full min-h-[46px] px-2 py-2 rounded-xl text-base sm:text-lg font-black outline-none text-center transition-all flex items-center justify-center leading-normal ${
+                    className={`w-full min-h-[38px] px-1.5 py-1 rounded-lg text-sm sm:text-base font-extrabold outline-none text-center transition-all flex items-center justify-center leading-normal ${
                       parseFloat(currentKg) > 0
                         ? 'bg-emerald-50/70 border-2 border-emerald-600 ring-2 ring-emerald-500/15 text-emerald-950 shadow-xs'
                         : 'bg-white border-2 border-slate-200 focus:border-emerald-600 focus:bg-emerald-50/20 text-slate-900 shadow-2xs placeholder:text-slate-300'
@@ -776,7 +788,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({
                 <div className="flex flex-col">
                   <label
                     htmlFor={`input-price-${product.id}`}
-                    className={`text-[11px] sm:text-xs font-bold uppercase py-1 px-1 rounded-lg mb-1 text-center tracking-wider block leading-none truncate ${
+                    className={`text-[10px] font-bold uppercase py-0.5 px-1 rounded mb-0.5 text-center tracking-wider block leading-none truncate ${
                       isItemActive ? 'text-emerald-900 bg-emerald-100/70 font-black' : 'text-slate-600 bg-slate-100'
                     }`}
                   >
@@ -789,7 +801,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({
                     value={currentPrice}
                     onChange={(e) => handlePriceChange(product.id, e.target.value)}
                     placeholder="PRICE"
-                    className={`w-full min-h-[46px] px-2 py-2 rounded-xl text-base sm:text-lg font-black outline-none text-center transition-all flex items-center justify-center leading-normal ${
+                    className={`w-full min-h-[38px] px-1.5 py-1 rounded-lg text-sm sm:text-base font-extrabold outline-none text-center transition-all flex items-center justify-center leading-normal ${
                       parseFloat(currentPrice) > 0
                         ? 'bg-emerald-50/70 border-2 border-emerald-600 ring-2 ring-emerald-500/15 text-emerald-950 shadow-xs'
                         : 'bg-white border-2 border-slate-200 focus:border-emerald-600 focus:bg-emerald-50/20 text-slate-900 shadow-2xs placeholder:text-slate-300'
@@ -801,7 +813,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({
                 <div className="flex flex-col">
                   <label
                     htmlFor={`input-rate-${product.id}`}
-                    className={`text-[11px] sm:text-xs font-bold uppercase py-1 px-1 rounded-lg mb-1 text-center tracking-wider block leading-none truncate ${
+                    className={`text-[10px] font-bold uppercase py-0.5 px-1 rounded mb-0.5 text-center tracking-wider block leading-none truncate ${
                       isItemActive ? 'text-emerald-900 bg-emerald-100/70 font-black' : 'text-slate-600 bg-slate-100'
                     }`}
                   >
@@ -814,7 +826,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({
                     value={displayedRate}
                     onChange={(e) => handleRateChange(product.id, e.target.value)}
                     placeholder="RATE"
-                    className="w-full min-h-[46px] px-2 py-2 bg-slate-50 hover:bg-white focus:bg-white border-2 border-slate-200 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 rounded-xl text-base sm:text-lg font-black text-slate-900 outline-none text-center shadow-2xs transition-all placeholder:text-slate-300 flex items-center justify-center leading-normal"
+                    className="w-full min-h-[38px] px-1.5 py-1 bg-slate-50 hover:bg-white focus:bg-white border-2 border-slate-200 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 rounded-lg text-sm sm:text-base font-extrabold text-slate-900 outline-none text-center shadow-2xs transition-all placeholder:text-slate-300 flex items-center justify-center leading-normal"
                   />
                 </div>
               </div>
@@ -824,7 +836,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({
       </div>
 
       {/* Fixed Bottom Total & Actions Bar */}
-      <div className="mt-4 sticky bottom-20 z-20 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-3xl p-4 shadow-xl shadow-slate-900/10">
+      <div className="mt-4 sticky bottom-2 z-20 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-3xl p-4 shadow-xl shadow-slate-900/10">
         {/* Bill Summary */}
         <div className="flex items-center justify-between mb-3 px-1">
           <div>

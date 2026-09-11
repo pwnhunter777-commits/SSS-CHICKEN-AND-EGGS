@@ -94,9 +94,9 @@ export const InvestmentApp: React.FC<InvestmentAppProps> = ({ onBackToPortal }) 
   };
 
   return (
-    <div id="investment-app-root" className="flex-1 flex flex-col w-full min-h-screen bg-[#F8F9FA]">
-      {/* Top Header */}
-      <header id="investment-header" className="relative bg-gradient-to-r from-emerald-700 via-emerald-800 to-emerald-900 text-white shadow-lg shadow-emerald-950/15 rounded-b-3xl px-4 pt-3.5 pb-4 z-30 border-b-2 border-emerald-600/30">
+    <div id="investment-app-root" className="flex-1 flex flex-col w-full h-full min-h-0 overflow-hidden bg-[#F8F9FA]">
+      {/* Top Header - Fixed at Top */}
+      <header id="investment-header" className="relative flex-shrink-0 bg-gradient-to-r from-emerald-700 via-emerald-800 to-emerald-900 text-white shadow-lg shadow-emerald-950/15 rounded-b-3xl px-4 pt-3.5 pb-4 z-30 border-b-2 border-emerald-600/30">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <button
@@ -130,8 +130,8 @@ export const InvestmentApp: React.FC<InvestmentAppProps> = ({ onBackToPortal }) 
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 pb-4 pt-2">
+      {/* Main Content Area - Scrollable */}
+      <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-4 pt-2">
         {activeTab === 'load' && (
           <LoadEntryPage
             data={data}
@@ -156,12 +156,14 @@ export const InvestmentApp: React.FC<InvestmentAppProps> = ({ onBackToPortal }) 
         )}
       </main>
 
-      {/* 23 | 24 | 25 Bottom Navigation */}
-      <InvestmentBottomNav
-        activeTab={activeTab}
-        onSelectTab={setActiveTab}
-        language={language}
-      />
+      {/* 23 | 24 | 25 Bottom Navigation - Pinned at Bottom */}
+      <div className="flex-shrink-0 z-40">
+        <InvestmentBottomNav
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
+          language={language}
+        />
+      </div>
     </div>
   );
 };

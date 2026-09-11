@@ -79,7 +79,7 @@ export const TotalPage: React.FC<TotalPageProps> = ({
   }, [products, targetBills, language]);
 
   return (
-    <div id="page-total" className="pb-28 pt-3 px-4 max-w-md mx-auto animate-in fade-in">
+    <div id="page-total" className="pb-8 pt-3 px-4 max-w-md mx-auto animate-in fade-in">
       {/* Page Title & Filter Toggle */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">

@@ -241,35 +241,9 @@ export const ChickenCutCard: React.FC<ChickenCutCardProps> = ({
       {/* Top Header Row */}
       <div className="p-4 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-base sm:text-lg font-black text-gray-900 leading-snug truncate">
-                {displayName}
-              </h3>
-              <span
-                className={`text-xs font-extrabold px-2 py-0.5 rounded-full shrink-0 border ${
-                  isEgg
-                    ? 'text-amber-900 bg-amber-100 border-amber-300'
-                    : 'text-emerald-800 bg-emerald-100/90 border-emerald-300'
-                }`}
-              >
-                {isEgg ? (language === 'ta' ? 'முட்டை' : 'Egg') : t.withSkin}
-              </span>
-            </div>
-            <p className="text-xs font-semibold text-slate-500 tracking-tight mt-0.5">
-              {isEgg ? (
-                data.numericKg > 0 ? (
-                  `${data.numericKg} ${language === 'ta' ? 'முட்டை' : 'Eggs'} @ ₹${actualEggRate.toFixed(2)}`
-                ) : (
-                  `${language === 'ta' ? '1 முட்டை விலை' : '1 Egg Price'}: ₹${actualEggRate.toFixed(2)}`
-                )
-              ) : data.numericKg > 0 ? (
-                `${data.numericKg.toFixed(3)} ${language === 'ta' ? 'கிலோ' : 'Kg'} @ ₹${currentAdjustedRate.toFixed(2)}`
-              ) : (
-                `${t.rateWithSkin}: ₹${baseRate.toFixed(2)} / ${language === 'ta' ? 'கிலோ' : 'Kg'}`
-              )}
-            </p>
-          </div>
+          <h3 className="text-base sm:text-lg font-black text-gray-900 leading-snug truncate">
+            {displayName}
+          </h3>
         </div>
 
         {/* Right Header: Item Total & Chevron */}
@@ -356,20 +330,6 @@ export const ChickenCutCard: React.FC<ChickenCutCardProps> = ({
                 </span>
               </button>
             </div>
-          </div>
-
-          {/* Current Rate Strip */}
-          <div className="mt-2 py-1.5 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs flex items-center justify-between">
-            <span className="text-slate-600 font-medium">
-              {isEgg
-                ? (language === 'ta' ? '1 முட்டை விலை' : '1 Egg Price')
-                : t.baseWithSkinRate}
-            </span>
-            <span className="font-extrabold text-emerald-900">
-              {isEgg
-                ? `₹${actualEggRate.toFixed(2)} / ${language === 'ta' ? 'முட்டை' : 'Egg'}`
-                : `₹${currentAdjustedRate.toFixed(2)} / ${language === 'ta' ? 'கிலோ' : 'Kg'}`}
-            </span>
           </div>
 
           {/* Input Cards:
@@ -574,21 +534,29 @@ export const ChickenCutCard: React.FC<ChickenCutCardProps> = ({
                 <span className="text-xs font-bold text-slate-500 block mb-1.5">
                   {language === 'ta' ? 'விரைவு முட்டை எண்ணிக்கை' : 'Quick Egg Quantity'}
                 </span>
-                <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
-                  {[1, 2, 5, 10, 12, 20, 30].map((val) => (
-                    <button
-                      key={val}
-                      type="button"
-                      onClick={() => handleQuickEggQty(val)}
-                      className={`py-2 px-1 rounded-xl text-xs font-extrabold transition-all border text-center whitespace-nowrap cursor-pointer ${
-                        parseFloat(data.kg) === val
-                          ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
-                          : 'bg-amber-50/60 hover:bg-amber-100 text-amber-950 border-amber-200'
-                      }`}
-                    >
-                      {val} {language === 'ta' ? (val === 1 ? 'முட்டை' : 'முட்டைகள்') : (val === 1 ? 'Egg' : 'Eggs')}
-                    </button>
-                  ))}
+                <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
+                  {[1, 2, 5, 10, 15, 20, 30, 60].map((val) => {
+                    let label = `${val} ${language === 'ta' ? (val === 1 ? 'முட்டை' : 'முட்டைகள்') : (val === 1 ? 'Egg' : 'Eggs')}`;
+                    if (val === 30) {
+                      label = language === 'ta' ? '1 தட்டு (30)' : '1 Tare (30)';
+                    } else if (val === 60) {
+                      label = language === 'ta' ? '2 தட்டு (60)' : '2 Tare (60)';
+                    }
+                    return (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => handleQuickEggQty(val)}
+                        className={`py-2 px-1 rounded-xl text-xs font-extrabold transition-all border text-center whitespace-nowrap cursor-pointer ${
+                          parseFloat(data.kg) === val
+                            ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                            : 'bg-amber-50/60 hover:bg-amber-100 text-amber-950 border-amber-200'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
