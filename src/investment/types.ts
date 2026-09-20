@@ -16,6 +16,12 @@ export interface EggLoadRecord {
   ratePerUnit?: number;
 }
 
+export interface ExpenseItem {
+  id: string;
+  title: string;
+  amount: number;
+}
+
 export interface DaySalesRecord {
   loadPriceSpend: number; // 9: total price spend for get the income
   totalIncomeKg: number; // 10: kg of total income
@@ -28,6 +34,10 @@ export interface DaySalesRecord {
   eggPrice?: number; // egg price per unit
   eggAmount?: number; // egg amount collected full day
   eggQty?: number; // egg count sold full day
+  expenses?: number; // Daily expense total in ₹
+  expenseCategory?: string; // Optional category (e.g. Shop, Transport, Salary, Tea, Misc)
+  expenseNotes?: string; // Optional note
+  expenseItems?: ExpenseItem[]; // List of itemized expenses
 }
 
 export interface DayOpeningStock {
@@ -49,5 +59,43 @@ export interface InvestmentDayData {
   isCustomOverridden?: boolean;
 }
 
+export interface DailyHistoryRecord {
+  date: string;
+  isToday: boolean;
+  // Everyday Profit
+  profit: number; // Net profit (Sales - Load Spend - Expenses)
+  grossProfit: number;
+  totalCollected: number;
+  loadCostSpend: number;
+  expenses: number;
+
+  // Total Chicken Sale
+  chickenSaleKg: number;
+  chickenSaleAmount: number;
+  wholesaleKg: number;
+  wholesaleAmount: number;
+  retailKg: number;
+  retailAmount: number;
+
+  // Under: Total Egg Sales
+  eggSaleQty: number;
+  eggSaleTares: number;
+  eggSaleRem: number;
+  eggSaleAmount: number;
+
+  // Everyday Remind Me Chicken and Egg (Closing / Remaining Stock)
+  chickenRemainingKg: number;
+  eggRemainingNos: number;
+  eggRemainingTares: number;
+  eggRemainingRem: number;
+
+  // Inward & Opening Details
+  chickenIncomingKg: number;
+  eggInwardTares: number;
+  openingChickenKg: number;
+  openingEggNos: number;
+  hasActivity: boolean;
+}
+
 export type InvestmentBottomTab = 'load' | 'sales' | 'summary' | 'settings';
-export type SummarySubTab = 'summary' | 'wholesale-total' | 'retail-total' | 'hotel-dues'; // 17, 21, 22, 26
+export type SummarySubTab = 'summary' | 'wholesale-total' | 'retail-total' | 'hotel-dues' | 'daily-history'; // 17, 21, 22, 26, 27

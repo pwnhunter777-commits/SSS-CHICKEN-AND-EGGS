@@ -2,10 +2,10 @@
 
 @layer base {
   html {
-    /* Slightly enlarged root font size so all rem-based typography scales up gracefully */
-    font-size: 18px;
-    font-weight: 700 !important;
+    /* Standard accessible mobile root size */
+    font-size: 16px;
     -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   body {
@@ -13,50 +13,32 @@
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    /* Universal bold typography across the entire application */
-    font-weight: 700 !important;
-    font-size: 1.05rem;
-    letter-spacing: -0.01em;
+    font-weight: 600;
+    line-height: 1.4;
   }
 
-  /* Force all elements, text nodes, controls, and containers to be bold */
+  /* Universal safe word-breaking: break only at word boundaries, never split words character by character */
   *,
   *::before,
-  *::after,
-  body,
-  body *,
-  #root,
-  #root * {
-    font-weight: 700 !important;
-    -webkit-font-smoothing: antialiased;
+  *::after {
+    word-break: normal;
+    overflow-wrap: break-word;
   }
 
-  /* Override any classes that attempt to set normal or medium weights */
-  .font-thin,
-  .font-extralight,
-  .font-light,
-  .font-normal,
-  .font-medium,
-  .font-semibold {
-    font-weight: 700 !important;
-  }
-
-  /* Extra strong emphasis for titles, buttons, badges, amounts, and headers */
+  /* Keep headings strong and clean */
   h1, h2, h3, h4, h5, h6,
   th, strong, b,
-  .font-bold, .font-black, .font-extrabold,
-  button, [role="button"],
-  .text-base, .text-lg, .text-xl, .text-2xl, .text-3xl {
-    font-weight: 900 !important;
+  .font-black, .font-extrabold {
+    font-weight: 800;
   }
 
-  /* Universal compact box alignment and enlarged input text */
+  /* Universal compact box alignment and clean input text */
   input, select, textarea {
-    font-size: 1.05rem !important;
-    line-height: normal !important;
+    font-size: 0.95rem;
+    line-height: normal;
     vertical-align: middle;
     box-sizing: border-box;
-    font-weight: 700 !important;
+    font-weight: 600;
   }
 
   input[type="text"],
@@ -68,97 +50,30 @@
 
   input::placeholder,
   textarea::placeholder {
-    line-height: normal !important;
+    line-height: normal;
     vertical-align: middle;
-    font-weight: 700 !important;
-    font-size: 0.95rem !important;
-    opacity: 0.7;
-  }
-
-  /* Enlarge micro-text and arbitrary pixel classes across wholesale, retail, and investment */
-  .text-\[8px\],
-  .text-\[8\.5px\] {
-    font-size: 11px !important;
-    line-height: 1.35 !important;
-  }
-
-  .text-\[9px\],
-  .text-\[9\.5px\] {
-    font-size: 12px !important;
-    line-height: 1.35 !important;
-  }
-
-  .text-\[10px\],
-  .text-\[10\.5px\] {
-    font-size: 13px !important;
-    line-height: 1.4 !important;
-  }
-
-  .text-\[11px\],
-  .text-\[11\.5px\] {
-    font-size: 13.5px !important;
-    line-height: 1.4 !important;
-  }
-
-  .text-\[12px\],
-  .text-\[12\.5px\] {
-    font-size: 14.5px !important;
-    line-height: 1.45 !important;
-  }
-
-  .text-\[13px\] {
-    font-size: 15px !important;
-    line-height: 1.45 !important;
-  }
-
-  /* Scale up standard Tailwind font sizes for increased readability */
-  .text-xs {
-    font-size: 0.85rem !important;
-    line-height: 1.25rem !important;
-  }
-
-  .text-sm {
-    font-size: 0.975rem !important;
-    line-height: 1.4rem !important;
-  }
-
-  .text-base {
-    font-size: 1.125rem !important;
-    line-height: 1.6rem !important;
-  }
-
-  .text-lg {
-    font-size: 1.25rem !important;
-    line-height: 1.75rem !important;
-  }
-
-  .text-xl {
-    font-size: 1.4rem !important;
-    line-height: 1.85rem !important;
-  }
-
-  .text-2xl {
-    font-size: 1.7rem !important;
-    line-height: 2.1rem !important;
-  }
-
-  .text-3xl {
-    font-size: 2.1rem !important;
-    line-height: 2.4rem !important;
+    font-weight: 500;
+    font-size: 0.875rem;
+    opacity: 0.65;
   }
 }
 
 /* App-wide Bold Text Mode */
-body.app-bold-mode,
-body.app-bold-mode * {
-  font-weight: 700 !important;
-  -webkit-font-smoothing: antialiased;
+body.app-bold-mode {
+  font-weight: 700;
 }
 
-body.app-bold-mode .font-bold,
+body.app-bold-mode h1,
+body.app-bold-mode h2,
+body.app-bold-mode h3,
+body.app-bold-mode h4,
+body.app-bold-mode h5,
+body.app-bold-mode h6,
+body.app-bold-mode strong,
+body.app-bold-mode b,
 body.app-bold-mode .font-black,
-body.app-bold-mode .font-extrabold {
-  font-weight: 900 !important;
+body.app-bold-mode .font-bold {
+  font-weight: 800;
 }
 
 /* Compact layout mode: tightens spacing, margins, and card padding */

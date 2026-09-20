@@ -68,12 +68,15 @@ export const MainScreen: React.FC<MainScreenProps> = ({
           <ChickenLogo size="xl" id="top-chicken-logo" className="ring-4 ring-amber-600/30 shadow-xl" />
         </div>
 
-        {/* Store/Agency Name in a large, bold, modern font with minimal Edit button/icon */}
-        <div className="relative flex items-center justify-center gap-2 max-w-full px-2">
+        {/* Store/Agency Name with responsive typography and minimal Edit button/icon */}
+        <div className="relative flex items-center justify-center gap-2 w-full max-w-full px-2">
           <h1
             id="store-agency-name"
-            style={{ fontSize: `${storeConfig.fontSize}px`, lineHeight: 1.15 }}
-            className="font-black tracking-tight text-neutral-950 text-center transition-all duration-150 break-words drop-shadow-xs"
+            style={{
+              fontSize: `clamp(18px, ${storeConfig.fontSize || 22}px, 24px)`,
+              lineHeight: 1.25,
+            }}
+            className="font-black tracking-tight text-neutral-950 text-center transition-all duration-150 drop-shadow-xs max-w-full text-balance"
           >
             {storeConfig.name}
           </h1>
@@ -81,7 +84,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({
           <button
             id="edit-store-name-btn"
             onClick={handleOpenEdit}
-            className={`p-2 min-h-[3rem] min-w-[3rem] flex items-center justify-center rounded-full transition-all touch-manipulation cursor-pointer ${
+            className={`p-2 min-h-[2.5rem] min-w-[2.5rem] flex items-center justify-center rounded-full transition-all touch-manipulation cursor-pointer shrink-0 ${
               isEditing
                 ? 'bg-emerald-700 text-white shadow-xs'
                 : 'text-neutral-400 hover:text-emerald-800 hover:bg-emerald-50'
@@ -89,7 +92,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({
             aria-label="Edit store name and typography"
             title="Edit store name and font size"
           >
-            <Pencil size={18} />
+            <Pencil size={17} />
           </button>
         </div>
 
@@ -222,11 +225,11 @@ export const MainScreen: React.FC<MainScreenProps> = ({
                   {sector.id === 'retail' && <Store size={24} className="transition-transform group-hover:scale-110" />}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h2 className="text-lg sm:text-xl font-black text-slate-900 group-hover:text-emerald-950 transition-colors tracking-tight break-words leading-snug">
+                  <h2 className="text-base sm:text-lg font-black text-slate-900 group-hover:text-emerald-950 transition-colors tracking-tight leading-snug truncate">
                     {sector.title}
                   </h2>
                   {isWholesale && (
-                    <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider block leading-normal mt-0.5">
+                    <span className="text-[10.5px] font-bold text-emerald-700 uppercase tracking-wider block leading-normal mt-0.5 truncate">
                       Active POS & Invoicing
                     </span>
                   )}

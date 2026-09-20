@@ -401,12 +401,16 @@ export const TotalPage: React.FC<TotalPageProps> = ({ language }) => {
               </div>
 
               {/* Tare count highlight pill */}
-              <div className="mt-1.5 px-2 py-1 rounded-xl bg-amber-50 border border-amber-200/80 flex items-center justify-between">
-                <span className="text-[10px] font-bold text-amber-900">
+              <div className="mt-1.5 px-2 py-1 rounded-xl bg-amber-50 border border-amber-200/80 flex items-center justify-between gap-1">
+                <span className="text-[10px] font-bold text-amber-900 shrink-0">
                   {language === 'ta' ? 'தட்டு:' : 'Tare:'}
                 </span>
-                <span className="text-[11px] font-black text-amber-950 truncate max-w-[110px]" title={tareFormattedText}>
-                  {tareFormattedText}
+                <span className="text-[11px] font-black text-amber-950 text-right leading-tight" title={tareFormattedText}>
+                  {remainingEggs === 0 ? (
+                    language === 'ta' ? `${fullTares} தட்டு` : `${fullTares} Tares`
+                  ) : (
+                    language === 'ta' ? `${fullTares} தட்டு + ${remainingEggs} மு` : `${fullTares} T + ${remainingEggs} pcs`
+                  )}
                 </span>
               </div>
             </div>

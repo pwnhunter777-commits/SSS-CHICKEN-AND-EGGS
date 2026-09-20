@@ -193,16 +193,14 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
         </div>
       )}
 
-      {/* Opening Stock from Previous Day Banner */}
-      {previousStock && (
-        <OpeningStockBanner
-          previousStock={previousStock}
-          currentData={data}
-          onChangeData={onChangeData}
-          language={language}
-          variant="card"
-        />
-      )}
+      {/* Opening Stock from Previous Day Banner - Chicken & Egg Top Inward */}
+      <OpeningStockBanner
+        previousStock={previousStock}
+        currentData={data}
+        onChangeData={onChangeData}
+        language={language}
+        variant="card"
+      />
 
       {/* Top Switcher - Chicken / Egg */}
       <div className="grid grid-cols-2 rounded-2xl bg-slate-200/80 p-1 mb-4 border border-slate-300 shadow-2xs">

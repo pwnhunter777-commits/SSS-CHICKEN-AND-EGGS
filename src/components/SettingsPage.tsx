@@ -228,14 +228,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1">
-            <h3 className="font-black text-xs sm:text-sm tracking-wide uppercase text-white break-words leading-tight">
+            <h3 className="font-black text-xs sm:text-sm tracking-wide uppercase text-white truncate leading-tight">
               {formData.shopName || 'SSS CHICKEN AND EGG AGENCY'}
             </h3>
           </div>
-          <p className="text-[10px] text-emerald-100 font-bold break-words leading-tight mt-0.5">
+          <p className="text-[10px] text-emerald-100 font-bold truncate leading-tight mt-0.5">
             {formData.phoneNumber || '8680000003'}
           </p>
-          <p className="text-[9px] text-amber-200 font-bold break-words leading-tight">
+          <p className="text-[9px] text-amber-200 font-bold truncate leading-tight">
             GST: {formData.gstNumber || '34AQPN8846J2ZF'}
           </p>
         </div>

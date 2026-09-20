@@ -121,39 +121,36 @@ export const InvestmentApp: React.FC<InvestmentAppProps> = ({ onBackToPortal }) 
   return (
     <div id="investment-app-root" className="flex-1 flex flex-col w-full h-full min-h-0 overflow-hidden bg-[#F8F9FA]">
       {/* Top Header - Fixed at Top */}
-      <header id="investment-header" className="relative flex-shrink-0 bg-gradient-to-r from-emerald-700 via-emerald-800 to-emerald-900 text-white shadow-lg shadow-emerald-950/15 rounded-b-3xl px-4 pt-3.5 pb-4 z-30 border-b-2 border-emerald-600/30">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+      <header id="investment-header" className="relative flex-shrink-0 bg-gradient-to-r from-emerald-700 via-emerald-800 to-emerald-900 text-white shadow-lg shadow-emerald-950/15 rounded-b-2xl sm:rounded-b-3xl px-3 sm:px-4 py-2.5 sm:py-3 z-30 border-b-2 border-emerald-600/30">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <button
               type="button"
               onClick={onBackToPortal}
-              className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-950/80 hover:bg-emerald-950 active:bg-black text-emerald-200 hover:text-white rounded-xl text-xs font-bold transition-all border border-emerald-600/60 active:scale-95 shadow-xs shrink-0 cursor-pointer"
+              className="flex items-center gap-1 px-2 py-1 bg-emerald-950/80 hover:bg-emerald-950 active:bg-black text-emerald-200 hover:text-white rounded-lg text-xs font-bold transition-all border border-emerald-600/60 active:scale-95 shadow-xs shrink-0 cursor-pointer"
               title="Return to Main Portal"
             >
-              <ArrowLeft size={16} />
-              <span>{language === 'ta' ? 'முகப்பு' : 'Portal'}</span>
+              <ArrowLeft size={14} />
+              <span className="text-[11px] font-bold">{language === 'ta' ? 'முகப்பு' : 'Portal'}</span>
             </button>
-            <div>
-              <h1 className="text-base font-black text-white tracking-tight leading-none">
+            <div className="truncate">
+              <h1 className="text-sm sm:text-base font-black text-white tracking-tight leading-tight truncate">
                 {language === 'ta' ? 'முதலீடு & லோடு' : 'Investment & Load'}
               </h1>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
             {/* Opening Stock Quick Trigger Button */}
             {previousStock && (previousStock.chickenRemainingKg > 0 || previousStock.eggRemainingNos > 0) && (
               <button
                 type="button"
                 id="btn-header-opening-stock"
                 onClick={() => setIsOpeningStockModalOpen(true)}
-                className="flex items-center gap-1.5 bg-amber-500/20 hover:bg-amber-500/30 active:scale-95 text-amber-200 border border-amber-400/40 px-2 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-xs"
+                className="flex items-center gap-1 bg-amber-500/20 hover:bg-amber-500/30 active:scale-95 text-amber-200 border border-amber-400/40 px-2 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer shadow-xs whitespace-nowrap"
                 title={language === 'ta' ? 'தொடக்க இருப்பு விவரம்' : 'View Opening Stock'}
               >
-                <PackageOpen size={13} className="text-amber-300 shrink-0" />
-                <span className="hidden sm:inline font-bold text-amber-100">
-                  {language === 'ta' ? 'தொடக்க இருப்பு:' : 'Opening:'}
-                </span>
+                <PackageOpen size={12} className="text-amber-300 shrink-0" />
                 <span className="text-amber-300 font-black">
                   {Math.max(0, previousStock.chickenRemainingKg)} kg
                 </span>
@@ -168,11 +165,11 @@ export const InvestmentApp: React.FC<InvestmentAppProps> = ({ onBackToPortal }) 
             <button
               type="button"
               onClick={handleToggleLanguage}
-              className="flex items-center gap-1 bg-emerald-950/80 hover:bg-emerald-950 active:scale-95 text-white px-2.5 py-1.5 rounded-xl text-xs font-black backdrop-blur-xs transition-all border border-emerald-600/60 shadow-xs cursor-pointer"
+              className="flex items-center gap-1 bg-emerald-950/80 hover:bg-emerald-950 active:scale-95 text-white px-2 py-1 rounded-lg text-[11px] font-black backdrop-blur-xs transition-all border border-emerald-600/60 shadow-xs cursor-pointer whitespace-nowrap"
               title="Toggle Language"
             >
-              <Globe size={13} className="text-emerald-300" />
-              <span>{language === 'en' ? 'தமிழ்' : 'English'}</span>
+              <Globe size={12} className="text-emerald-300" />
+              <span>{language === 'en' ? 'தமிழ்' : 'EN'}</span>
             </button>
           </div>
         </div>
@@ -200,8 +197,11 @@ export const InvestmentApp: React.FC<InvestmentAppProps> = ({ onBackToPortal }) 
         {activeTab === 'summary' && (
           <StockRemainingPage
             data={data}
+            onChangeData={handleChangeData}
             language={language}
             previousStock={previousStock}
+            onNavigateToLoadInward={() => setActiveTab('load')}
+            onSelectDate={(newDate) => setSelectedDate(newDate)}
           />
         )}
 

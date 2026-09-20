@@ -89,7 +89,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               </div>
               {/* Clean Readable Label */}
               <span
-                className={`text-[8.5px] leading-tight text-center break-words max-w-full px-0.5 tracking-tight font-black ${
+                className={`text-[9.5px] leading-tight text-center truncate max-w-full px-0.5 tracking-tight font-black ${
                   isActive
                     ? 'text-emerald-900'
                     : 'text-slate-500'

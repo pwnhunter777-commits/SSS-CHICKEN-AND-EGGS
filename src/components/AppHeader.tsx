@@ -102,7 +102,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           </div>
 
           <div className="min-w-0 flex-1">
-            <h1 className="text-[11.5px] sm:text-xs font-black tracking-tight text-white uppercase drop-shadow-xs break-words leading-tight">
+            <h1 className="text-[11px] sm:text-xs font-black tracking-tight text-white uppercase drop-shadow-xs truncate leading-tight">
               {settings.shopName || 'SSS CHICKEN AND EGG AGENCY'}
             </h1>
             <p className="text-[9px] text-emerald-100/90 font-bold truncate leading-none mt-0.5">

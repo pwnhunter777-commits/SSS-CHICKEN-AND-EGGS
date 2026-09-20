@@ -11,6 +11,7 @@ import {
   RefreshCw,
   MessageCircle,
   X,
+  Loader2,
 } from 'lucide-react';
 import { Bill, HotelItem, HotelPayment, LanguageCode, ShopSettings } from '../../types';
 import {
@@ -25,6 +26,7 @@ import { HotelBalanceSlipModal } from '../../components/HotelBalanceSlipModal';
 import {
   generateHotelBalanceWhatsAppText,
   openWhatsAppChatWithText,
+  shareHotelStatementAsPdfToWhatsApp,
   HotelBalanceShareData,
 } from '../../utils/whatsapp';
 
@@ -60,6 +62,7 @@ export const HotelGiveDuesView: React.FC<HotelGiveDuesViewProps> = ({
   // Quick WhatsApp phone number prompt for hotels without a phone number saved
   const [phonePromptHotel, setPhonePromptHotel] = useState<HotelStatsItem | null>(null);
   const [promptPhoneInput, setPromptPhoneInput] = useState<string>('');
+  const [sharingHotelId, setSharingHotelId] = useState<string | null>(null);
 
   const loadAllData = () => {
     setHotels(loadWholesaleHotels());
@@ -180,8 +183,8 @@ export const HotelGiveDuesView: React.FC<HotelGiveDuesViewProps> = ({
     }, 3000);
   };
 
-  // Direct WhatsApp dispatch for that hotel number
-  const sendWhatsAppDirect = (item: HotelStatsItem, phoneStr?: string) => {
+  // Direct WhatsApp dispatch with PDF for that hotel number (like wholesale bill PDF)
+  const sendWhatsAppDirect = async (item: HotelStatsItem, phoneStr?: string) => {
     const rawPhone = (phoneStr !== undefined ? phoneStr : item.hotel.phone) || '';
     let cleanNumber = rawPhone.replace(/\D/g, '');
     if (cleanNumber.length === 10) {
@@ -199,20 +202,18 @@ export const HotelGiveDuesView: React.FC<HotelGiveDuesViewProps> = ({
       totalKg: item.totalKg,
       billCount: item.hotelBills.length,
       paymentCount: item.hotelPayments.filter((p) => p.type !== 'balance_add').length,
-      recentBills: item.hotelBills.slice(0, 3).map((b) => ({
-        billNumber: parseInt(b.billNumber, 10) || 0,
+      recentBills: item.hotelBills.slice(0, 5).map((b) => ({
+        billNumber: parseInt(b.billNumber as any, 10) || 0,
         date: formatDisplayDate(b.date),
         amount: b.totalAmount,
         kg: b.totalKg,
       })),
-      recentPayments: item.hotelPayments.slice(0, 3).map((p) => ({
+      recentPayments: item.hotelPayments.slice(0, 4).map((p) => ({
         date: formatDisplayDate(p.date),
         amount: p.amount,
         mode: p.paymentMode,
       })),
     };
-
-    const text = generateHotelBalanceWhatsAppText(shareData, settings, language as LanguageCode);
 
     // If new phone was entered for a registered hotel, save it
     if (rawPhone && rawPhone !== item.hotel.phone && !item.hotel.id.startsWith('custom_')) {
@@ -221,13 +222,35 @@ export const HotelGiveDuesView: React.FC<HotelGiveDuesViewProps> = ({
       saveHotels(updatedHotels);
     }
 
-    // Direct WhatsApp navigation strictly to this hotel's number
-    openWhatsAppChatWithText(text, cleanNumber);
+    setSharingHotelId(item.hotel.id);
     showToast(
-      cleanNumber
-        ? (language === 'ta' ? `${rawPhone} வாட்ஸ்அப் திறக்கப்படுகிறது...` : `Opening WhatsApp for ${rawPhone}...`)
-        : (language === 'ta' ? 'வாட்ஸ்அப் திறக்கப்பட்டது' : 'Opened WhatsApp')
+      language === 'ta'
+        ? 'வாட்ஸ்அப் PDF உருவாக்கப்படுகிறது...'
+        : 'Generating Statement PDF for WhatsApp...'
     );
+
+    try {
+      // Generate A5 PDF and share directly to WhatsApp (native share sheet or auto-download + open chat)
+      const res = await shareHotelStatementAsPdfToWhatsApp(
+        shareData,
+        settings,
+        undefined, // Uses high quality vector statement generator
+        language as LanguageCode
+      );
+      showToast(res.message);
+    } catch (err) {
+      console.error('Failed to share Statement PDF:', err);
+      // Safe fallback: send statement text to WhatsApp chat
+      const text = generateHotelBalanceWhatsAppText(shareData, settings, language as LanguageCode);
+      openWhatsAppChatWithText(text, cleanNumber);
+      showToast(
+        cleanNumber
+          ? (language === 'ta' ? `${rawPhone} வாட்ஸ்அப் திறக்கப்படுகிறது...` : `Opening WhatsApp for ${rawPhone}...`)
+          : (language === 'ta' ? 'வாட்ஸ்அப் திறக்கப்பட்டது' : 'Opened WhatsApp')
+      );
+    } finally {
+      setSharingHotelId(null);
+    }
   };
 
   const handleShareHotel = (item: HotelStatsItem) => {
@@ -387,20 +410,30 @@ export const HotelGiveDuesView: React.FC<HotelGiveDuesViewProps> = ({
                   )}
                 </div>
 
-                {/* Share Button (in the same line - goes directly to WhatsApp for hotel number) */}
+                {/* Share Button (in the same line - generates A5 Statement PDF and shares directly to WhatsApp for hotel number) */}
                 <button
                   type="button"
                   id={`btn-share-hotel-${item.hotel.id}`}
+                  disabled={sharingHotelId === item.hotel.id}
                   onClick={() => handleShareHotel(item)}
                   title={
                     item.hotel.phone
-                      ? (language === 'ta' ? `${item.hotel.phone} எண்ணிற்கு வாட்ஸ்அப்பில் அனுப்ப` : `Send WhatsApp to ${item.hotel.phone}`)
-                      : (language === 'ta' ? 'வாட்ஸ்அப்பில் பகிர' : 'Share on WhatsApp')
+                      ? (language === 'ta' ? `${item.hotel.phone} எண்ணிற்கு PDF வாட்ஸ்அப்பில் அனுப்ப` : `Send PDF to WhatsApp (${item.hotel.phone})`)
+                      : (language === 'ta' ? 'PDF வாட்ஸ்அப்பில் பகிர' : 'Share PDF to WhatsApp')
                   }
-                  className="shrink-0 h-8 px-2.5 sm:px-3 bg-emerald-700 hover:bg-emerald-800 active:scale-98 text-white rounded-lg font-black text-xs flex items-center justify-center gap-1 shadow-2xs transition-all cursor-pointer touch-manipulation"
+                  className="shrink-0 h-8 px-2.5 sm:px-3 bg-emerald-700 hover:bg-emerald-800 active:scale-98 text-white rounded-lg font-black text-xs flex items-center justify-center gap-1 shadow-2xs transition-all cursor-pointer touch-manipulation disabled:opacity-70"
                 >
-                  <MessageCircle className="w-3.5 h-3.5 fill-white shrink-0" />
-                  <span>{language === 'ta' ? 'பகிர்' : 'Share'}</span>
+                  {sharingHotelId === item.hotel.id ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                      <span>{language === 'ta' ? 'PDF...' : 'PDF...'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <MessageCircle className="w-3.5 h-3.5 fill-white shrink-0" />
+                      <span>{language === 'ta' ? 'PDF பகிர்' : 'PDF Share'}</span>
+                    </>
+                  )}
                 </button>
               </div>
             );
@@ -446,15 +479,16 @@ export const HotelGiveDuesView: React.FC<HotelGiveDuesViewProps> = ({
             <div className="flex items-center gap-2">
               <button
                 type="button"
+                disabled={!!sharingHotelId}
                 onClick={() => {
                   const targetItem = phonePromptHotel;
                   setPhonePromptHotel(null);
                   sendWhatsAppDirect(targetItem, promptPhoneInput);
                 }}
-                className="flex-1 py-2 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+                className="flex-1 py-2 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer disabled:opacity-60"
               >
                 <MessageCircle className="w-3.5 h-3.5 fill-white" />
-                <span>{language === 'ta' ? 'வாட்ஸ்அப்பில் அனுப்பு' : 'Send WhatsApp'}</span>
+                <span>{language === 'ta' ? 'வாட்ஸ்அப் PDF அனுப்பு' : 'Send WhatsApp PDF'}</span>
               </button>
             </div>
           </div>

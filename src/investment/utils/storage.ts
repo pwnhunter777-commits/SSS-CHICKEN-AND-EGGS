@@ -1,4 +1,4 @@
-import { InvestmentDayData, InvestmentItemType } from '../types';
+import { InvestmentDayData, InvestmentItemType, DailyHistoryRecord } from '../types';
 import { loadBills as loadWholesaleBills } from '../../utils/storage';
 import { loadBills as loadRetailBills } from '../../retail/utils/storage';
 import { isOlderThan31Days } from '../../utils/retention';
@@ -42,6 +42,8 @@ export function getDefaultInvestmentData(dateStr: string): InvestmentDayData {
       eggPrice: 0,
       eggAmount: 0,
       eggQty: 0,
+      expenses: 0,
+      expenseItems: [],
     },
     isCustomOverridden: false,
   };
@@ -307,5 +309,170 @@ export function getPreviousDayStock(currentDateStr: string): PreviousDayStock | 
     daysAgo: 1,
     ...yesterdayStock,
   };
+}
+
+export function getDailyHistoryRecords(currentDateStr: string = getTodayDateKey(), maxDays: number = 30): DailyHistoryRecord[] {
+  const datesSet = new Set<string>();
+  datesSet.add(currentDateStr);
+
+  // 1. Discover dates from wholesale bills
+  try {
+    const wBills = loadWholesaleBills();
+    wBills.forEach((b) => {
+      if (b.date && /^\d{4}-\d{2}-\d{2}$/.test(b.date)) {
+        datesSet.add(b.date);
+      }
+    });
+  } catch {
+    // ignore
+  }
+
+  // 2. Discover dates from retail bills
+  try {
+    const rBills = loadRetailBills();
+    rBills.forEach((b) => {
+      if (b.date && /^\d{4}-\d{2}-\d{2}$/.test(b.date)) {
+        datesSet.add(b.date);
+      } else if (b.timestamp) {
+        const d = new Date(b.timestamp);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        datesSet.add(`${y}-${m}-${day}`);
+      }
+    });
+  } catch {
+    // ignore
+  }
+
+  // 3. Discover dates from localStorage investment keys
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(STORAGE_KEY_PREFIX)) {
+        const d = k.replace(STORAGE_KEY_PREFIX, '');
+        if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+          datesSet.add(d);
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  // 4. Add the immediate past few days (e.g. yesterday, 2 days ago) so they can be viewed
+  for (let i = 1; i <= 7; i++) {
+    datesSet.add(getPreviousDateKey(currentDateStr, i));
+  }
+
+  // Sort dates descending (newest date first)
+  const sortedDates = Array.from(datesSet).sort((a, b) => b.localeCompare(a));
+  const todayKey = getTodayDateKey();
+
+  const allRecords: DailyHistoryRecord[] = sortedDates.map((dStr) => {
+    const dayData = loadInvestmentData(dStr);
+    const billSummary = fetchDailyBillsSummary(dStr);
+
+    // Chicken Load Inward calculations
+    const chickenGross = Number(dayData.chickenLoad?.totalIncomeKg || 0);
+    const chickenWastage = Number(dayData.chickenLoad?.wastagePercent || 0);
+    const chickenRate = Number(dayData.chickenLoad?.ratePerKg || 0);
+    const chickenNet = chickenWastage > 0
+      ? Math.max(0, Math.round((chickenGross * (1 - chickenWastage / 100)) * 100) / 100)
+      : chickenGross;
+    const chickenCost = Number(dayData.chickenLoad?.totalAmount || 0) > 0
+      ? Number(dayData.chickenLoad.totalAmount)
+      : Math.round(chickenNet * chickenRate * 100) / 100;
+
+    // Egg Load Inward calculations
+    const eggTares = Number(dayData.eggLoad?.totalTareIncome || (dayData.eggLoad?.totalIncomeCount ? dayData.eggLoad.totalIncomeCount / 30 : 0));
+    const eggPrice = Number(dayData.eggLoad?.pricePerTare || (dayData.eggLoad?.ratePerUnit ? dayData.eggLoad.ratePerUnit * 30 : 0));
+    const eggCost = Math.round(eggTares * eggPrice * 100) / 100;
+    const eggInwardNos = Math.round(eggTares * 30);
+
+    const combinedLoadCost = Math.round((chickenCost + eggCost) * 100) / 100;
+    const loadCostSpend = combinedLoadCost > 0 ? combinedLoadCost : Number(dayData.sales?.loadPriceSpend || 0);
+
+    // Sales calculations
+    const wholesaleKg = billSummary.wholesaleKg > 0 ? billSummary.wholesaleKg : Number(dayData.sales?.wholesaleKg || 0);
+    const wholesaleAmount = billSummary.wholesaleAmount > 0 ? billSummary.wholesaleAmount : Number(dayData.sales?.wholesaleAmount || 0);
+    const retailKg = billSummary.retailKg > 0 ? billSummary.retailKg : Number(dayData.sales?.retailKg || 0);
+    const retailAmount = billSummary.retailAmount > 0 ? billSummary.retailAmount : Number(dayData.sales?.retailAmount || 0);
+
+    const chickenSaleKg = Math.round((wholesaleKg + retailKg) * 1000) / 1000;
+    const chickenSaleAmount = Math.round((wholesaleAmount + retailAmount) * 100) / 100;
+
+    const eggSaleAmount = billSummary.eggAmount > 0 ? billSummary.eggAmount : Number(dayData.sales?.eggAmount || 0);
+    const eggSaleQty = billSummary.eggQty > 0 ? billSummary.eggQty : Number(dayData.sales?.eggQty || 0);
+    const eggSaleTares = Math.floor(eggSaleQty / 30);
+    const eggSaleRem = eggSaleQty % 30;
+
+    const expenses = Number(dayData.sales?.expenses || 0);
+
+    const totalCollected = Math.round((chickenSaleAmount + eggSaleAmount) * 100) / 100;
+    const grossProfit = Math.round((totalCollected - loadCostSpend) * 100) / 100;
+    const profit = Math.round((grossProfit - expenses) * 100) / 100;
+
+    // Opening Stock
+    const isOpeningApplied = Boolean(dayData.openingStock?.appliedToLoad);
+    const openingChickenKg = isOpeningApplied ? Number(dayData.openingStock?.chickenKg || 0) : 0;
+    const openingEggNos = isOpeningApplied ? Number(dayData.openingStock?.eggNos || 0) : 0;
+
+    // Remaining Stock ("Everyday Remind Me Chicken and Egg")
+    const incomingChickenKg = chickenNet > 0 ? chickenNet : Number(dayData.sales?.totalIncomeKg || 0);
+    const totalAvailableChicken = incomingChickenKg + openingChickenKg;
+    const chickenRemainingKg = Math.round((totalAvailableChicken - chickenSaleKg) * 1000) / 1000;
+
+    const totalAvailableEggs = eggInwardNos + openingEggNos;
+    const eggRemainingNos = totalAvailableEggs - eggSaleQty;
+    const eggRemainingTares = Math.floor(eggRemainingNos / 30);
+    const eggRemainingRem = Math.abs(eggRemainingNos) % 30;
+
+    const hasActivity =
+      chickenSaleKg > 0 ||
+      chickenSaleAmount > 0 ||
+      eggSaleQty > 0 ||
+      eggSaleAmount > 0 ||
+      incomingChickenKg > 0 ||
+      eggInwardNos > 0 ||
+      loadCostSpend > 0 ||
+      expenses > 0 ||
+      openingChickenKg > 0 ||
+      openingEggNos > 0;
+
+    return {
+      date: dStr,
+      isToday: dStr === todayKey,
+      profit,
+      grossProfit,
+      totalCollected,
+      loadCostSpend,
+      expenses,
+      chickenSaleKg,
+      chickenSaleAmount,
+      wholesaleKg,
+      wholesaleAmount,
+      retailKg,
+      retailAmount,
+      eggSaleQty,
+      eggSaleTares,
+      eggSaleRem,
+      eggSaleAmount,
+      chickenRemainingKg,
+      eggRemainingNos,
+      eggRemainingTares,
+      eggRemainingRem,
+      chickenIncomingKg: incomingChickenKg,
+      eggInwardTares: eggTares,
+      openingChickenKg,
+      openingEggNos,
+      hasActivity,
+    };
+  });
+
+  // Filter: Always keep Today, plus any days that have real activity / entries
+  const filtered = allRecords.filter((r) => r.isToday || r.hasActivity);
+
+  return filtered.slice(0, maxDays);
 }
 

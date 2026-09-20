@@ -1,6 +1,17 @@
 import React, { useState } from 'react';
-import { PackageOpen, Calendar, ArrowRight, CheckCircle2, X, PlusCircle, MinusCircle, RefreshCw } from 'lucide-react';
-import { PreviousDayStock } from '../utils/storage';
+import {
+  PackageOpen,
+  Calendar,
+  ArrowRight,
+  CheckCircle2,
+  X,
+  PlusCircle,
+  MinusCircle,
+  RefreshCw,
+  Edit3,
+  Check,
+} from 'lucide-react';
+import { PreviousDayStock, getPreviousDateKey } from '../utils/storage';
 import { InvestmentDayData } from '../types';
 import { LanguageCode } from '../../types';
 
@@ -22,14 +33,37 @@ export const OpeningStockBanner: React.FC<OpeningStockBannerProps> = ({
   onDismiss,
 }) => {
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
-  if (!previousStock) return null;
+  const effectiveStock: PreviousDayStock = previousStock || {
+    date: currentData.openingStock?.fromPreviousDate || getPreviousDateKey(currentData.date, 1),
+    daysAgo: 1,
+    chickenRemainingKg: Number(currentData.openingStock?.chickenKg || 0),
+    chickenIncomingKg: 0,
+    chickenSoldKg: 0,
+    eggRemainingNos: Number(currentData.openingStock?.eggNos || 0),
+    eggRemainingTares: Math.floor(Number(currentData.openingStock?.eggNos || 0) / 30),
+    eggRemainingRem: Number(currentData.openingStock?.eggNos || 0) % 30,
+    eggInwardNos: 0,
+    eggSoldNos: 0,
+    hasActivity: Boolean(currentData.openingStock?.appliedToLoad),
+  };
 
   const isApplied = Boolean(currentData.openingStock?.appliedToLoad);
-  const chickenRem = Math.max(0, previousStock.chickenRemainingKg);
-  const eggNosRem = Math.max(0, previousStock.eggRemainingNos);
+  const chickenRem = currentData.openingStock?.chickenKg !== undefined && isApplied
+    ? Number(currentData.openingStock.chickenKg)
+    : Math.max(0, effectiveStock.chickenRemainingKg);
+
+  const eggNosRem = currentData.openingStock?.eggNos !== undefined && isApplied
+    ? Number(currentData.openingStock.eggNos)
+    : Math.max(0, effectiveStock.eggRemainingNos);
+
   const eggTaresRem = Math.floor(eggNosRem / 30);
   const eggUnitRem = eggNosRem % 30;
+
+  const [editChickenKg, setEditChickenKg] = useState<string>(String(chickenRem));
+  const [editEggTares, setEditEggTares] = useState<string>(String(eggTaresRem));
+  const [editEggUnits, setEditEggUnits] = useState<string>(String(eggUnitRem));
 
   // Format date display
   const formatDateLabel = (dateStr: string) => {
@@ -54,7 +88,7 @@ export const OpeningStockBanner: React.FC<OpeningStockBannerProps> = ({
       onChangeData({
         ...currentData,
         openingStock: {
-          fromPreviousDate: previousStock.date,
+          fromPreviousDate: effectiveStock.date,
           chickenKg: chickenRem,
           eggNos: eggNosRem,
           eggTares: eggTaresRem,
@@ -67,7 +101,7 @@ export const OpeningStockBanner: React.FC<OpeningStockBannerProps> = ({
       onChangeData({
         ...currentData,
         openingStock: {
-          fromPreviousDate: previousStock.date,
+          fromPreviousDate: effectiveStock.date,
           chickenKg: chickenRem,
           eggNos: eggNosRem,
           eggTares: eggTaresRem,
@@ -76,6 +110,26 @@ export const OpeningStockBanner: React.FC<OpeningStockBannerProps> = ({
         },
       });
     }
+  };
+
+  const handleSaveCustomEdit = () => {
+    const parsedKg = Math.max(0, parseFloat(editChickenKg) || 0);
+    const parsedTares = Math.max(0, parseInt(editEggTares, 10) || 0);
+    const parsedUnits = Math.max(0, parseInt(editEggUnits, 10) || 0);
+    const totalEggs = parsedTares * 30 + parsedUnits;
+
+    onChangeData({
+      ...currentData,
+      openingStock: {
+        fromPreviousDate: effectiveStock.date,
+        chickenKg: parsedKg,
+        eggNos: totalEggs,
+        eggTares: parsedTares,
+        eggRem: parsedUnits,
+        appliedToLoad: true,
+      },
+    });
+    setIsEditing(false);
   };
 
   // Compact Variant (Pill in Top Bar)
@@ -134,16 +188,30 @@ export const OpeningStockBanner: React.FC<OpeningStockBannerProps> = ({
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">
             <h3 className="text-xs font-black text-emerald-950 truncate">
-              {language === 'ta' ? 'அடுத்த நாள் தொடக்க இருப்பு' : 'Opening Stock'}
+              {language === 'ta' ? 'அடுத்த நாள் தொடக்க இருப்பு (Remind Me Stock)' : 'Opening Stock (Remind Me Stock)'}
             </h3>
             <span className="text-[9px] font-extrabold bg-amber-200/90 text-amber-950 px-1.5 py-0.2 rounded-md border border-amber-300/60">
-              {language === 'ta' ? 'நேற்றைய இருப்பு' : 'Previous Day'} ({formatDateLabel(previousStock.date)})
+              {language === 'ta' ? 'நேற்றைய மீதி இருப்பு' : 'Previous Day'} ({formatDateLabel(effectiveStock.date)})
             </span>
           </div>
         </div>
 
-        {/* Minimize / Dismiss actions */}
+        {/* Header Actions: Edit, Minimize, Dismiss */}
         <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              setEditChickenKg(String(chickenRem));
+              setEditEggTares(String(eggTaresRem));
+              setEditEggUnits(String(eggUnitRem));
+              setIsEditing(!isEditing);
+            }}
+            className="text-[10px] font-bold text-amber-900 hover:text-amber-950 bg-amber-200/80 hover:bg-amber-200 px-1.5 py-0.5 rounded-md border border-amber-300 transition-all flex items-center gap-0.5 cursor-pointer"
+            title="Edit Opening Stock"
+          >
+            <Edit3 className="w-3 h-3" />
+            <span>{language === 'ta' ? 'திருத்து' : 'Edit'}</span>
+          </button>
           <button
             type="button"
             onClick={() => setIsMinimized(true)}
@@ -165,61 +233,131 @@ export const OpeningStockBanner: React.FC<OpeningStockBannerProps> = ({
         </div>
       </div>
 
-      {/* 2 Highlight Cards: Remaining Chicken & Egg */}
-      <div className="grid grid-cols-2 gap-1.5 my-1.5">
-        {/* Left Card: Remaining Chicken Stock */}
-        <div className="bg-white/95 rounded-xl p-2 border border-amber-200/80 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-[9px] font-black uppercase tracking-wider text-amber-900 flex items-center gap-0.5">
-              🐔 {language === 'ta' ? 'நேற்றைய மீதி கோழி' : 'Previous Day Chicken'}
-            </span>
-            <span className="text-[8px] font-bold text-slate-400">
-              {formatDateLabel(previousStock.date)}
-            </span>
+      {/* Inline Edit Form */}
+      {isEditing ? (
+        <div className="bg-white/95 rounded-xl p-2.5 border-2 border-amber-400/80 my-1.5 shadow-sm space-y-2">
+          <div className="text-[11px] font-black text-amber-950 flex items-center justify-between">
+            <span>{language === 'ta' ? 'தொடக்க இருப்பு மாற்று / Custom Opening Stock' : 'Custom Opening Stock'}</span>
+            <span className="text-[9px] text-slate-500 font-normal">({effectiveStock.date})</span>
           </div>
-          <div className="flex items-baseline gap-1 mt-0.5">
-            <span className="text-base sm:text-lg font-black text-amber-950 tracking-tight">
-              {chickenRem}
-            </span>
-            <span className="text-[10px] font-bold text-amber-700 uppercase">kg</span>
-          </div>
-          <p className="text-[8px] text-slate-400 font-medium truncate mt-0.5">
-            {language === 'ta'
-              ? `வரவு: ${previousStock.chickenIncomingKg} | விற்றது: ${previousStock.chickenSoldKg}`
-              : `In: ${previousStock.chickenIncomingKg} | Sold: ${previousStock.chickenSoldKg} kg`}
-          </p>
-        </div>
 
-        {/* Right Card: Remaining Egg Stock */}
-        <div className="bg-white/95 rounded-xl p-2 border border-orange-200/80 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-[9px] font-black uppercase tracking-wider text-orange-900 flex items-center gap-0.5">
-              🥚 {language === 'ta' ? 'நேற்றைய மீதி முட்டை' : 'Previous Day Eggs'}
-            </span>
-            <span className="text-[8px] font-bold text-slate-400">
-              {formatDateLabel(previousStock.date)}
-            </span>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[9px] font-black text-slate-700 block mb-0.5">
+                🐔 {language === 'ta' ? 'கோழி (கிலோ)' : 'Chicken (kg)'}
+              </label>
+              <input
+                type="number"
+                step="any"
+                value={editChickenKg}
+                onChange={(e) => setEditChickenKg(e.target.value)}
+                placeholder="0"
+                className="w-full text-xs font-black p-1.5 rounded-lg border border-slate-300 bg-slate-50 focus:bg-white focus:border-amber-500 outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="text-[9px] font-black text-slate-700 block mb-0.5">
+                🥚 {language === 'ta' ? 'முட்டை (தட்டு + சில்லறை)' : 'Egg (Tares + Nos)'}
+              </label>
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  step="1"
+                  value={editEggTares}
+                  onChange={(e) => setEditEggTares(e.target.value)}
+                  placeholder="Tares"
+                  title="Tares"
+                  className="w-1/2 text-xs font-black p-1.5 rounded-lg border border-slate-300 bg-slate-50 focus:bg-white focus:border-orange-500 outline-none"
+                />
+                <input
+                  type="number"
+                  step="1"
+                  value={editEggUnits}
+                  onChange={(e) => setEditEggUnits(e.target.value)}
+                  placeholder="Nos"
+                  title="Remaining Single Eggs"
+                  className="w-1/2 text-xs font-black p-1.5 rounded-lg border border-slate-300 bg-slate-50 focus:bg-white focus:border-orange-500 outline-none"
+                />
+              </div>
+            </div>
           </div>
-          <div className="flex items-baseline gap-1 mt-0.5 flex-wrap">
-            <span className="text-base sm:text-lg font-black text-orange-950 tracking-tight">
-              {eggTaresRem}
-            </span>
-            <span className="text-[10px] font-bold text-orange-700 uppercase">
-              {language === 'ta' ? 'தட்டு' : 'Tares'}
-            </span>
-            {eggUnitRem > 0 && (
-              <span className="text-[9px] font-extrabold text-orange-800 bg-orange-100 px-1 py-0.2 rounded-sm">
-                +{eggUnitRem}
-              </span>
-            )}
+
+          <div className="flex items-center justify-end gap-1.5 pt-1">
+            <button
+              type="button"
+              onClick={() => setIsEditing(false)}
+              className="px-2 py-1 text-[10px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer"
+            >
+              {language === 'ta' ? 'ரத்து' : 'Cancel'}
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveCustomEdit}
+              className="px-3 py-1 text-[10px] font-black text-white bg-amber-600 hover:bg-amber-700 rounded-lg flex items-center gap-1 shadow-xs cursor-pointer"
+            >
+              <Check className="w-3 h-3" />
+              <span>{language === 'ta' ? 'சேமி & சேர்' : 'Save & Apply'}</span>
+            </button>
           </div>
-          <p className="text-[8px] text-slate-400 font-medium truncate mt-0.5">
-            {language === 'ta'
-              ? `வரவு: ${Math.round(previousStock.eggInwardNos / 30)} தட்டு | விற்றது: ${previousStock.eggSoldNos}`
-              : `In: ${Math.round(previousStock.eggInwardNos / 30)}T | Sold: ${previousStock.eggSoldNos}`}
-          </p>
         </div>
-      </div>
+      ) : (
+        /* 2 Highlight Cards: Remaining Chicken & Egg */
+        <div className="grid grid-cols-2 gap-1.5 my-1.5">
+          {/* Left Card: Remaining Chicken Stock */}
+          <div className="bg-white/95 rounded-xl p-2 border border-amber-200/80 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[9px] font-black uppercase tracking-wider text-amber-900 flex items-center gap-0.5">
+                🐔 {language === 'ta' ? 'மீதி கோழி (Remind Me Chicken)' : 'Remind Me Chicken'}
+              </span>
+              <span className="text-[8px] font-bold text-slate-400">
+                {formatDateLabel(effectiveStock.date)}
+              </span>
+            </div>
+            <div className="flex items-baseline gap-1 mt-0.5">
+              <span className="text-base sm:text-lg font-black text-amber-950 tracking-tight">
+                {chickenRem}
+              </span>
+              <span className="text-[10px] font-bold text-amber-700 uppercase">kg</span>
+            </div>
+            <p className="text-[8px] text-slate-400 font-medium truncate mt-0.5">
+              {language === 'ta'
+                ? `வரவு: ${effectiveStock.chickenIncomingKg} | விற்றது: ${effectiveStock.chickenSoldKg}`
+                : `In: ${effectiveStock.chickenIncomingKg} | Sold: ${effectiveStock.chickenSoldKg} kg`}
+            </p>
+          </div>
+
+          {/* Right Card: Remaining Egg Stock */}
+          <div className="bg-white/95 rounded-xl p-2 border border-orange-200/80 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[9px] font-black uppercase tracking-wider text-orange-900 flex items-center gap-0.5">
+                🥚 {language === 'ta' ? 'மீதி முட்டை (Remind Me Eggs)' : 'Remind Me Eggs'}
+              </span>
+              <span className="text-[8px] font-bold text-slate-400">
+                {formatDateLabel(effectiveStock.date)}
+              </span>
+            </div>
+            <div className="flex items-baseline gap-1 mt-0.5 flex-wrap">
+              <span className="text-base sm:text-lg font-black text-orange-950 tracking-tight">
+                {eggTaresRem}
+              </span>
+              <span className="text-[10px] font-bold text-orange-700 uppercase">
+                {language === 'ta' ? 'தட்டு' : 'Tares'}
+              </span>
+              {eggUnitRem > 0 && (
+                <span className="text-[9px] font-extrabold text-orange-800 bg-orange-100 px-1 py-0.2 rounded-sm">
+                  +{eggUnitRem}
+                </span>
+              )}
+            </div>
+            <p className="text-[8px] text-slate-400 font-medium truncate mt-0.5">
+              {language === 'ta'
+                ? `வரவு: ${Math.round(effectiveStock.eggInwardNos / 30)} தட்டு | விற்றது: ${effectiveStock.eggSoldNos}`
+                : `In: ${Math.round(effectiveStock.eggInwardNos / 30)}T | Sold: ${effectiveStock.eggSoldNos}`}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Action Footer: Add to Today's Stock or Exclude */}
       <div className="mt-1.5 pt-1.5 border-t border-amber-200/70 flex items-center justify-between gap-1.5">

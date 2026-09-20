@@ -761,26 +761,109 @@ export async function generateHotelStatementPdfBlob(
     curY += 7;
 
     // Balance Banner
-    pdf.setFillColor(data.balance >= 0 ? 5 : 2, data.balance >= 0 ? 150 : 132, data.balance >= 0 ? 105 : 199);
+    const isDue = data.balance >= 0;
+    pdf.setFillColor(isDue ? 225 : 2, isDue ? 29 : 132, isDue ? 72 : 199); // Rose for due, cyan/blue for advance
     pdf.roundedRect(margin + 4, curY, contentWidth - 8, 14, 1, 1, 'F');
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(12);
     pdf.setTextColor(255, 255, 255);
     pdf.text(
-      data.balance >= 0
+      isDue
         ? `NET BALANCE DUE: Rs. ${Math.round(data.balance).toLocaleString('en-IN')}`
         : `ADVANCE BALANCE: Rs. ${Math.abs(Math.round(data.balance)).toLocaleString('en-IN')}`,
       pageWidth / 2,
       curY + 9,
       { align: 'center' }
     );
-    curY += 20;
+    curY += 18;
 
+    // Optional: Recent Bills Table
+    if (data.recentBills && data.recentBills.length > 0) {
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(8.5);
+      pdf.setTextColor(15, 23, 42);
+      pdf.text('RECENT BILLS / சமீபத்திய பில்கள்:', margin + 4, curY);
+      curY += 2;
+
+      autoTable(pdf, {
+        startY: curY,
+        margin: { left: margin + 4, right: margin + 4 },
+        head: [['Date', 'Bill #', 'Weight (Kg)', 'Amount (Rs.)']],
+        body: data.recentBills.slice(0, 5).map((b) => [
+          b.date,
+          `#${b.billNumber}`,
+          b.kg ? `${b.kg.toFixed(2)} kg` : '-',
+          `Rs. ${Math.round(b.amount).toLocaleString('en-IN')}`,
+        ]),
+        theme: 'grid',
+        styles: { fontSize: 7.5, cellPadding: 1.5 },
+        headStyles: { fillColor: [51, 65, 85], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
+        columnStyles: {
+          0: { halign: 'center', cellWidth: 26 },
+          1: { halign: 'center', cellWidth: 20 },
+          2: { halign: 'right', cellWidth: 28 },
+          3: { halign: 'right', fontStyle: 'bold' },
+        },
+      });
+      curY = (pdf as any).lastAutoTable?.finalY ? (pdf as any).lastAutoTable.finalY + 4 : curY + 25;
+    }
+
+    // Optional: Recent Payments Table
+    if (data.recentPayments && data.recentPayments.length > 0 && curY < pageHeight - 35) {
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(8.5);
+      pdf.setTextColor(15, 23, 42);
+      pdf.text('RECENT PAYMENTS / செலுத்திய தொகை:', margin + 4, curY);
+      curY += 2;
+
+      autoTable(pdf, {
+        startY: curY,
+        margin: { left: margin + 4, right: margin + 4 },
+        head: [['Date', 'Mode', 'Amount (Rs.)']],
+        body: data.recentPayments.slice(0, 4).map((p) => [
+          p.date,
+          p.mode?.toUpperCase() || 'CASH',
+          `Rs. ${Math.round(p.amount).toLocaleString('en-IN')}`,
+        ]),
+        theme: 'grid',
+        styles: { fontSize: 7.5, cellPadding: 1.5 },
+        headStyles: { fillColor: [5, 150, 105], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
+        columnStyles: {
+          0: { halign: 'center', cellWidth: 32 },
+          1: { halign: 'center', cellWidth: 35 },
+          2: { halign: 'right', fontStyle: 'bold' },
+        },
+      });
+      curY = (pdf as any).lastAutoTable?.finalY ? (pdf as any).lastAutoTable.finalY + 4 : curY + 20;
+    }
+
+    // UPI Payment & GPay Button
     const upiId = settings.upiId || 'NAZIRAHAMED0003@okhdfcbank';
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8);
-    pdf.setTextColor(71, 85, 105);
-    pdf.text(`UPI Pay ID: ${upiId}`, pageWidth / 2, curY, { align: 'center' });
+    const balanceInt = Math.max(0, Math.round(data.balance));
+    const upiPayUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(
+      settings.shopName || 'SSS Chicken and Egg Agency'
+    )}&am=${balanceInt}&cu=INR&tn=${encodeURIComponent(`Balance ${data.hotelName}`)}`;
+
+    if (balanceInt > 0 && curY < pageHeight - 16) {
+      const btnW = 76;
+      const btnH = 6.5;
+      const btnX = (pageWidth - btnW) / 2;
+      pdf.setFillColor(26, 115, 232); // Google Pay Blue (#1a73e8)
+      pdf.roundedRect(btnX, curY, btnW, btnH, 1.5, 1.5, 'F');
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(7);
+      pdf.setTextColor(255, 255, 255);
+      pdf.text(`Pay Balance via GPay: Rs. ${balanceInt.toLocaleString('en-IN')}`, pageWidth / 2, curY + 4.2, { align: 'center' });
+      pdf.link(btnX, curY, btnW, btnH, { url: upiPayUri });
+      curY += btnH + 3;
+    }
+
+    if (curY < pageHeight - 8) {
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7.5);
+      pdf.setTextColor(71, 85, 105);
+      pdf.text(`UPI Pay ID: ${upiId}`, pageWidth / 2, curY, { align: 'center' });
+    }
 
     return pdf.output('blob');
   } catch (e) {

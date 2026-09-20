@@ -1,7 +1,7 @@
 import React from 'react';
 import { InvestmentDayData } from '../types';
 import { fetchDailyBillsSummary } from '../utils/storage';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Receipt } from 'lucide-react';
 
 interface DailySalesProfitPageProps {
   data: InvestmentDayData;
@@ -63,13 +63,32 @@ export const DailySalesProfitPage: React.FC<DailySalesProfitPageProps> = ({
     ? billSummary.eggPrice
     : (eggQty > 0 ? Math.round((eggAmount / eggQty) * 100) / 100 : (Number(data.sales.eggPrice) || 6));
 
+  // Current Expenses entered
+  const currentExpenses = Number(data.sales.expenses) || 0;
+
   // Total shop sale kg (wholesale kg + retail kg)
   const totalShopSaleKg = Math.round((wholesaleKg + retailKg) * 1000) / 1000;
 
   // Total collected revenue: Wholesale Amount + Retail Amount + Egg Price / Amount
   const totalCollectedAmount = Math.round((wholesaleAmount + retailAmount + eggAmount) * 100) / 100;
-  // Total shop profit: (Wholesale Amount + Retail Amount + Egg Amount) - Total Load Cost Spend (Chicken + Egg)
-  const totalShopProfit = Math.round((totalCollectedAmount - currentLoadSpend) * 100) / 100;
+  // Gross profit before expenses:
+  const grossProfit = Math.round((totalCollectedAmount - currentLoadSpend) * 100) / 100;
+  // Net shop profit after deducting expenses: (Sales - Load Spend - Expenses)
+  const totalShopProfit = Math.round((grossProfit - currentExpenses) * 100) / 100;
+
+  // Update expenses handler
+  const handleUpdateExpenses = (amount: number, category?: string, notes?: string) => {
+    const validAmount = typeof amount === 'number' && !isNaN(amount) ? Math.max(0, amount) : 0;
+    onChangeData({
+      ...data,
+      sales: {
+        ...data.sales,
+        expenses: validAmount,
+        expenseCategory: category !== undefined ? category : data.sales.expenseCategory,
+        expenseNotes: notes !== undefined ? notes : data.sales.expenseNotes,
+      },
+    });
+  };
 
   // Sync Load directly from First Page
   const handleSyncFirstPage = () => {
@@ -278,6 +297,79 @@ export const DailySalesProfitPage: React.FC<DailySalesProfitPageProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Row 5: Daily Expenses Section (செலவுகள்) */}
+        <div className="space-y-2.5 p-3.5 rounded-2xl bg-rose-50/60 border-2 border-rose-200/90 shadow-2xs">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-1.5">
+              <Receipt size={16} className="text-rose-600" />
+              <span className="text-xs font-black text-rose-950">
+                {language === 'ta' ? '5. தினசரி கடை செலவுகள் (Expenses)' : '5. Daily Expenses'}
+              </span>
+            </div>
+            {currentExpenses > 0 && (
+              <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300">
+                - ₹{currentExpenses.toLocaleString('en-IN')}
+              </span>
+            )}
+          </div>
+
+          <div className="bg-white rounded-2xl p-3 border border-rose-200 shadow-2xs space-y-2.5">
+            {/* Amount input */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-black text-neutral-400">₹</span>
+                <input
+                  id="investment-expenses-input"
+                  type="number"
+                  inputMode="numeric"
+                  value={currentExpenses === 0 ? '' : currentExpenses}
+                  onChange={(e) => handleUpdateExpenses(parseFloat(e.target.value) || 0)}
+                  placeholder="0"
+                  className="w-full pl-7 pr-3 py-2 bg-neutral-50 rounded-xl border border-neutral-300 focus:border-rose-500 focus:bg-white text-base font-black text-neutral-900 focus:outline-none transition-all"
+                />
+              </div>
+              {currentExpenses > 0 && (
+                <button
+                  type="button"
+                  onClick={() => handleUpdateExpenses(0, '', '')}
+                  className="px-2.5 py-2 text-xs font-bold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 rounded-xl border border-rose-200 transition-all cursor-pointer"
+                >
+                  {language === 'ta' ? 'அழி' : 'Clear'}
+                </button>
+              )}
+            </div>
+
+            {/* Quick Presets */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+              {[50, 100, 200, 500, 1000].map((amt) => (
+                <button
+                  key={amt}
+                  type="button"
+                  onClick={() => handleUpdateExpenses(currentExpenses + amt)}
+                  className="px-2 py-1 bg-neutral-100 hover:bg-rose-100 active:bg-rose-200 text-neutral-700 hover:text-rose-900 rounded-lg text-[11px] font-bold transition-all border border-neutral-200 shrink-0 cursor-pointer"
+                >
+                  +₹{amt}
+                </button>
+              ))}
+            </div>
+
+            {/* Note description input */}
+            <input
+              type="text"
+              value={data.sales.expenseNotes || ''}
+              onChange={(e) => handleUpdateExpenses(currentExpenses, data.sales.expenseCategory, e.target.value)}
+              placeholder={language === 'ta' ? 'செலவு குறிப்பு (டீசல், வாடகை, டீ, கூலி...)' : 'Expense note (diesel, salary, tea, rent...)'}
+              className="w-full px-2.5 py-1.5 text-xs bg-neutral-50 rounded-lg border border-neutral-200 focus:border-rose-400 focus:bg-white text-neutral-800 focus:outline-none placeholder:text-neutral-400"
+            />
+
+            <p className="text-[10px] text-neutral-500 font-medium leading-tight">
+              {language === 'ta'
+                ? 'ℹ️ இந்த செலவு தொகை மொத்த லாபத்திலிருந்து நேரடியாக கழிக்கப்படும்.'
+                : 'ℹ️ Entered expenses will be automatically deducted from the total profit.'}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Bottom Summary Section */}
@@ -315,18 +407,66 @@ export const DailySalesProfitPage: React.FC<DailySalesProfitPageProps> = ({
           </div>
         </div>
 
+        {/* Expenses Summary Card (if expenses entered) */}
+        {currentExpenses > 0 && (
+          <div className="bg-rose-50 rounded-2xl px-4 py-2.5 border border-rose-200 flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Receipt size={15} className="text-rose-600" />
+              <span className="text-xs font-bold text-rose-900">
+                {language === 'ta' ? 'கழித்த மொத்த செலவு:' : 'Deducted Expenses:'}
+              </span>
+              {data.sales.expenseNotes && (
+                <span className="text-[11px] text-rose-700 italic max-w-[140px] truncate">
+                  ({data.sales.expenseNotes})
+                </span>
+              )}
+            </div>
+            <span className="text-sm font-black text-rose-700">
+              - ₹{currentExpenses.toLocaleString('en-IN')}
+            </span>
+          </div>
+        )}
+
         {/* Row 2: Total Shop Profit Card BIG */}
         <div className="bg-white rounded-3xl p-5 sm:p-6 border-2 border-emerald-600 shadow-sm bg-emerald-50/40 relative overflow-hidden">
-          <div className="mb-2">
+          <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-black text-emerald-950 uppercase tracking-wide">
-              {language === 'ta' ? 'மொத்த லாபம்' : 'Total Profit'}
+              {language === 'ta' ? 'நிகர லாபம் (மொத்த லாபம்)' : 'Net Profit (Total Profit)'}
             </span>
+            {currentExpenses > 0 && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200">
+                {language === 'ta' ? `செலவு: -₹${currentExpenses.toLocaleString('en-IN')}` : `Exp: -₹${currentExpenses.toLocaleString('en-IN')}`}
+              </span>
+            )}
           </div>
 
           <div className="my-2">
             <div className={`text-4xl sm:text-5xl font-black tracking-tight ${totalShopProfit >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>
               ₹{totalShopProfit.toLocaleString('en-IN')}
             </div>
+          </div>
+
+          {/* Formula calculation breakdown */}
+          <div className="mt-2 pt-2 border-t border-emerald-200/80 text-[11px] text-neutral-600 font-semibold flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="text-emerald-900 font-bold">
+              {language === 'ta' ? 'விற்பனை:' : 'Sales:'} ₹{totalCollectedAmount.toLocaleString('en-IN')}
+            </span>
+            <span>-</span>
+            <span className="text-neutral-700 font-bold">
+              {language === 'ta' ? 'லோடு:' : 'Load:'} ₹{currentLoadSpend.toLocaleString('en-IN')}
+            </span>
+            {currentExpenses > 0 && (
+              <>
+                <span>-</span>
+                <span className="text-rose-700 font-bold">
+                  {language === 'ta' ? 'செலவு:' : 'Expenses:'} ₹{currentExpenses.toLocaleString('en-IN')}
+                </span>
+              </>
+            )}
+            <span>=</span>
+            <span className={`font-black ${totalShopProfit >= 0 ? 'text-emerald-800' : 'text-rose-700'}`}>
+              ₹{totalShopProfit.toLocaleString('en-IN')}
+            </span>
           </div>
         </div>
       </div>
