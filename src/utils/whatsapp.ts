@@ -12,7 +12,7 @@ import {
   resolveItemDisplayName,
   ShopSettings,
 } from '../types';
-import { formatDisplayDate, formatDisplayTime } from './storage';
+import { formatDisplayDate, formatDisplayTime, getHotelPhone } from './storage';
 
 function getQrCodeDataUrl(): string | null {
   const domCanvas = document.getElementById('bill-upi-qr-canvas') as HTMLCanvasElement | null;
@@ -35,16 +35,29 @@ export async function generateBillPdfBlob(
   hotels: HotelItem[] = [],
   products: ProductItem[] = []
 ): Promise<Blob | null> {
+  // 1. High-Fidelity DOM Capture (Preserves Exact Tamil Typography & Screenshot Layout)
   const receiptElem = document.getElementById(elementId);
-
-  // 1. High-DPI DOM rasterization
   if (receiptElem) {
     try {
+      // Measure natural dimensions so no edges or table columns are cropped on narrow viewports
+      const naturalWidth = Math.max(400, receiptElem.scrollWidth || 0, receiptElem.offsetWidth || 0);
+      const naturalHeight = Math.max(receiptElem.scrollHeight || 0, receiptElem.offsetHeight || 0);
+
       const dataUrl = await toPng(receiptElem, {
         pixelRatio: 3,
         backgroundColor: '#ffffff',
         cacheBust: true,
         quality: 1,
+        width: naturalWidth,
+        height: naturalHeight,
+        style: {
+          width: `${naturalWidth}px`,
+          minWidth: `${naturalWidth}px`,
+          maxWidth: 'none',
+          boxSizing: 'border-box',
+          margin: '0',
+          transform: 'none',
+        },
       });
 
       let imgWidthPx = 0;
@@ -61,10 +74,10 @@ export async function generateBillPdfBlob(
       });
 
       const pdfWidth = 148; // Standard A5 width in mm
-      const margin = 4;
+      const margin = 5;
       const printableWidth = pdfWidth - margin * 2;
       const imgHeightMm = (imgHeightPx * printableWidth) / (imgWidthPx || 1);
-      const dynamicPageHeight = Math.ceil(imgHeightMm + margin * 2);
+      const dynamicPageHeight = Math.max(210, Math.ceil(imgHeightMm + margin * 2));
 
       const pdf = new jsPDF({
         orientation: 'portrait',
@@ -74,42 +87,85 @@ export async function generateBillPdfBlob(
       });
 
       pdf.addImage(dataUrl, 'PNG', margin, margin, printableWidth, imgHeightMm, undefined, 'FAST');
+
+      // Add interactive PDF hyperlinks directly on the GPay button and QR code
+      try {
+        const billAmountInt = Math.round(bill.totalAmount);
+        const upiId = settings.upiId || 'NAZIRAHAMED0003@okhdfcbank';
+        const englishShopName = (settings.shopNameEn || settings.shopName || 'SSS CHICKEN AGENCY').toUpperCase();
+        const upiPayUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(
+          englishShopName
+        )}&am=${billAmountInt}&cu=INR&tn=${encodeURIComponent(`Bill #${bill.billNumber}`)}`;
+
+        const gpayBtnElem = document.getElementById('btn-bill-gpay-link');
+        const qrCanvasElem = document.getElementById('bill-upi-qr-canvas');
+        const receiptRect = receiptElem.getBoundingClientRect();
+
+        if (gpayBtnElem && receiptRect.width > 0 && receiptRect.height > 0) {
+          const btnRect = gpayBtnElem.getBoundingClientRect();
+          const btnX = margin + ((btnRect.left - receiptRect.left) / receiptRect.width) * printableWidth;
+          const btnY = margin + ((btnRect.top - receiptRect.top) / receiptRect.height) * imgHeightMm;
+          const btnW = (btnRect.width / receiptRect.width) * printableWidth;
+          const btnH = (btnRect.height / receiptRect.height) * imgHeightMm;
+          pdf.link(btnX, btnY, btnW, btnH, { url: upiPayUri });
+        }
+
+        if (qrCanvasElem && receiptRect.width > 0 && receiptRect.height > 0) {
+          const qrRect = qrCanvasElem.getBoundingClientRect();
+          const qrX = margin + ((qrRect.left - receiptRect.left) / receiptRect.width) * printableWidth;
+          const qrY = margin + ((qrRect.top - receiptRect.top) / receiptRect.height) * imgHeightMm;
+          const qrW = (qrRect.width / receiptRect.width) * printableWidth;
+          const qrH = (qrRect.height / receiptRect.height) * imgHeightMm;
+          pdf.link(qrX, qrY, qrW, qrH, { url: upiPayUri });
+        }
+      } catch (linkErr) {
+        console.warn('Could not overlay PDF link annotations:', linkErr);
+      }
+
       return pdf.output('blob');
     } catch (domErr) {
-      console.warn('DOM to PDF image capture failed, falling back:', domErr);
+      console.warn('DOM rasterization to PDF failed, proceeding to vector generator:', domErr);
     }
   }
 
-  // 2. Vector PDF fallback generator
+  // 2. Vector PDF Generator strictly adhering to standard A5 Wholesale Bill dimensions and screenshot styling
   try {
-    const hasPrevBalance = bill.previousBalance !== undefined && bill.previousBalance !== 0;
-    const finalPayableAmount = Math.round(
-      hasPrevBalance
-        ? (bill.netTotalWithBalance ?? (bill.totalAmount + (bill.previousBalance || 0)))
-        : bill.totalAmount
-    );
     const isTamil = lang === 'ta';
-    const pageWidth = 148;
+    const pageWidth = 148; // Standard A5 width in mm
     const margin = 6;
     const contentWidth = pageWidth - margin * 2;
+    const billAmount = Math.round(bill.totalAmount);
     const qrDataUrl = getQrCodeDataUrl();
     const upiId = settings.upiId || 'NAZIRAHAMED0003@okhdfcbank';
 
+    // Store details ALWAYS in English itself (explicit user mandate)
+    const englishShopName = (settings.shopNameEn || settings.shopName || 'SSS CHICKEN AGENCY').toUpperCase();
+    const englishAddress = (settings.addressEn || settings.address || 'NO 6, PONDY MAIN ROAD, SULTHANPET, VILLIANUR, PUDUCHERRY - 605 110').toUpperCase();
+    const phone = settings.phoneNumber || '8680000003';
+    const gst = settings.gstNumber || '34AQPN8846J2ZF';
+
+    const finalPhone = (recipientPhone || bill.hotelPhone || getHotelPhone(bill.hotelName, hotels) || '').trim();
+    const hotelName = resolveHotelDisplayName(bill.hotelName, bill.hotelId, hotels, lang);
+    const upiPayUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(
+      englishShopName
+    )}&am=${billAmount}&cu=INR&tn=${encodeURIComponent(`Bill #${bill.billNumber}`)}`;
+
     const itemCount = Math.max(1, bill.items.length);
     const tableHeight = 10 + itemCount * 7.5;
-    const metaBoxH = recipientPhone ? 15 : 13;
-    const calcBoxH = hasPrevBalance ? 14 : 8;
-    const qrSectionH = qrDataUrl ? 38 : 10;
+    const metaBoxH = finalPhone ? 15 : 13;
+    const calcBoxH = 8; // Only bill amount box
+    const qrSectionH = qrDataUrl ? 44 : 10;
     const estimatedContentH =
-      19 +
+      22 +
       metaBoxH + 4 +
       tableHeight + 4 +
       8 +
       calcBoxH + 4 +
-      17.5 +
-      qrSectionH + 4;
+      16 +
+      qrSectionH + 6;
 
-    const pageHeight = Math.ceil(estimatedContentH + margin * 2);
+    // Standard A5 page height (210mm), or expand dynamically if bill has many items
+    const pageHeight = Math.max(210, Math.ceil(estimatedContentH + margin * 2));
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -117,61 +173,58 @@ export async function generateBillPdfBlob(
       compress: true,
     });
 
+    // Single outer rounded border matching screenshot
     pdf.setDrawColor(30, 41, 59);
-    pdf.setLineWidth(0.4);
-    pdf.rect(margin, margin, contentWidth, pageHeight - margin * 2, 'S');
+    pdf.setLineWidth(0.6);
+    pdf.roundedRect(margin, margin, contentWidth, pageHeight - margin * 2, 4, 4, 'S');
 
-    let curY = margin + 5;
-    const shopName = getShopDisplayName(settings, lang);
-    const shopAddress = getShopDisplayAddress(settings, lang);
-    const hotelName = resolveHotelDisplayName(bill.hotelName, bill.hotelId, hotels, lang);
+    let curY = margin + 6;
 
+    // Shop Header: ALWAYS English
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(15);
     pdf.setTextColor(15, 23, 42);
-    pdf.text(shopName.toUpperCase(), pageWidth / 2, curY, { align: 'center' });
+    pdf.text(englishShopName, pageWidth / 2, curY, { align: 'center' });
     curY += 4.5;
 
-    if (shopAddress) {
+    if (englishAddress) {
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(7.5);
       pdf.setTextColor(51, 65, 85);
-      pdf.text(shopAddress, pageWidth / 2, curY, { align: 'center', maxWidth: 120 });
+      pdf.text(englishAddress, pageWidth / 2, curY, { align: 'center', maxWidth: 120 });
       curY += 4;
     }
 
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(8.5);
     pdf.setTextColor(15, 23, 42);
-    const phone = settings.phoneNumber || '8680000003';
-    const gst = settings.gstNumber || '34AQPN8846J2ZF';
-    const phoneLabel = isTamil ? 'போன்' : 'Phone';
-    const gstLabel = isTamil ? 'ஜிஎஸ்டி' : 'GSTIN';
-    pdf.text(`${phoneLabel}: ${phone}   |   ${gstLabel}: ${gst}`, pageWidth / 2, curY, { align: 'center' });
+    pdf.text(`Phone: ${phone}   |   GSTIN: ${gst}`, pageWidth / 2, curY, { align: 'center' });
     curY += 3.5;
+
     pdf.setDrawColor(203, 213, 225);
     pdf.setLineWidth(0.3);
     pdf.line(margin + 2, curY, pageWidth - margin - 2, curY);
-    curY += 2;
+    curY += 2.5;
 
+    // Customer / Hotel Meta Box
     const metaBoxY = curY;
     pdf.setFillColor(248, 250, 252);
     pdf.setDrawColor(203, 213, 225);
-    pdf.roundedRect(margin + 2, metaBoxY, contentWidth - 4, metaBoxH, 1, 1, 'FD');
+    pdf.roundedRect(margin + 2, metaBoxY, contentWidth - 4, metaBoxH, 1.5, 1.5, 'FD');
 
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(7);
     pdf.setTextColor(100, 116, 139);
-    pdf.text(isTamil ? 'ஹோட்டல் :' : 'HOTEL / CUSTOMER:', margin + 5, metaBoxY + 4);
+    pdf.text(isTamil ? 'ஹோட்டல் / வாடிக்கையாளர்:' : 'HOTEL / CUSTOMER:', margin + 5, metaBoxY + 4);
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(11);
     pdf.setTextColor(15, 23, 42);
     pdf.text(hotelName, margin + 5, metaBoxY + 8.5, { maxWidth: 68 });
-    if (recipientPhone) {
+    if (finalPhone) {
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(8);
       pdf.setTextColor(5, 150, 105);
-      pdf.text(`${phoneLabel}: ${recipientPhone}`, margin + 5, metaBoxY + 12.5);
+      pdf.text(`Ph: ${finalPhone}`, margin + 5, metaBoxY + 12.5);
     }
 
     pdf.setDrawColor(203, 213, 225);
@@ -190,12 +243,13 @@ export async function generateBillPdfBlob(
     if (billTimeStr) {
       pdf.text(`${isTamil ? 'நேரம்' : 'Time'}: ${billTimeStr}`, contentWidth + margin - 5, metaBoxY + 12, { align: 'right' });
     }
-    curY = metaBoxY + metaBoxH + 2;
+    curY = metaBoxY + metaBoxH + 2.5;
 
+    // Items Table
+    const curr = isTamil ? 'ரூ. ' : 'Rs. ';
     const tableBody = bill.items.map((item, idx) => {
       const itemName = resolveItemDisplayName(item, products, lang);
       const unit = isTamil ? 'கிலோ' : 'KG';
-      const curr = isTamil ? 'ரூ. ' : 'Rs. ';
       return [
         (idx + 1).toString(),
         itemName,
@@ -206,8 +260,8 @@ export async function generateBillPdfBlob(
     });
 
     const headers = isTamil
-      ? [['எண்', 'பொருள் பெயர்', 'எடை (கிலோ)', 'விலை (ரூ)', 'தொகை (ரூ)']]
-      : [['#', 'ITEM NAME', 'WEIGHT (KG)', 'RATE (Rs)', 'AMOUNT (Rs)']];
+      ? [['#', 'பொருள் பெயர்', 'எடை (கிலோ)', 'விலை (ரூ)', 'தொகை (ரூ)']]
+      : [['#', 'ITEM NAME', 'WEIGHT (KG)', 'RATE (RS)', 'AMOUNT (RS)']];
 
     autoTable(pdf, {
       startY: curY,
@@ -224,7 +278,7 @@ export async function generateBillPdfBlob(
         textColor: [15, 23, 42],
       },
       headStyles: {
-        fillColor: [30, 41, 59],
+        fillColor: [15, 23, 42],
         textColor: [255, 255, 255],
         fontStyle: 'bold',
         fontSize: 8,
@@ -233,7 +287,7 @@ export async function generateBillPdfBlob(
       columnStyles: {
         0: { halign: 'center', cellWidth: 8 },
         1: { halign: 'left', fontStyle: 'bold' },
-        2: { halign: 'right', fontStyle: 'bold', cellWidth: 26 },
+        2: { halign: 'center', fontStyle: 'bold', cellWidth: 26 },
         3: { halign: 'right', cellWidth: 22 },
         4: { halign: 'right', fontStyle: 'bold', textColor: [15, 23, 42], cellWidth: 28 },
       },
@@ -244,6 +298,7 @@ export async function generateBillPdfBlob(
 
     curY = (pdf as any).lastAutoTable.finalY + 2;
 
+    // Total Weight Row
     pdf.setFillColor(241, 245, 249);
     pdf.setDrawColor(203, 213, 225);
     pdf.roundedRect(margin + 2, curY, contentWidth - 4, 6, 1, 1, 'FD');
@@ -253,78 +308,77 @@ export async function generateBillPdfBlob(
     pdf.text(isTamil ? 'மொத்த எடை:' : 'TOTAL WEIGHT:', margin + 5, curY + 4.2);
     pdf.setFontSize(9);
     pdf.setTextColor(15, 23, 42);
-    pdf.text(`${bill.totalKg.toFixed(2)} ${isTamil ? 'கிலோ' : 'KG'}`, contentWidth + margin - 5, curY + 4.2, { align: 'right' });
+    pdf.text(`${bill.totalKg.toFixed(2)}`, contentWidth + margin - 5, curY + 4.2, { align: 'right' });
     curY += 8;
 
+    // Bill Amount Only Row (Explicitly ONLY current bill amount, no old balance)
     pdf.setFillColor(248, 250, 252);
     pdf.setDrawColor(203, 213, 225);
     pdf.roundedRect(margin + 2, curY, contentWidth - 4, calcBoxH, 1, 1, 'FD');
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(9);
     pdf.setTextColor(71, 85, 105);
-    pdf.text(isTamil ? 'தற்போதைய பில் தொகை:' : 'Current Bill Amount:', margin + 5, curY + 5.2);
+    pdf.text(isTamil ? 'பில் தொகை:' : 'Current Bill Amount:', margin + 5, curY + 5.2);
     pdf.setFontSize(10);
     pdf.setTextColor(15, 23, 42);
-    pdf.text(`${isTamil ? 'ரூ. ' : 'Rs. '}${Math.round(bill.totalAmount).toLocaleString('en-IN')}`, contentWidth + margin - 5, curY + 5.2, {
+    pdf.text(`${curr}${billAmount.toLocaleString('en-IN')}`, contentWidth + margin - 5, curY + 5.2, {
       align: 'right',
     });
-
-    if (hasPrevBalance) {
-      pdf.setDrawColor(253, 230, 138);
-      pdf.line(margin + 3, curY + 7.2, contentWidth + margin - 3, curY + 7.2);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(9);
-      pdf.setTextColor(180, 83, 9);
-      pdf.text(isTamil ? 'பழைய பாக்கி:' : 'Old Balance (Previous Due):', margin + 5, curY + 11.5);
-      pdf.setFontSize(10);
-      pdf.text(
-        `${isTamil ? 'ரூ. ' : 'Rs. '}${Math.round(bill.previousBalance || 0).toLocaleString('en-IN')}`,
-        contentWidth + margin - 5,
-        curY + 11.5,
-        { align: 'right' }
-      );
-    }
     curY += calcBoxH + 2.5;
 
+    // Grand Total Banner: strictly ONLY the bill amount
     pdf.setFillColor(15, 23, 42);
     pdf.roundedRect(margin + 2, curY, contentWidth - 4, 15, 1.5, 1.5, 'F');
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(8);
     pdf.setTextColor(203, 213, 225);
-    const totalLabel = isTamil
-      ? (hasPrevBalance ? 'செலுத்த வேண்டிய மொத்தத் தொகை' : 'மொத்தத் தொகை')
-      : (hasPrevBalance ? 'TOTAL PAYABLE DUE' : 'GRAND TOTAL');
+    const totalLabel = isTamil ? 'மொத்தத் தொகை' : 'GRAND TOTAL';
     pdf.text(totalLabel, pageWidth / 2, curY + 4.5, { align: 'center' });
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(16);
     pdf.setTextColor(255, 255, 255);
-    pdf.text(`${isTamil ? 'ரூ. ' : 'Rs. '}${finalPayableAmount.toLocaleString('en-IN')}/-`, pageWidth / 2, curY + 11.8, {
+    pdf.text(`${curr}${billAmount.toLocaleString('en-IN')}/-`, pageWidth / 2, curY + 11.8, {
       align: 'center',
     });
     curY += 17.5;
 
+    // QR & Google Pay (GPay) Section
     if (qrDataUrl) {
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(7.5);
-      pdf.setTextColor(15, 23, 42);
-      pdf.text(
-        isTamil ? 'கட்டணம் செலுத்த QR ஸ்கேன் செய்க' : 'SCAN QR CODE TO PAY (UPI)',
-        pageWidth / 2,
-        curY,
-        { align: 'center' }
-      );
-      curY += 2;
-      pdf.addImage(qrDataUrl, 'PNG', pageWidth / 2 - 12, curY, 24, 24);
-      curY += 25.5;
+      const qrSize = 24;
+      const qrX = pageWidth / 2 - qrSize / 2;
+      const qrY = curY;
+      pdf.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
+      // Link on QR Code
+      pdf.link(qrX, qrY, qrSize, qrSize, { url: upiPayUri });
+      curY += qrSize + 2;
+
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(8);
       pdf.setTextColor(15, 23, 42);
-      pdf.text(`UPI: ${upiId}`, pageWidth / 2, curY, { align: 'center' });
+      pdf.text(`UPI ID: ${upiId}`, pageWidth / 2, curY, { align: 'center' });
+      pdf.link(pageWidth / 2 - 25, curY - 3, 50, 4, { url: upiPayUri });
+      curY += 3.5;
+
+      // Clickable Google Pay Button in PDF
+      const btnW = 74;
+      const btnH = 6.5;
+      const btnX = (pageWidth - btnW) / 2;
+      pdf.setFillColor(26, 115, 232); // Google Pay Blue (#1a73e8)
+      pdf.roundedRect(btnX, curY, btnW, btnH, 1.5, 1.5, 'F');
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(7);
+      pdf.setTextColor(255, 255, 255);
+      const gpayText = isTamil
+        ? `Google Pay மூலம் செலுத்த கிளிக் செய்க (GPay)`
+        : `Pay via Google Pay (GPay): Rs. ${billAmount}`;
+      pdf.text(gpayText, pageWidth / 2, curY + 4.2, { align: 'center' });
+      pdf.link(btnX, curY, btnW, btnH, { url: upiPayUri });
+      curY += btnH + 3;
     }
 
     return pdf.output('blob');
   } catch (error) {
-    console.error('Error generating A5 bill PDF fallback:', error);
+    console.error('Error generating A5 wholesale bill PDF:', error);
     return null;
   }
 }
@@ -362,15 +416,16 @@ export async function shareBillAsPdfToWhatsApp(
   products: ProductItem[] = []
 ): Promise<{ success: boolean; sharedDirectly: boolean; message: string }> {
   const filename = `A5_Bill_${bill.billNumber}_${bill.date}.pdf`;
+  const targetPhone = (phoneNumber || bill.hotelPhone || getHotelPhone(bill.hotelName, hotels) || '').trim();
   let cleanNumber = '';
-  if (phoneNumber && phoneNumber.trim().length > 0) {
-    cleanNumber = phoneNumber.replace(/\D/g, '');
+  if (targetPhone.length > 0) {
+    cleanNumber = targetPhone.replace(/\D/g, '');
     if (cleanNumber.length === 10) {
       cleanNumber = '91' + cleanNumber;
     }
   }
 
-  const pdfBlob = await generateBillPdfBlob(bill, settings, phoneNumber, elementId, lang, hotels, products);
+  const pdfBlob = await generateBillPdfBlob(bill, settings, targetPhone, elementId, lang, hotels, products);
   if (!pdfBlob) {
     openWhatsAppChatWithoutText(cleanNumber);
     return {
@@ -506,8 +561,12 @@ export function generateHotelBalanceWhatsAppText(
   msg += `━━━━━━━━━━━━━━━━━━━━\n`;
   msg += `📊 *${isTa ? 'கணக்கு விவரம்' : 'Account Summary'}:*\n`;
   msg += `• ${isTa ? 'மொத்த பில் வரவு' : 'Total Billed'}: ₹${Math.round(data.totalBilled).toLocaleString('en-IN')} (${data.billCount} ${isTa ? 'பில்கள்' : 'bills'} • ${data.totalKg.toFixed(1)} Kg)\n`;
-  if (data.totalBalAdded && data.totalBalAdded > 0) {
-    msg += `• ${isTa ? 'பாக்கி கூட்டல்' : 'Balance Added'}: +₹${Math.round(data.totalBalAdded).toLocaleString('en-IN')}\n`;
+  if (data.totalBalAdded && data.totalBalAdded !== 0) {
+    if (data.totalBalAdded > 0) {
+      msg += `• ${isTa ? 'பாக்கி கூட்டல் / ஆரம்ப இருப்பு' : 'Balance Added / Opening Bal'}: +₹${Math.round(data.totalBalAdded).toLocaleString('en-IN')}\n`;
+    } else {
+      msg += `• ${isTa ? 'ஆரம்ப முன்பணம் (Credit)' : 'Opening Credit'}: -₹${Math.abs(Math.round(data.totalBalAdded)).toLocaleString('en-IN')}\n`;
+    }
   }
   msg += `• ${isTa ? 'செலுத்திய வரவு' : 'Total Paid'}: ₹${Math.round(data.totalPaid).toLocaleString('en-IN')} (${data.paymentCount} ${isTa ? 'வரவுகள்' : 'payments'})\n`;
   msg += `━━━━━━━━━━━━━━━━━━━━\n`;
@@ -532,7 +591,7 @@ export function generateHotelBalanceWhatsAppText(
 
   if (balanceInt > 0 && upiId) {
     const payUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(
-      settings.shopName || 'SSS Chicken'
+      settings.shopName || 'SSS Chicken and Egg Agency'
     )}&am=${balanceInt}&cu=INR&tn=${encodeURIComponent(`Balance Payment ${data.hotelName}`)}`;
 
     msg += `🏦 *${isTa ? 'UPI மூலம் பணம் செலுத்த' : 'Pay via UPI'} (GPay/PhonePe/Paytm):*\n`;
@@ -556,11 +615,24 @@ export async function generateHotelStatementPdfBlob(
   // 1. High-DPI DOM rasterization
   if (statementElem) {
     try {
+      const naturalWidth = Math.max(400, statementElem.scrollWidth || 0, statementElem.offsetWidth || 0);
+      const naturalHeight = Math.max(statementElem.scrollHeight || 0, statementElem.offsetHeight || 0);
+
       const dataUrl = await toPng(statementElem, {
         pixelRatio: 3,
         backgroundColor: '#ffffff',
         cacheBust: true,
         quality: 1,
+        width: naturalWidth,
+        height: naturalHeight,
+        style: {
+          width: `${naturalWidth}px`,
+          minWidth: `${naturalWidth}px`,
+          maxWidth: 'none',
+          boxSizing: 'border-box',
+          margin: '0',
+          transform: 'none',
+        },
       });
 
       let imgWidthPx = 0;
@@ -678,17 +750,26 @@ export async function generateHotelStatementPdfBlob(
     pdf.setTextColor(51, 65, 85);
     pdf.text(`Total Billed: Rs. ${Math.round(data.totalBilled).toLocaleString('en-IN')}`, margin + 7, curY);
     curY += 5;
+    if (data.totalBalAdded && data.totalBalAdded !== 0) {
+      const balLabel = data.totalBalAdded > 0
+        ? `Balance Added / Opening Bal: +Rs. ${Math.round(data.totalBalAdded).toLocaleString('en-IN')}`
+        : `Opening Credit: -Rs. ${Math.abs(Math.round(data.totalBalAdded)).toLocaleString('en-IN')}`;
+      pdf.text(balLabel, margin + 7, curY);
+      curY += 5;
+    }
     pdf.text(`Total Paid: Rs. ${Math.round(data.totalPaid).toLocaleString('en-IN')}`, margin + 7, curY);
     curY += 7;
 
     // Balance Banner
-    pdf.setFillColor(5, 150, 105);
+    pdf.setFillColor(data.balance >= 0 ? 5 : 2, data.balance >= 0 ? 150 : 132, data.balance >= 0 ? 105 : 199);
     pdf.roundedRect(margin + 4, curY, contentWidth - 8, 14, 1, 1, 'F');
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(12);
     pdf.setTextColor(255, 255, 255);
     pdf.text(
-      `NET BALANCE DUE: Rs. ${Math.round(data.balance).toLocaleString('en-IN')}`,
+      data.balance >= 0
+        ? `NET BALANCE DUE: Rs. ${Math.round(data.balance).toLocaleString('en-IN')}`
+        : `ADVANCE BALANCE: Rs. ${Math.abs(Math.round(data.balance)).toLocaleString('en-IN')}`,
       pageWidth / 2,
       curY + 9,
       { align: 'center' }

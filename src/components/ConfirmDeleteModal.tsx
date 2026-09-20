@@ -35,25 +35,25 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
   return (
     <div
       id="confirm-delete-modal-overlay"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 animate-in fade-in duration-150"
       onClick={onCancel}
     >
       <div
         id="confirm-delete-modal-card"
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-red-100 overflow-hidden transform animate-in zoom-in-95 duration-150"
+        className="w-full max-w-xs max-h-[92dvh] overflow-y-auto bg-white rounded-2xl shadow-2xl border border-red-100 transform animate-in zoom-in-95 duration-150 flex flex-col"
       >
         {/* Header Icon + Close */}
-        <div className="bg-red-50/80 px-5 pt-5 pb-3 border-b border-red-100 flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center flex-shrink-0 shadow-xs">
-              <Trash2 className="w-5 h-5" />
+        <div className="bg-red-50/80 px-3.5 pt-3 pb-2 border-b border-red-100 flex items-start justify-between flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-red-100 text-red-600 flex items-center justify-center flex-shrink-0 shadow-2xs">
+              <Trash2 className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-black text-slate-900 leading-snug">
+              <h3 className="text-xs sm:text-sm font-black text-slate-900 leading-tight break-words">
                 {defaultTitle}
               </h3>
-              <p className="text-[11px] font-bold text-red-700">
+              <p className="text-[10px] font-black text-red-700 leading-tight">
                 {isTamil ? 'இந்த செயலை மாற்ற முடியாது' : 'This action cannot be undone'}
               </p>
             </div>
@@ -61,42 +61,42 @@ export const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
           <button
             type="button"
             onClick={onCancel}
-            className="text-slate-400 hover:text-slate-600 p-1 rounded-xl hover:bg-red-100/50 transition-colors"
+            className="text-slate-400 hover:text-slate-600 p-1 min-h-[2.4rem] min-w-[2.4rem] flex items-center justify-center rounded-lg hover:bg-red-100/50 transition-colors cursor-pointer touch-manipulation"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="px-5 py-4 space-y-2.5">
-          <p className="text-xs sm:text-sm font-semibold text-slate-700 leading-relaxed">
+        <div className="px-3.5 py-2.5 space-y-2 overflow-y-auto flex-1">
+          <p className="text-xs font-black text-slate-700 leading-normal break-words">
             {message}
           </p>
           {itemDetails && (
-            <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 break-words">
+            <div className="p-2 bg-slate-50 rounded-lg border border-slate-200 text-xs font-black text-slate-800 break-words leading-tight">
               {itemDetails}
             </div>
           )}
         </div>
 
         {/* Action Buttons: Cancel vs Delete */}
-        <div className="px-5 pb-5 pt-1 grid grid-cols-2 gap-2.5">
+        <div className="px-3.5 pb-3 pt-1 grid grid-cols-2 gap-1.5 flex-shrink-0">
           <button
             id="btn-confirm-delete-cancel"
             type="button"
             onClick={onCancel}
-            className="py-2.5 px-4 bg-slate-700 hover:bg-slate-800 active:bg-slate-900 text-white rounded-xl font-black text-xs sm:text-sm shadow-md transition-all active:scale-95"
+            className="min-h-[2.4rem] py-1.5 px-3 bg-slate-700 hover:bg-slate-800 active:bg-slate-900 text-white rounded-lg font-black text-xs shadow-2xs transition-all active:scale-95 flex items-center justify-center touch-manipulation cursor-pointer"
           >
-            {defaultCancel}
+            <span className="leading-normal">{defaultCancel}</span>
           </button>
           <button
             id="btn-confirm-delete-yes"
             type="button"
             onClick={onConfirm}
-            className="py-2.5 px-4 bg-red-600 hover:bg-red-700 active:bg-rose-800 text-white rounded-xl font-black text-xs sm:text-sm shadow-md shadow-red-600/25 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+            className="min-h-[2.4rem] py-1.5 px-3 bg-red-600 hover:bg-red-700 active:bg-rose-800 text-white rounded-lg font-black text-xs shadow-2xs shadow-red-600/25 transition-all active:scale-95 flex items-center justify-center gap-1 touch-manipulation cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span>{defaultConfirm}</span>
+            <span className="leading-normal">{defaultConfirm}</span>
           </button>
         </div>
       </div>

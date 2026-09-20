@@ -5,12 +5,16 @@ import {
   loadInvestmentData,
   saveInvestmentData,
   fetchDailyBillsSummary,
+  getPreviousDayStock,
+  PreviousDayStock,
 } from './utils/storage';
 import { LoadEntryPage } from './pages/LoadEntryPage';
 import { DailySalesProfitPage } from './pages/DailySalesProfitPage';
 import { StockRemainingPage } from './pages/StockRemainingPage';
+import { InvestmentSettingsPage } from './pages/InvestmentSettingsPage';
 import { InvestmentBottomNav } from './components/InvestmentBottomNav';
-import { ArrowLeft, Globe, Calendar } from 'lucide-react';
+import { OpeningStockModal } from './components/OpeningStockModal';
+import { ArrowLeft, Globe, Calendar, PackageOpen } from 'lucide-react';
 import { LanguageCode } from '../types';
 
 interface InvestmentAppProps {
@@ -20,6 +24,8 @@ interface InvestmentAppProps {
 export const InvestmentApp: React.FC<InvestmentAppProps> = ({ onBackToPortal }) => {
   const [selectedDate, setSelectedDate] = useState<string>(() => getTodayDateKey());
   const [activeTab, setActiveTab] = useState<InvestmentBottomTab>('load');
+  const [previousStock, setPreviousStock] = useState<PreviousDayStock | null>(() => getPreviousDayStock(selectedDate));
+  const [isOpeningStockModalOpen, setIsOpeningStockModalOpen] = useState(false);
   const [language, setLanguage] = useState<LanguageCode>(() => {
     try {
       const saved = localStorage.getItem('chicken_app_language');
@@ -35,6 +41,25 @@ export const InvestmentApp: React.FC<InvestmentAppProps> = ({ onBackToPortal }) 
   useEffect(() => {
     const loaded = loadInvestmentData(selectedDate);
     const summary = fetchDailyBillsSummary(selectedDate);
+
+    // Compute previous day's closing stock
+    const prev = getPreviousDayStock(selectedDate);
+    setPreviousStock(prev);
+
+    // Auto-prompt on app open next day if there is stock remaining from previous day
+    // and user hasn't seen the popup for this date in the current browser session
+    if (prev && (prev.chickenRemainingKg > 0 || prev.eggRemainingNos > 0)) {
+      try {
+        const seenKey = `apex_opening_stock_seen_${selectedDate}`;
+        const hasSeen = sessionStorage.getItem(seenKey);
+        if (!hasSeen) {
+          setIsOpeningStockModalOpen(true);
+          sessionStorage.setItem(seenKey, '1');
+        }
+      } catch {
+        // ignore
+      }
+    }
 
     // If sales figures are unedited or zero, populate with today's live bills
     const updatedSales = {
@@ -116,6 +141,29 @@ export const InvestmentApp: React.FC<InvestmentAppProps> = ({ onBackToPortal }) 
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Opening Stock Quick Trigger Button */}
+            {previousStock && (previousStock.chickenRemainingKg > 0 || previousStock.eggRemainingNos > 0) && (
+              <button
+                type="button"
+                id="btn-header-opening-stock"
+                onClick={() => setIsOpeningStockModalOpen(true)}
+                className="flex items-center gap-1.5 bg-amber-500/20 hover:bg-amber-500/30 active:scale-95 text-amber-200 border border-amber-400/40 px-2 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer shadow-xs"
+                title={language === 'ta' ? 'தொடக்க இருப்பு விவரம்' : 'View Opening Stock'}
+              >
+                <PackageOpen size={13} className="text-amber-300 shrink-0" />
+                <span className="hidden sm:inline font-bold text-amber-100">
+                  {language === 'ta' ? 'தொடக்க இருப்பு:' : 'Opening:'}
+                </span>
+                <span className="text-amber-300 font-black">
+                  {Math.max(0, previousStock.chickenRemainingKg)} kg
+                </span>
+                <span className="text-amber-400/80">|</span>
+                <span className="text-orange-300 font-black">
+                  {Math.floor(Math.max(0, previousStock.eggRemainingNos) / 30)} {language === 'ta' ? 'தட்டு' : 'T'}
+                </span>
+              </button>
+            )}
+
             {/* Language Toggle */}
             <button
               type="button"
@@ -137,6 +185,7 @@ export const InvestmentApp: React.FC<InvestmentAppProps> = ({ onBackToPortal }) 
             data={data}
             onChangeData={handleChangeData}
             language={language}
+            previousStock={previousStock}
           />
         )}
 
@@ -152,9 +201,26 @@ export const InvestmentApp: React.FC<InvestmentAppProps> = ({ onBackToPortal }) 
           <StockRemainingPage
             data={data}
             language={language}
+            previousStock={previousStock}
+          />
+        )}
+
+        {activeTab === 'settings' && (
+          <InvestmentSettingsPage
+            language={language}
           />
         )}
       </main>
+
+      {/* Opening Stock Modal on Next Day Open */}
+      <OpeningStockModal
+        isOpen={isOpeningStockModalOpen}
+        onClose={() => setIsOpeningStockModalOpen(false)}
+        previousStock={previousStock}
+        currentData={data}
+        onChangeData={handleChangeData}
+        language={language}
+      />
 
       {/* 23 | 24 | 25 Bottom Navigation - Pinned at Bottom */}
       <div className="flex-shrink-0 z-40">

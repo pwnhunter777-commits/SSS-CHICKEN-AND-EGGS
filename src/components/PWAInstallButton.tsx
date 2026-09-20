@@ -57,7 +57,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ language = '
                     <img src="/logo.jpg" alt="Logo" className="w-8 h-8 rounded-xl object-cover" />
                   </div>
                   <div>
-                    <h3 className="text-base font-black text-emerald-950">SSS CHICKEN AGENCY</h3>
+                    <h3 className="text-base font-black text-emerald-950">SSS CHICKEN AND EGG AGENCY</h3>
                     <p className="text-xs text-gray-500 font-bold">Progressive Web App</p>
                   </div>
                 </div>
@@ -74,7 +74,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ language = '
                 <p className="text-emerald-900 font-bold">
                   {language === 'ta' 
                     ? 'உங்கள் ஐபோனில் செயலியை நிறுவ பின்வரும் 2 படிகளை செய்யவும்:' 
-                    : 'To install SSS Chicken Agency on your iPhone or iPad:'}
+                    : 'To install SSS Chicken & Egg Agency on your iPhone or iPad:'}
                 </p>
                 <div className="flex items-start gap-3 bg-emerald-50/70 p-3 rounded-2xl border border-emerald-200/80">
                   <div className="w-7 h-7 rounded-xl bg-emerald-700 text-white flex items-center justify-center flex-shrink-0 font-black text-xs">
@@ -144,7 +144,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ language = '
                   <img src="/logo.jpg" alt="Logo" className="w-8 h-8 rounded-xl object-cover" />
                 </div>
                 <div>
-                  <h3 className="text-base font-black text-emerald-950">SSS CHICKEN AGENCY</h3>
+                  <h3 className="text-base font-black text-emerald-950">SSS CHICKEN AND EGG AGENCY</h3>
                   <p className="text-xs text-gray-500 font-bold">Progressive Web App (PWA)</p>
                 </div>
               </div>

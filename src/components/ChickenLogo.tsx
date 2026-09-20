@@ -19,11 +19,11 @@ export const ChickenLogo: React.FC<ChickenLogoProps> = ({ size = 'md', id = 'age
     <div
       id={id}
       className={`relative inline-flex items-center justify-center ${dimensions} rounded-full overflow-hidden bg-amber-50 shadow-md ring-2 ring-amber-700/20 active:scale-95 transition-transform flex-shrink-0 ${className}`}
-      aria-label="SSS Chicken Agency Logo"
+      aria-label="SSS Chicken and Egg Agency Logo"
     >
       <img
         src={appLogo}
-        alt="SSS Chicken Agency Logo"
+        alt="SSS Chicken and Egg Agency Logo"
         referrerPolicy="no-referrer"
         className="w-full h-full object-cover rounded-full"
       />

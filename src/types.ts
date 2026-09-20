@@ -1,14 +1,17 @@
 export interface ShopSettings {
   shopName: string;
+  shopNameEn?: string;
   shopNameTa?: string;
   phoneNumber: string;
   gstNumber: string;
   address: string;
+  addressEn?: string;
   addressTa?: string;
   upiId: string;
   billWidthCm?: number;
   fontSizeScale?: number; // percentage, e.g. 80 to 140, default 100
   isBoldText?: boolean; // whether all text across the app is bolded
+  retentionDays?: number; // 31, 60, 90, 180, 365, or 0 (keep forever)
 }
 
 export interface ProductItem {
@@ -48,6 +51,7 @@ export interface Bill {
   createdAt: string; // ISO string
   hotelName: string;
   hotelId?: string;
+  hotelPhone?: string;
   items: BillItem[];
   totalKg: number;
   totalAmount: number;
@@ -65,6 +69,7 @@ export interface HotelPayment {
   paymentMode?: 'cash' | 'upi' | 'bank' | 'other' | 'cheque';
   notes?: string;
   type?: 'payment' | 'balance_add';
+  isOpeningBalance?: boolean;
 }
 
 export type AppPage = 'daily-price' | 'billing' | 'register' | 'total' | 'hotel' | 'settings';
@@ -118,16 +123,17 @@ export const DEFAULT_HOTELS: HotelItem[] = [
 ];
 
 export const DEFAULT_SETTINGS: ShopSettings = {
-  shopName: 'SSS CHICKEN AGENCY',
-  shopNameTa: 'எஸ்.எஸ்.எஸ். சிக்கன் ஏஜென்சி',
+  shopName: 'SSS CHICKEN AND EGG AGENCY',
+  shopNameTa: 'எஸ்.எஸ்.எஸ். சிக்கன் & முட்டை ஏஜென்சி',
   phoneNumber: '8680000003',
   gstNumber: '34AQPN8846J2ZF',
   address: 'NO 6, PONDY MAIN ROAD, SULTHANPET, VILLIANUR, PUDUCHERRY - 605 110',
   addressTa: 'எண் 6, பாண்டி மெயின் ரோடு, சுல்தான்பேட்டை, வில்லியனூர், புதுச்சேரி - 605 110',
   upiId: 'NAZIRAHAMED0003@okhdfcbank',
-  billWidthCm: 17,
-  fontSizeScale: 125, // Default 125% scale for old-age visual accessibility
+  billWidthCm: 19,
+  fontSizeScale: 135, // Default 135% scale for clear visual accessibility
   isBoldText: true, // Default bold mode for high contrast and readability
+  retentionDays: 31, // Default 31 days data retention
 };
 
 // Helper function to get product name based on active language
@@ -149,11 +155,10 @@ export function getHotelName(hotel: HotelItem, lang: LanguageCode): string {
 // Helper function to get shop name based on active language
 export function getShopDisplayName(settings: ShopSettings, lang: LanguageCode): string {
   if (lang === 'ta') {
-    if (settings.shopNameTa && settings.shopNameTa.trim()) return settings.shopNameTa;
-    if (settings.shopName === 'SSS CHICKEN AGENCY' || !settings.shopName) return 'எஸ்.எஸ்.எஸ். சிக்கன் ஏஜென்சி';
-    return settings.shopName;
+    if (settings.shopNameTa && settings.shopNameTa.trim() && settings.shopNameTa !== 'எஸ்.எஸ்.எஸ். சிக்கன் ஏஜென்சி') return settings.shopNameTa;
+    return 'எஸ்.எஸ்.எஸ். சிக்கன் & முட்டை ஏஜென்சி';
   }
-  return settings.shopName || 'SSS CHICKEN AGENCY';
+  return settings.shopName || 'SSS CHICKEN AND EGG AGENCY';
 }
 
 // Helper function to get shop address based on active language

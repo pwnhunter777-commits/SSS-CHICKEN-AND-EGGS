@@ -30,14 +30,24 @@ export interface DaySalesRecord {
   eggQty?: number; // egg count sold full day
 }
 
+export interface DayOpeningStock {
+  fromPreviousDate?: string;
+  chickenKg: number;
+  eggNos: number;
+  eggTares?: number;
+  eggRem?: number;
+  appliedToLoad?: boolean; // whether added to today's available stock
+}
+
 export interface InvestmentDayData {
   date: string; // YYYY-MM-DD
   itemType: InvestmentItemType; // chicken | egg
   chickenLoad: ChickenLoadRecord;
   eggLoad: EggLoadRecord;
   sales: DaySalesRecord;
+  openingStock?: DayOpeningStock;
   isCustomOverridden?: boolean;
 }
 
-export type InvestmentBottomTab = 'load' | 'sales' | 'summary'; // 23, 24, 25
+export type InvestmentBottomTab = 'load' | 'sales' | 'summary' | 'settings';
 export type SummarySubTab = 'summary' | 'wholesale-total' | 'retail-total' | 'hotel-dues'; // 17, 21, 22, 26

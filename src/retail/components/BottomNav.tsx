@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tag, Receipt, BookOpen, BarChart3, Settings as SettingsIcon } from 'lucide-react';
+import { Tag, Receipt, BookOpen, BarChart3 } from 'lucide-react';
 import { Page, Language } from '../types';
 import { TRANSLATIONS } from '../utils/translations';
 
@@ -37,16 +37,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       label: t.total,
       icon: <BarChart3 className="w-5 h-5" />,
     },
-    {
-      id: 'settings',
-      label: t.settings,
-      icon: <SettingsIcon className="w-5 h-5" />,
-    },
   ];
 
   return (
     <nav className="sticky bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-emerald-100 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] pb-safe">
-      <div className="max-w-md mx-auto grid grid-cols-5 min-h-[4.25rem] h-auto items-center px-1 py-1">
+      <div className="max-w-md mx-auto grid grid-cols-4 min-h-[4.25rem] h-auto items-center px-1 py-1">
         {navItems.map((item) => {
           const isActive = currentPage === item.id;
           return (

@@ -319,7 +319,7 @@ export async function testPrintBluetooth(
     date: new Date().toISOString().split('T')[0],
     time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
     timestamp: Date.now(),
-    hotelName: settings.shopName || 'Apex Retail Chicken Shop',
+    hotelName: settings.shopName || 'SSS CHICKEN AND EGG AGENCY',
     items: [
       {
         productId: 'p0',

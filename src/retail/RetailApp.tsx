@@ -14,7 +14,6 @@ import { DailyPricePage } from './pages/DailyPricePage';
 import { BillingPage } from './pages/BillingPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { TotalPage } from './pages/TotalPage';
-import { SettingsPage } from './pages/SettingsPage';
 import { InstallAppModal } from './components/InstallAppModal';
 
 interface RetailAppProps {
@@ -28,9 +27,17 @@ export const RetailApp: React.FC<RetailAppProps> = ({ onBackToPortal }) => {
   const [products, setProducts] = useState<Product[]>(() => loadProducts());
   const [showInstallModal, setShowInstallModal] = useState<boolean>(false);
 
-  // Font scale zoom factor (default 1.0)
+  useEffect(() => {
+    if (currentPage === ('settings' as Page)) {
+      setCurrentPage('billing');
+    }
+  }, [currentPage]);
+
+  // Font scale zoom factor (default 1.15 for enhanced legibility)
   const fontScale =
-    settings.fontSizeScale !== undefined ? settings.fontSizeScale : 1.0;
+    settings.fontSizeScale !== undefined && settings.fontSizeScale > 1.0
+      ? settings.fontSizeScale
+      : 1.15;
 
   const handleLanguageChange = (newLang: Language) => {
     setLanguage(newLang);
@@ -90,16 +97,6 @@ export const RetailApp: React.FC<RetailAppProps> = ({ onBackToPortal }) => {
           )}
 
           {currentPage === 'total' && <TotalPage language={language} />}
-
-          {currentPage === 'settings' && (
-            <SettingsPage
-              settings={settings}
-              setSettings={setSettings}
-              language={language}
-              onLanguageChange={handleLanguageChange}
-              onExitToPortal={onBackToPortal}
-            />
-          )}
         </main>
 
         {/* Bottom Navigation Bar - Pinned at Bottom */}

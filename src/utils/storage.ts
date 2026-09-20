@@ -10,9 +10,32 @@ import {
   ProductItem,
   ShopSettings,
 } from '../types';
-import { isOlderThan31Days, execute31DayDataCleanup, getStorageStats, RETENTION_DAYS } from './retention';
+import {
+  isOlderThanRetention,
+  executeDataCleanup,
+  checkPendingCleanup,
+  isOlderThan31Days,
+  execute31DayDataCleanup,
+  getStorageStats,
+  RETENTION_DAYS,
+} from './retention';
+import {
+  saveToPhoneDB,
+  getFromPhoneDB,
+  requestPhonePersistentStorage,
+  isPhoneStoragePersistent,
+} from './idbPhoneStorage';
 
-export { execute31DayDataCleanup, getStorageStats, RETENTION_DAYS };
+export {
+  isOlderThanRetention,
+  executeDataCleanup,
+  checkPendingCleanup,
+  execute31DayDataCleanup,
+  getStorageStats,
+  RETENTION_DAYS,
+  requestPhonePersistentStorage,
+  isPhoneStoragePersistent,
+};
 
 const STORAGE_KEYS = {
   SETTINGS: 'chicken_app_settings',
@@ -97,15 +120,23 @@ export function loadSettings(): ShopSettings {
     const data = localStorage.getItem(STORAGE_KEYS.SETTINGS);
     if (data) {
       const parsed = JSON.parse(data);
-      // If legacy 100% font scale or missing, upgrade to 125% for elderly user readability
-      if (!parsed.fontSizeScale || parsed.fontSizeScale === 100) {
-        parsed.fontSizeScale = 125;
+      // Ensure comfortable font scale (minimum 135%) and universal bold text
+      if (!parsed.fontSizeScale || parsed.fontSizeScale < 130) {
+        parsed.fontSizeScale = 135;
       }
-      if (parsed.isBoldText === undefined) {
-        parsed.isBoldText = true;
-      }
-      if (parsed.shopName === 'GREEN FARMS CHICKEN' || !parsed.shopName) {
-        const merged = { ...DEFAULT_SETTINGS, ...parsed, ...DEFAULT_SETTINGS, fontSizeScale: parsed.fontSizeScale };
+      parsed.isBoldText = true;
+      if (
+        parsed.shopName === 'GREEN FARMS CHICKEN' ||
+        parsed.shopName === 'SSS CHICKEN AGENCY' ||
+        !parsed.shopName
+      ) {
+        const merged = {
+          ...DEFAULT_SETTINGS,
+          ...parsed,
+          shopName: DEFAULT_SETTINGS.shopName,
+          shopNameTa: DEFAULT_SETTINGS.shopNameTa,
+          fontSizeScale: parsed.fontSizeScale,
+        };
         saveSettings(merged);
         return merged;
       }
@@ -120,6 +151,7 @@ export function loadSettings(): ShopSettings {
 export function saveSettings(settings: ShopSettings): void {
   try {
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+    saveToPhoneDB(STORAGE_KEYS.SETTINGS, settings);
   } catch (e) {
     console.error('Error saving settings:', e);
   }
@@ -151,6 +183,7 @@ export function loadProducts(): ProductItem[] {
 export function saveProducts(products: ProductItem[]): void {
   try {
     localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
+    saveToPhoneDB(STORAGE_KEYS.PRODUCTS, products);
   } catch (e) {
     console.error('Error saving products:', e);
   }
@@ -173,6 +206,7 @@ export function loadAllDailyPrices(): Record<string, DailyPriceRecord> {
       }
       if (changed) {
         localStorage.setItem(STORAGE_KEYS.DAILY_PRICES, JSON.stringify(filtered));
+        saveToPhoneDB(STORAGE_KEYS.DAILY_PRICES, filtered);
       }
       return filtered;
     }
@@ -206,25 +240,21 @@ export function saveTodayDailyPrices(prices: Record<string, number>): DailyPrice
       }
     }
     localStorage.setItem(STORAGE_KEYS.DAILY_PRICES, JSON.stringify(filtered));
+    saveToPhoneDB(STORAGE_KEYS.DAILY_PRICES, filtered);
   } catch (e) {
     console.error('Error saving daily prices:', e);
   }
   return record;
 }
 
-// 4. Bills (with 31-day local phone storage auto-retention)
+// 4. Bills
 export function loadBills(): Bill[] {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.BILLS);
     if (data) {
       const parsed = JSON.parse(data);
       if (Array.isArray(parsed)) {
-        // Automatically prune any bill older than 31 days from phone storage
-        const retainedBills = parsed.filter((b) => !isOlderThan31Days(b.date || b.createdAt));
-        if (retainedBills.length !== parsed.length) {
-          localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(retainedBills));
-        }
-        return retainedBills;
+        return parsed;
       }
     }
   } catch (e) {
@@ -235,9 +265,8 @@ export function loadBills(): Bill[] {
 
 export function saveBills(bills: Bill[]): void {
   try {
-    // Enforce 31-day retention before writing to phone storage
-    const activeBills = bills.filter((b) => !isOlderThan31Days(b.date || b.createdAt));
-    localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(activeBills));
+    localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(bills));
+    saveToPhoneDB(STORAGE_KEYS.BILLS, bills);
   } catch (e) {
     console.error('Error saving bills:', e);
   }
@@ -264,7 +293,6 @@ export function incrementBillNumber(): void {
 }
 
 export function addBill(bill: Bill): Bill[] {
-  execute31DayDataCleanup();
   const bills = loadBills();
   const updated = [bill, ...bills];
   saveBills(updated);
@@ -309,8 +337,37 @@ export function loadHotels(): HotelItem[] {
 export function saveHotels(hotels: HotelItem[]): void {
   try {
     localStorage.setItem(STORAGE_KEYS.HOTELS, JSON.stringify(hotels));
+    saveToPhoneDB(STORAGE_KEYS.HOTELS, hotels);
   } catch (e) {
     console.error('Error saving hotels:', e);
+  }
+}
+
+export function updateBillsForHotelPhone(hotelIdOrName: string, phone: string): Bill[] {
+  try {
+    const bills = loadBills();
+    const trimmed = phone.trim();
+    const lower = (hotelIdOrName || '').toLowerCase().trim();
+    let changed = false;
+    const updated = bills.map((b) => {
+      if (
+        (b.hotelId && b.hotelId === hotelIdOrName) ||
+        (b.hotelName && b.hotelName.toLowerCase().trim() === lower)
+      ) {
+        if (b.hotelPhone !== trimmed) {
+          changed = true;
+          return { ...b, hotelPhone: trimmed };
+        }
+      }
+      return b;
+    });
+    if (changed) {
+      saveBills(updated);
+    }
+    return updated;
+  } catch (e) {
+    console.error('Error updating bills for hotel phone:', e);
+    return loadBills();
   }
 }
 
@@ -341,6 +398,7 @@ export function saveOrUpdateHotelPhone(hotelIdOrName: string, phone: string): Ho
   }
 
   saveHotels(newHotels);
+  updateBillsForHotelPhone(hotelIdOrName, trimmedPhone);
   return newHotels;
 }
 
@@ -355,19 +413,14 @@ export function getHotelPhone(hotelIdOrName: string, hotelsList?: HotelItem[]): 
   return match?.phone || '';
 }
 
-// 6. Hotel Payments (with 31-day local phone storage auto-retention)
+// 6. Hotel Payments
 export function loadHotelPayments(): HotelPayment[] {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.HOTEL_PAYMENTS);
     if (data) {
       const parsed = JSON.parse(data);
       if (Array.isArray(parsed)) {
-        // Automatically prune any payment older than 31 days from phone storage
-        const retainedPayments = parsed.filter((p) => !isOlderThan31Days(p.date || p.createdAt));
-        if (retainedPayments.length !== parsed.length) {
-          localStorage.setItem(STORAGE_KEYS.HOTEL_PAYMENTS, JSON.stringify(retainedPayments));
-        }
-        return retainedPayments;
+        return parsed;
       }
     }
   } catch (e) {
@@ -378,15 +431,14 @@ export function loadHotelPayments(): HotelPayment[] {
 
 export function saveHotelPayments(payments: HotelPayment[]): void {
   try {
-    const activePayments = payments.filter((p) => !isOlderThan31Days(p.date || p.createdAt));
-    localStorage.setItem(STORAGE_KEYS.HOTEL_PAYMENTS, JSON.stringify(activePayments));
+    localStorage.setItem(STORAGE_KEYS.HOTEL_PAYMENTS, JSON.stringify(payments));
+    saveToPhoneDB(STORAGE_KEYS.HOTEL_PAYMENTS, payments);
   } catch (e) {
     console.error('Error saving hotel payments:', e);
   }
 }
 
 export function addHotelPayment(payment: HotelPayment): HotelPayment[] {
-  execute31DayDataCleanup();
   const payments = loadHotelPayments();
   const updated = [payment, ...payments];
   saveHotelPayments(updated);
@@ -416,6 +468,7 @@ export function loadLanguage(): LanguageCode {
 export function saveLanguage(lang: LanguageCode): void {
   try {
     localStorage.setItem(STORAGE_KEYS.LANGUAGE, lang);
+    saveToPhoneDB(STORAGE_KEYS.LANGUAGE, lang);
   } catch (e) {
     console.error('Error saving language:', e);
   }
@@ -590,13 +643,17 @@ export function exportHotelStatementToCSV(
   payments: HotelPayment[],
   totalBilled: number,
   totalPaid: number,
-  balance: number
+  balance: number,
+  totalBalAdded: number = 0
 ): void {
   try {
     const lines: string[] = [];
     lines.push(`HOTEL STATEMENT - ${hotelName.toUpperCase()}`);
     lines.push(`Generated On,${new Date().toLocaleString('en-IN')}`);
     lines.push(`Total Billed (Rs),${totalBilled.toFixed(2)}`);
+    if (totalBalAdded !== 0) {
+      lines.push(`Balance Adjustments / Opening Balance (Rs),${totalBalAdded.toFixed(2)}`);
+    }
     lines.push(`Total Paid (Rs),${totalPaid.toFixed(2)}`);
     lines.push(`Outstanding Balance Due (Rs),${balance.toFixed(2)}`);
     lines.push('');
@@ -610,7 +667,12 @@ export function exportHotelStatementToCSV(
     lines.push('--- PAYMENTS & BALANCE ADJUSTMENTS ---');
     lines.push('ID,Date,Type,Amount (Rs),Payment Mode,Notes');
     payments.forEach((p) => {
-      const entryType = p.type === 'balance_add' ? 'Balance Add (+)' : 'Payment Received (-)';
+      let entryType = 'Payment Received (-)';
+      if (p.isOpeningBalance) {
+        entryType = p.amount >= 0 ? 'Opening Balance (+)' : 'Opening Balance Credit (-)';
+      } else if (p.type === 'balance_add') {
+        entryType = p.amount >= 0 ? 'Balance Add (+)' : 'Balance Adj (-)';
+      }
       lines.push(`${p.id},${p.date},${entryType},${p.amount.toFixed(2)},${p.paymentMode || 'Cash'},"${(p.notes || '').replace(/"/g, '""')}"`);
     });
     const csvContent = lines.join('\n');
@@ -627,4 +689,76 @@ export function exportHotelStatementToCSV(
   } catch (e) {
     console.error('Failed to export hotel statement to CSV:', e);
   }
+}
+
+/**
+ * Initialize on-device phone storage:
+ * 1. Requests persistent storage permission from the phone's browser so data is never evicted.
+ * 2. Mirrors current localStorage data into the phone's IndexedDB for dual local safety.
+ * 3. If localStorage was cleared (e.g. browser refreshed/cleared cache), restores from IndexedDB.
+ */
+export async function initPhoneStorage(): Promise<boolean> {
+  try {
+    await requestPhonePersistentStorage();
+
+    // Check if bills or hotels exist in localStorage
+    const localBills = localStorage.getItem(STORAGE_KEYS.BILLS);
+    const localHotels = localStorage.getItem(STORAGE_KEYS.HOTELS);
+
+    if (!localBills || localBills === '[]') {
+      const idbBills = await getFromPhoneDB<Bill[]>(STORAGE_KEYS.BILLS);
+      if (idbBills && Array.isArray(idbBills) && idbBills.length > 0) {
+        localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(idbBills));
+        console.log('[PhoneDB] Restored bills from on-device Phone DB:', idbBills.length);
+      }
+    } else {
+      // Sync to Phone DB
+      try {
+        const parsed = JSON.parse(localBills);
+        saveToPhoneDB(STORAGE_KEYS.BILLS, parsed);
+      } catch {}
+    }
+
+    if (!localHotels || localHotels === '[]') {
+      const idbHotels = await getFromPhoneDB<HotelItem[]>(STORAGE_KEYS.HOTELS);
+      if (idbHotels && Array.isArray(idbHotels) && idbHotels.length > 0) {
+        localStorage.setItem(STORAGE_KEYS.HOTELS, JSON.stringify(idbHotels));
+      }
+    } else {
+      try {
+        const parsed = JSON.parse(localHotels);
+        saveToPhoneDB(STORAGE_KEYS.HOTELS, parsed);
+      } catch {}
+    }
+
+    // Mirror current settings & payments to phone DB
+    const settings = loadSettings();
+    saveToPhoneDB(STORAGE_KEYS.SETTINGS, settings);
+    const payments = loadHotelPayments();
+    if (payments.length > 0) {
+      saveToPhoneDB(STORAGE_KEYS.HOTEL_PAYMENTS, payments);
+    }
+    const products = loadProducts();
+    saveToPhoneDB(STORAGE_KEYS.PRODUCTS, products);
+
+    return true;
+  } catch (err) {
+    console.warn('[PhoneDB] Init phone storage notice:', err);
+    return false;
+  }
+}
+
+export function getPhoneStorageStatus() {
+  const bills = loadBills();
+  const hotels = loadHotels();
+  const payments = loadHotelPayments();
+  const products = loadProducts();
+  return {
+    isDeviceLocal: true,
+    storageName: 'Phone Local Storage (IndexedDB + LocalStorage)',
+    billsCount: bills.length,
+    hotelsCount: hotels.length,
+    paymentsCount: payments.length,
+    productsCount: products.length,
+  };
 }

@@ -121,7 +121,7 @@ export function generateReceiptText(bill: Bill, settings: ShopSettings): string 
   const dLine = '================================';
   let receipt = '';
 
-  receipt += `${(settings.shopName || 'SSS CHICKEN AGENCY').toUpperCase()}\n`;
+  receipt += `${(settings.shopName || 'SSS CHICKEN AND EGG AGENCY').toUpperCase()}\n`;
   if (settings.address) receipt += `${settings.address}\n`;
   if (settings.phoneNumber) receipt += `Ph: ${settings.phoneNumber}\n`;
   if (settings.gstNumber) receipt += `GST: ${settings.gstNumber}\n`;
@@ -130,18 +130,30 @@ export function generateReceiptText(bill: Bill, settings: ShopSettings): string 
   receipt += `Date: ${bill.date}\n`;
   receipt += `Hotel: ${bill.hotelName}\n`;
   receipt += `${line}\n`;
-  receipt += `ITEM              KG   RATE  AMT\n`;
-  receipt += `${line}\n`;
 
-  bill.items.forEach((item) => {
-    const name = item.productName.substring(0, 14).padEnd(14, ' ');
-    const kg = item.kg.toFixed(2).padStart(5, ' ');
-    const rate = Math.round(item.pricePerKg).toString().padStart(4, ' ');
-    const amt = Math.round(item.amount).toString().padStart(6, ' ');
-    receipt += `${name} ${kg} ${rate} ${amt}\n`;
-  });
+  if (bill.items.length === 1) {
+    // Single-item clean showcase
+    const item = bill.items[0];
+    receipt += `ITEM: ${item.productName.toUpperCase()}\n`;
+    receipt += `RATE:   Rs. ${Math.round(item.pricePerKg)} / KG\n`;
+    receipt += `WEIGHT: ${item.kg.toFixed(2)} KG\n`;
+    receipt += `AMOUNT: Rs. ${Math.round(item.amount).toLocaleString('en-IN')}/-\n`;
+  } else {
+    // Multi-item table
+    receipt += `#  ITEM           KG  RATE   AMT\n`;
+    receipt += `${line}\n`;
+    bill.items.forEach((item, idx) => {
+      const num = (idx + 1).toString().padEnd(2, ' ');
+      const name = item.productName.substring(0, 13).padEnd(13, ' ');
+      const kg = item.kg.toFixed(1).padStart(5, ' ');
+      const rate = Math.round(item.pricePerKg).toString().padStart(4, ' ');
+      const amt = Math.round(item.amount).toString().padStart(6, ' ');
+      receipt += `${num} ${name} ${kg} ${rate} ${amt}\n`;
+    });
+  }
 
   receipt += `${line}\n`;
+  receipt += `ITEMS COUNT:  ${bill.items.length}\n`;
   receipt += `TOTAL KG:     ${bill.totalKg.toFixed(2)} KG\n`;
   receipt += `CURRENT BILL: Rs. ${Math.round(bill.totalAmount).toLocaleString('en-IN')}/-\n`;
 
@@ -178,7 +190,7 @@ export function generateEscPosCommands(bill: Bill, settings: ShopSettings): Uint
   // Bold & Double height for Shop Name
   bytes.push(0x1b, 0x45, 0x01); // Bold ON
   bytes.push(0x1d, 0x21, 0x11); // Double width & height
-  bytes.push(...encoder.encode(`${settings.shopName || 'SSS CHICKEN AGENCY'}\n`));
+  bytes.push(...encoder.encode(`${settings.shopName || 'SSS CHICKEN AND EGG AGENCY'}\n`));
   bytes.push(0x1d, 0x21, 0x00); // Normal size
   bytes.push(0x1b, 0x45, 0x00); // Bold OFF
 
@@ -269,10 +281,14 @@ export async function printViaBluetooth(
     const device = await nav.bluetooth.requestDevice({
       acceptAllDevices: true,
       optionalServices: [
-        '000018f0-0000-1000-8000-00805f9b34fb',
-        '49535343-fe7d-4ae5-8fa9-9fafd205e455',
-        '0000e0ff-0000-1000-8000-00805f9b34fb',
+        '000018f0-0000-1000-8000-00805f9b34fb', // Standard POS Print Service
+        'e7810a06-73ae-499d-8c15-faa9aef0c3f2',
+        '0000ffe0-0000-1000-8000-00805f9b34fb', // Common BLE Serial (HC-08, PT-210, etc.)
+        '49535343-fe7d-4ae5-8fa9-9fafd205e455', // ISSC Transparent UART
         '0000ff00-0000-1000-8000-00805f9b34fb',
+        '0000ae00-0000-1000-8000-00805f9b34fb',
+        '0000af00-0000-1000-8000-00805f9b34fb',
+        '0000e0ff-0000-1000-8000-00805f9b34fb',
       ],
     });
 
@@ -317,7 +333,7 @@ export async function printViaBluetooth(
       data = generateEscPosCommands(bill, settings);
     }
 
-    const chunkSize = 512;
+    const chunkSize = 128;
     for (let i = 0; i < data.length; i += chunkSize) {
       const chunk = data.slice(i, i + chunkSize);
       if (writeCharacteristic.writeValueWithoutResponse) {
@@ -325,9 +341,7 @@ export async function printViaBluetooth(
       } else {
         await writeCharacteristic.writeValue(chunk);
       }
-      if (data.length > 2048) {
-        await new Promise((r) => setTimeout(r, 15));
-      }
+      await new Promise((r) => setTimeout(r, 35));
     }
 
     return {

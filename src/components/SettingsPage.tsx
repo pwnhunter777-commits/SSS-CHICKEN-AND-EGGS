@@ -17,6 +17,7 @@ import {
   Type,
   Bold,
   Store,
+  Archive,
 } from 'lucide-react';
 import { appLogo } from '../assets/logo';
 import { Bill, DEFAULT_HOTELS, getHotelName, HotelItem, LanguageCode, ShopSettings } from '../types';
@@ -49,15 +50,16 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
 
   const [formData, setFormData] = useState<ShopSettings>({
     shopName: settings.shopName || '',
-    shopNameTa: settings.shopNameTa || 'எஸ்.எஸ்.எஸ். சிக்கன் ஏஜென்சி',
+    shopNameTa: settings.shopNameTa || 'எஸ்.எஸ்.எஸ். சிக்கன் & முட்டை ஏஜென்சி',
     phoneNumber: settings.phoneNumber || '',
     gstNumber: settings.gstNumber || '',
     address: settings.address || '',
     addressTa: settings.addressTa || 'எண் 6, பாண்டி மெயின் ரோடு, சுல்தான்பேட்டை, வில்லியனூர், புதுச்சேரி - 605 110',
     upiId: settings.upiId || '',
-    billWidthCm: settings.billWidthCm || 17,
+    billWidthCm: settings.billWidthCm || 19,
     fontSizeScale: settings.fontSizeScale || 100,
     isBoldText: settings.isBoldText || false,
+    retentionDays: settings.retentionDays !== undefined ? settings.retentionDays : 31,
   });
 
   const [newHotelNameEn, setNewHotelNameEn] = useState('');
@@ -207,33 +209,33 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   };
 
   return (
-    <div id="page-settings" className="pb-8 pt-3 px-4 max-w-md mx-auto space-y-4 animate-in fade-in">
+    <div id="page-settings" className="pb-6 pt-2 px-2.5 max-w-md mx-auto space-y-2 animate-in fade-in">
       {/* Page Title */}
-      <div className="flex items-center gap-2">
-        <Settings className="w-5 h-5 text-emerald-700" />
-        <h2 className="text-base font-bold text-emerald-950">{t.settings}</h2>
+      <div className="flex items-center gap-1.5">
+        <Settings className="w-4 h-4 text-emerald-700" />
+        <h2 className="text-xs sm:text-sm font-black text-emerald-950">{t.settings}</h2>
       </div>
 
       {/* Official Business Branding Badge Card */}
-      <div className="bg-gradient-to-r from-emerald-800 to-emerald-900 text-white rounded-3xl p-4 shadow-md flex items-center gap-3.5 border border-emerald-700/60">
-        <div className="w-14 h-14 rounded-2xl overflow-hidden bg-white p-0.5 flex-shrink-0 shadow-md border-2 border-amber-300">
+      <div className="bg-gradient-to-r from-emerald-800 to-emerald-900 text-white rounded-2xl p-2.5 shadow-md flex items-center gap-2.5 border border-emerald-700/60">
+        <div className="w-10 h-10 rounded-xl overflow-hidden bg-white p-0.5 flex-shrink-0 shadow-2xs border-2 border-amber-300">
           <img
             src={appLogo}
-            alt="SSS Chicken Agency Logo"
-            className="w-full h-full object-cover rounded-xl"
+            alt="SSS Chicken and Egg Agency Logo"
+            className="w-full h-full object-cover rounded-lg"
             referrerPolicy="no-referrer"
           />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <h3 className="font-black text-sm sm:text-base tracking-wide uppercase text-white truncate">
-              {formData.shopName || 'SSS CHICKEN AGENCY'}
+          <div className="flex items-center gap-1">
+            <h3 className="font-black text-xs sm:text-sm tracking-wide uppercase text-white break-words leading-tight">
+              {formData.shopName || 'SSS CHICKEN AND EGG AGENCY'}
             </h3>
           </div>
-          <p className="text-[11px] text-emerald-100 font-semibold truncate">
+          <p className="text-[10px] text-emerald-100 font-bold break-words leading-tight mt-0.5">
             {formData.phoneNumber || '8680000003'}
           </p>
-          <p className="text-[10px] text-amber-200 font-medium truncate">
+          <p className="text-[9px] text-amber-200 font-bold break-words leading-tight">
             GST: {formData.gstNumber || '34AQPN8846J2ZF'}
           </p>
         </div>
@@ -241,29 +243,29 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
 
       {/* Success Notification */}
       {savedSuccess && (
-        <div className="bg-emerald-600 text-white p-3.5 rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md animate-in fade-in slide-in-from-top-2">
-          <Check className="w-5 h-5 flex-shrink-0" />
+        <div className="bg-emerald-600 text-white p-2 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-2xs animate-in fade-in slide-in-from-top-2">
+          <Check className="w-4 h-4 flex-shrink-0" />
           <span>{t.saveSettingsSuccess}</span>
         </div>
       )}
 
       {fileStatus && (
         <div
-          className={`p-3.5 rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md animate-in fade-in slide-in-from-top-2 ${
+          className={`p-2 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-2xs animate-in fade-in slide-in-from-top-2 ${
             fileStatus.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'
           }`}
         >
-          <Check className="w-5 h-5 flex-shrink-0" />
+          <Check className="w-4 h-4 flex-shrink-0" />
           <span>{fileStatus.text}</span>
         </div>
       )}
 
       {/* Settings Form Card */}
-      <form onSubmit={handleSubmit} className="bg-white border border-emerald-200 rounded-3xl p-4 sm:p-5 shadow-xs space-y-4">
+      <form onSubmit={handleSubmit} className="bg-white border border-emerald-200 rounded-2xl p-3 shadow-2xs space-y-2">
         {/* 1. Shop Name */}
         <div>
-          <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
-            <Store className="w-3.5 h-3.5 text-emerald-700" />
+          <label className="block text-[10px] font-black text-gray-700 mb-1 flex items-center gap-1 leading-tight">
+            <Store className="w-3 h-3 text-emerald-700" />
             <span>1. {t.shopName}</span>
           </label>
           <input
@@ -271,16 +273,16 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             type="text"
             value={formData.shopName}
             onChange={(e) => handleChange('shopName', e.target.value)}
-            placeholder="SSS CHICKEN AGENCY"
+            placeholder="SSS CHICKEN AND EGG AGENCY"
             required
-            className="w-full px-3.5 py-2.5 bg-emerald-50/40 border border-emerald-300 focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 rounded-xl text-xs sm:text-sm font-bold text-gray-900 outline-none transition-all"
+            className="w-full min-h-[2.4rem] px-2.5 py-1.5 bg-emerald-50/40 border border-emerald-300 focus:border-emerald-600 focus:bg-white focus:ring-1 focus:ring-emerald-500/20 rounded-lg text-xs font-black text-gray-900 outline-none transition-all leading-normal"
           />
         </div>
 
         {/* 2. Phone Number */}
         <div>
-          <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
-            <Phone className="w-3.5 h-3.5 text-emerald-700" />
+          <label className="block text-[10px] font-black text-gray-700 mb-1 flex items-center gap-1 leading-tight">
+            <Phone className="w-3 h-3 text-emerald-700" />
             <span>2. {t.phoneNumber}</span>
           </label>
           <input
@@ -289,14 +291,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             value={formData.phoneNumber}
             onChange={(e) => handleChange('phoneNumber', e.target.value)}
             placeholder="8680000003"
-            className="w-full px-3.5 py-2.5 bg-emerald-50/40 border border-emerald-300 focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 rounded-xl text-xs sm:text-sm font-semibold text-gray-900 outline-none transition-all"
+            className="w-full min-h-[2.4rem] px-2.5 py-1.5 bg-emerald-50/40 border border-emerald-300 focus:border-emerald-600 focus:bg-white focus:ring-1 focus:ring-emerald-500/20 rounded-lg text-xs font-black text-gray-900 outline-none transition-all leading-normal"
           />
         </div>
 
         {/* 3. GST Number */}
         <div>
-          <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
-            <FileText className="w-3.5 h-3.5 text-emerald-700" />
+          <label className="block text-[10px] font-black text-gray-700 mb-1 flex items-center gap-1 leading-tight">
+            <FileText className="w-3 h-3 text-emerald-700" />
             <span>3. {t.gstNumber}</span>
           </label>
           <input
@@ -305,14 +307,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             value={formData.gstNumber}
             onChange={(e) => handleChange('gstNumber', e.target.value)}
             placeholder="34AQPN8846J2ZF"
-            className="w-full px-3.5 py-2.5 bg-emerald-50/40 border border-emerald-300 focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 rounded-xl text-xs sm:text-sm font-semibold text-gray-900 outline-none transition-all uppercase"
+            className="w-full min-h-[2.4rem] px-2.5 py-1.5 bg-emerald-50/40 border border-emerald-300 focus:border-emerald-600 focus:bg-white focus:ring-1 focus:ring-emerald-500/20 rounded-lg text-xs font-black text-gray-900 outline-none transition-all uppercase leading-normal"
           />
         </div>
 
         {/* 4. Address */}
         <div>
-          <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
-            <MapPin className="w-3.5 h-3.5 text-emerald-700" />
+          <label className="block text-[10px] font-black text-gray-700 mb-1 flex items-center gap-1 leading-tight">
+            <MapPin className="w-3 h-3 text-emerald-700" />
             <span>4. {t.address}</span>
           </label>
           <textarea
@@ -321,14 +323,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             value={formData.address}
             onChange={(e) => handleChange('address', e.target.value)}
             placeholder="NO 6, PONDY MAIN ROAD, SULTHANPET, VILLIANUR, PUDUCHERRY - 605 110"
-            className="w-full px-3.5 py-2 bg-emerald-50/40 border border-emerald-300 focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 rounded-xl text-xs sm:text-sm font-medium text-gray-900 outline-none transition-all resize-none"
+            className="w-full min-h-[2.4rem] px-2.5 py-1.5 bg-emerald-50/40 border border-emerald-300 focus:border-emerald-600 focus:bg-white focus:ring-1 focus:ring-emerald-500/20 rounded-lg text-xs font-black text-gray-900 outline-none transition-all resize-none leading-normal"
           />
         </div>
 
         {/* 5. UPI ID */}
         <div>
-          <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
-            <QrCode className="w-3.5 h-3.5 text-emerald-700" />
+          <label className="block text-[10px] font-black text-gray-700 mb-1 flex items-center gap-1 leading-tight">
+            <QrCode className="w-3 h-3 text-emerald-700" />
             <span>5. {t.upiId}</span>
           </label>
           <input
@@ -337,57 +339,57 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             value={formData.upiId}
             onChange={(e) => handleChange('upiId', e.target.value)}
             placeholder="NAZIRAHAMED0003@okhdfcbank"
-            className="w-full px-3.5 py-2.5 bg-emerald-50/40 border border-emerald-300 focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 rounded-xl text-xs sm:text-sm font-semibold text-gray-900 outline-none transition-all"
+            className="w-full min-h-[2.4rem] px-2.5 py-1.5 bg-emerald-50/40 border border-emerald-300 focus:border-emerald-600 focus:bg-white focus:ring-1 focus:ring-emerald-500/20 rounded-lg text-xs font-black text-gray-900 outline-none transition-all leading-normal"
           />
         </div>
 
         {/* 6. Default Bill Print Width */}
         <div>
-          <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
-            <Printer className="w-3.5 h-3.5 text-emerald-700" />
+          <label className="block text-[10px] font-black text-gray-700 mb-1 flex items-center gap-1 leading-tight">
+            <Printer className="w-3 h-3 text-emerald-700" />
             <span>6. {language === 'ta' ? 'பில் அகலம் (Bill Width)' : 'Bill Print Width'}</span>
           </label>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <input
               id="setting-input-bill-width"
               type="number"
               min="5"
               max="30"
               step="1"
-              value={formData.billWidthCm || 17}
-              onChange={(e) => handleChange('billWidthCm', Number(e.target.value) || 17)}
-              className="w-28 px-3.5 py-2.5 bg-emerald-50/40 border border-emerald-300 focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 rounded-xl text-xs sm:text-sm font-black text-gray-900 outline-none"
+              value={formData.billWidthCm || 19}
+              onChange={(e) => handleChange('billWidthCm', Number(e.target.value) || 19)}
+              className="w-24 min-h-[2.4rem] px-2.5 py-1.5 bg-emerald-50/40 border border-emerald-300 focus:border-emerald-600 focus:bg-white focus:ring-1 focus:ring-emerald-500/20 rounded-lg text-xs font-black text-gray-900 outline-none leading-normal"
             />
-            <span className="text-xs font-extrabold text-emerald-950">cm</span>
+            <span className="text-xs font-black text-emerald-950">cm</span>
           </div>
         </div>
 
         {/* 7. Font Size Controller */}
-        <div className="bg-emerald-50/60 border border-emerald-300/80 rounded-2xl p-3.5 space-y-3">
+        <div className="bg-emerald-50/60 border border-emerald-300/80 rounded-xl p-2.5 space-y-2">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
-              <Type className="w-4 h-4 text-emerald-700" />
+            <label className="text-[10px] font-black text-gray-800 flex items-center gap-1 leading-tight">
+              <Type className="w-3.5 h-3.5 text-emerald-700" />
               <span>7. {language === 'ta' ? 'எழுத்து அளவு (Font Size)' : 'Bill & App Font Size'}</span>
             </label>
-            <span className="text-[11px] font-bold text-emerald-900 bg-emerald-100/80 px-2.5 py-0.5 rounded-full border border-emerald-200">
+            <span className="text-[10px] font-black text-emerald-900 bg-emerald-100/80 px-2 py-0.5 rounded-full border border-emerald-200">
               {getScaleLabel(currentFontSizeScale)}
             </span>
           </div>
 
-          <div className="flex items-center justify-between gap-2 pt-1">
+          <div className="flex items-center justify-between gap-1.5 pt-0.5">
             <button
               id="btn-decrease-font-size"
               type="button"
               onClick={handleDecreaseFontSize}
               disabled={currentFontSizeScale <= 75}
-              className="flex-1 py-3 px-3 bg-slate-800 hover:bg-slate-900 active:bg-slate-950 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md shadow-slate-900/20 transition-all active:scale-95 touch-manipulation cursor-pointer"
+              className="flex-1 min-h-[2.4rem] py-1.5 px-2 bg-slate-800 hover:bg-slate-900 active:bg-slate-950 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg font-black text-xs flex items-center justify-center gap-1 shadow-2xs transition-all active:scale-95 touch-manipulation cursor-pointer"
               title={language === 'ta' ? 'அளவை குறைக்கவும்' : 'Decrease font size'}
             >
-              <Minus className="w-4 h-4 text-white" />
+              <Minus className="w-3.5 h-3.5 text-white" />
               <span>{language === 'ta' ? 'குறை (-)' : 'Decrease (-)'}</span>
             </button>
 
-            <div className="px-4 py-2 bg-emerald-800 text-white rounded-xl font-mono font-black text-base shadow-xs min-w-[72px] text-center">
+            <div className="px-3 py-1.5 bg-emerald-800 text-white rounded-lg font-mono font-black text-xs sm:text-sm shadow-2xs min-w-[56px] text-center">
               {currentFontSizeScale}%
             </div>
 
@@ -396,10 +398,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               type="button"
               onClick={handleIncreaseFontSize}
               disabled={currentFontSizeScale >= 165}
-              className="flex-1 py-3 px-3 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md shadow-emerald-700/20 transition-all active:scale-95 touch-manipulation cursor-pointer"
+              className="flex-1 min-h-[2.4rem] py-1.5 px-2 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg font-black text-xs flex items-center justify-center gap-1 shadow-2xs shadow-emerald-700/20 transition-all active:scale-95 touch-manipulation cursor-pointer"
               title={language === 'ta' ? 'அளவை கூட்டவும்' : 'Increase font size'}
             >
-              <Plus className="w-4 h-4 text-white" />
+              <Plus className="w-3.5 h-3.5 text-white" />
               <span>{language === 'ta' ? 'கூட்டு (+)' : 'Increase (+)'}</span>
             </button>
           </div>
@@ -409,13 +411,13 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             id="btn-toggle-bold-text"
             type="button"
             onClick={handleToggleBold}
-            className={`w-full py-3 px-3 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 touch-manipulation text-white cursor-pointer ${
+            className={`w-full min-h-[2.4rem] py-1.5 px-2.5 rounded-lg font-black text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-95 touch-manipulation text-white cursor-pointer ${
               isBoldActive
                 ? 'bg-slate-950 ring-2 ring-emerald-400 shadow-emerald-950/20'
                 : 'bg-slate-800 hover:bg-slate-900 active:bg-slate-950 shadow-slate-900/20'
             }`}
           >
-            <Bold className={`w-4 h-4 ${isBoldActive ? 'text-amber-300 stroke-[3]' : 'text-white'}`} />
+            <Bold className={`w-3.5 h-3.5 ${isBoldActive ? 'text-amber-300 stroke-[3]' : 'text-white'}`} />
             <span>
               {language === 'ta'
                 ? isBoldActive
@@ -428,25 +430,61 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           </button>
         </div>
 
+        {/* Data Retention & Archival Setting Card */}
+        <div className="bg-white border border-emerald-200 rounded-xl p-2.5 shadow-2xs space-y-1.5">
+          <div className="flex items-center gap-1.5 pb-1 border-b border-emerald-100">
+            <Archive className="w-3.5 h-3.5 text-emerald-700" />
+            <div className="min-w-0 flex-1">
+              <label htmlFor="retention-days-select" className="text-[10px] font-black text-emerald-950 uppercase tracking-wide block leading-tight">
+                {t.dataRetention}
+              </label>
+              <p className="text-[9px] text-emerald-700 font-bold leading-tight">
+                {t.dataRetentionDesc}
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <select
+              id="retention-days-select"
+              value={formData.retentionDays !== undefined ? formData.retentionDays : 31}
+              onChange={(e) => handleChange('retentionDays', Number(e.target.value))}
+              className="w-full min-h-[2.4rem] px-2.5 py-1.5 rounded-lg border border-emerald-300 focus:outline-hidden focus:ring-1 focus:ring-emerald-500 text-xs bg-emerald-50/50 font-black text-emerald-950 cursor-pointer"
+            >
+              <option value={31}>{t.retention31}</option>
+              <option value={60}>{t.retention60}</option>
+              <option value={90}>{t.retention90}</option>
+              <option value={180}>{t.retention180}</option>
+              <option value={365}>{t.retention365}</option>
+              <option value={0}>{t.retentionForever}</option>
+            </select>
+            <p className="text-[9px] text-slate-500 font-bold leading-tight">
+              {language === 'ta'
+                ? 'பழைய பில்கள் காப்பகப்படுத்தப்பட்டாலும் ஹோட்டல் மீதி பாக்கி எப்போதும் ஆரம்ப இருப்பாகப் பாதுகாக்கப்படும்.'
+                : 'When old bills are archived, all hotel dues are safely preserved as opening balances.'}
+            </p>
+          </div>
+        </div>
+
         {/* Save Button */}
-        <div className="pt-2">
+        <div className="pt-1">
           <button
             id="btn-save-settings"
             type="submit"
-            className="w-full py-3.5 px-4 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white font-black text-sm sm:text-base rounded-2xl shadow-lg shadow-emerald-700/25 flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer"
+            className="w-full min-h-[2.6rem] py-2 px-3 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white font-black text-xs sm:text-sm rounded-xl shadow-2xs shadow-emerald-700/25 flex items-center justify-center gap-1.5 transition-all active:scale-98 cursor-pointer"
           >
-            <Save className="w-5 h-5 text-white" />
+            <Save className="w-4 h-4 text-white" />
             <span>{t.save}</span>
           </button>
         </div>
       </form>
 
       {/* Hotel & Customer Names Management Card with Phone Number Setup */}
-      <div className="bg-white border border-emerald-200 rounded-3xl p-4 sm:p-5 shadow-xs space-y-3">
-        <div className="flex items-center justify-between pb-2 border-b border-emerald-100 flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-emerald-700" />
-            <h3 className="text-xs sm:text-sm font-bold text-emerald-950 uppercase tracking-wide">
+      <div className="bg-white border border-emerald-200 rounded-2xl p-3 shadow-2xs space-y-2">
+        <div className="flex items-center justify-between pb-1.5 border-b border-emerald-100 flex-wrap gap-1.5">
+          <div className="flex items-center gap-1.5">
+            <Building2 className="w-3.5 h-3.5 text-emerald-700" />
+            <h3 className="text-xs font-black text-emerald-950 uppercase tracking-wide leading-tight">
               {t.hotelsAndCustomers} ({hotels.length})
             </h3>
           </div>
@@ -454,7 +492,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             type="button"
             onClick={() => setResetHotelsConfirm(true)}
             title="Reset to 14 standard hotels"
-            className="text-[11px] font-black text-white flex items-center gap-1.5 bg-slate-700 hover:bg-slate-800 active:bg-slate-900 px-2.5 py-1 rounded-xl shadow-xs transition-colors cursor-pointer"
+            className="text-[10px] font-black text-white flex items-center gap-1 bg-slate-700 hover:bg-slate-800 active:bg-slate-900 px-2 py-1 rounded-lg shadow-2xs transition-colors cursor-pointer"
           >
             <RotateCcw className="w-3 h-3 text-white" />
             <span>{t.resetHotels}</span>
@@ -462,43 +500,43 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         </div>
 
         {/* Add New Hotel Form */}
-        <form onSubmit={handleAddHotel} className="space-y-2 bg-emerald-50/50 p-3 rounded-2xl border border-emerald-200">
-          <div className="text-xs font-bold text-emerald-950 flex items-center gap-1">
-            <Plus className="w-3.5 h-3.5 text-emerald-700" />
+        <form onSubmit={handleAddHotel} className="space-y-1.5 bg-emerald-50/50 p-2.5 rounded-xl border border-emerald-200">
+          <div className="text-[10px] font-black text-emerald-950 flex items-center gap-1 leading-tight">
+            <Plus className="w-3 h-3 text-emerald-700" />
             <span>{t.addHotel}</span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
             <input
               type="text"
               value={newHotelNameEn}
               onChange={(e) => setNewHotelNameEn(e.target.value)}
               placeholder={t.hotelNameEn + ' (e.g. Star Biriyani)'}
-              className="w-full px-3 py-2 bg-white border border-emerald-300 focus:border-emerald-600 rounded-xl text-xs font-semibold text-gray-900 outline-none"
+              className="w-full min-h-[2.4rem] px-2.5 py-1.5 bg-white border border-emerald-300 focus:border-emerald-600 rounded-lg text-xs font-black text-gray-900 outline-none leading-normal"
             />
             <input
               type="text"
               value={newHotelNameTa}
               onChange={(e) => setNewHotelNameTa(e.target.value)}
               placeholder={t.hotelNameTa + ' (உ.ம். ஸ்டார் பிரியாணி)'}
-              className="w-full px-3 py-2 bg-white border border-emerald-300 focus:border-emerald-600 rounded-xl text-xs font-semibold text-gray-900 outline-none"
+              className="w-full min-h-[2.4rem] px-2.5 py-1.5 bg-white border border-emerald-300 focus:border-emerald-600 rounded-lg text-xs font-black text-gray-900 outline-none leading-normal"
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-1.5">
             <div className="relative flex-1">
               <input
                 type="tel"
                 value={newHotelPhone}
                 onChange={(e) => setNewHotelPhone(e.target.value)}
                 placeholder={language === 'ta' ? 'வாட்ஸ்அப் எண் (உ.ம்: 9876543210)' : 'WhatsApp Phone (Optional - e.g. 9876543210)'}
-                className="w-full pl-8 pr-3 py-2 bg-white border border-emerald-300 focus:border-emerald-600 rounded-xl text-xs font-semibold text-gray-900 outline-none"
+                className="w-full min-h-[2.4rem] pl-7 pr-2.5 py-1.5 bg-white border border-emerald-300 focus:border-emerald-600 rounded-lg text-xs font-black text-gray-900 outline-none leading-normal"
               />
-              <Phone className="w-3.5 h-3.5 text-emerald-600 absolute left-2.5 top-2.5" />
+              <Phone className="w-3 h-3 text-emerald-600 absolute left-2.5 top-2.5" />
             </div>
             <button
               type="submit"
-              className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition-all active:scale-95 shadow-xs whitespace-nowrap cursor-pointer"
+              className="min-h-[2.4rem] px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-black flex items-center gap-1 transition-all active:scale-95 shadow-2xs whitespace-nowrap cursor-pointer"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-3 h-3" />
               <span>{t.addHotel}</span>
             </button>
           </div>
@@ -511,13 +549,13 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             value={hotelSearchQuery}
             onChange={(e) => setHotelSearchQuery(e.target.value)}
             placeholder={language === 'ta' ? 'ஹோட்டல் பெயர் அல்லது போன் எண் தேட...' : 'Search hotel name or phone number...'}
-            className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 focus:border-emerald-500 rounded-xl text-xs text-gray-800 outline-none"
+            className="w-full min-h-[2.4rem] pl-7 pr-2.5 py-1 bg-slate-50 border border-slate-200 focus:border-emerald-500 rounded-lg text-xs font-black text-gray-800 outline-none"
           />
-          <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-2" />
+          <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2 top-2" />
         </div>
 
         {/* Hotel list with phone setup */}
-        <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+        <div className="space-y-1.5 max-h-80 overflow-y-auto pr-0.5">
           {hotels
             .filter((hotel) => {
               if (!hotelSearchQuery.trim()) return true;
@@ -535,19 +573,19 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               return (
                 <div
                   key={hotel.id}
-                  className="bg-slate-50 hover:bg-emerald-50/50 border border-slate-200 hover:border-emerald-300 p-2.5 rounded-2xl transition-all space-y-2"
+                  className="bg-slate-50 hover:bg-emerald-50/50 border border-slate-200 hover:border-emerald-300 p-2 rounded-xl transition-all space-y-1.5"
                 >
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center justify-between gap-1.5">
                     <div className="min-w-0 flex-1">
-                      <span className="text-xs sm:text-sm font-extrabold text-emerald-950 block truncate">
+                      <span className="text-xs font-black text-emerald-950 block truncate leading-tight">
                         {displayName}
                       </span>
                       {secondaryName && secondaryName !== displayName && (
-                        <span className="text-[10px] text-gray-500 font-medium block truncate">{secondaryName}</span>
+                        <span className="text-[9px] text-gray-500 font-bold block truncate leading-tight">{secondaryName}</span>
                       )}
                     </div>
                     {hotel.phone && (
-                      <span className="text-[10px] text-emerald-800 bg-emerald-100 font-bold px-2 py-0.5 rounded-md flex items-center gap-1 flex-shrink-0">
+                      <span className="text-[9px] text-emerald-800 bg-emerald-100 font-black px-1.5 py-0.5 rounded-md flex items-center gap-0.5 flex-shrink-0">
                         <Check className="w-2.5 h-2.5 text-emerald-600" />
                         <span>{hotel.phone}</span>
                       </span>
@@ -555,7 +593,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                   </div>
 
                   {/* Hotel Phone Input + Save + Delete */}
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1">
                     <div className="relative flex-1">
                       <input
                         type="tel"
@@ -568,26 +606,26 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                           }));
                         }}
                         placeholder={language === 'ta' ? 'வாட்ஸ்அப் எண் (உ.ம்: 9876543210)' : 'WhatsApp phone (e.g. 9876543210)'}
-                        className="w-full pl-7 pr-2 py-1.5 bg-white border border-slate-300 focus:border-emerald-600 rounded-xl text-xs font-bold text-gray-900 outline-none"
+                        className="w-full min-h-[2.2rem] pl-6 pr-2 py-1 bg-white border border-slate-300 focus:border-emerald-600 rounded-lg text-xs font-black text-gray-900 outline-none"
                       />
-                      <Phone className="w-3.5 h-3.5 text-emerald-600 absolute left-2 top-2" />
+                      <Phone className="w-3 h-3 text-emerald-600 absolute left-1.5 top-1.5" />
                     </div>
                     <button
                       type="button"
                       onClick={() => handleSaveHotelPhone(hotel.id)}
                       title="Save Phone Number"
-                      className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-xs transition-all active:scale-95 flex-shrink-0 cursor-pointer"
+                      className="min-h-[2.2rem] px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white rounded-lg text-xs font-black flex items-center gap-1 shadow-2xs transition-all active:scale-95 flex-shrink-0 cursor-pointer"
                     >
-                      <Save className="w-3.5 h-3.5" />
+                      <Save className="w-3 h-3" />
                       <span>{language === 'ta' ? 'சேமி' : 'Save'}</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setPhoneToDelete(hotel)}
                       title={language === 'ta' ? `போன் எண் நீக்கு (${displayName})` : `Delete Phone Number for ${displayName}`}
-                      className="p-2 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white rounded-xl text-xs font-black flex items-center justify-center transition-colors active:scale-95 flex-shrink-0 shadow-xs cursor-pointer"
+                      className="min-h-[2.2rem] p-1.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white rounded-lg text-xs font-black flex items-center justify-center transition-colors active:scale-95 flex-shrink-0 shadow-2xs cursor-pointer"
                     >
-                      <Trash2 className="w-3.5 h-3.5 text-white" />
+                      <Trash2 className="w-3 h-3 text-white" />
                     </button>
                   </div>
                 </div>

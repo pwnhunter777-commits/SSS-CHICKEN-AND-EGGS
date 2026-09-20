@@ -8,8 +8,8 @@ import { BillingPage } from './components/BillingPage';
 import { RegisterPage } from './components/RegisterPage';
 import { TotalPage } from './components/TotalPage';
 import { HotelPage } from './components/HotelPage';
-import { SettingsPage } from './components/SettingsPage';
 import { ReceiptModal } from './components/ReceiptModal';
+import { BackupCleanupModal } from './components/BackupCleanupModal';
 import { RetailApp } from './retail/RetailApp';
 import { InvestmentApp } from './investment/InvestmentApp';
 import { OfflineIndicator } from './components/OfflineIndicator';
@@ -44,10 +44,14 @@ import {
   saveSettings,
   saveTodayDailyPrices,
   execute31DayDataCleanup,
+  executeDataCleanup,
+  checkPendingCleanup,
+  exportAllDataToFile,
+  initPhoneStorage,
 } from './utils/storage';
 
 const DEFAULT_STORE_CONFIG: StoreConfig = {
-  name: 'Apex Poultry Agency',
+  name: 'SSS CHICKEN AND EGG AGENCY',
   fontSize: 28,
 };
 
@@ -61,7 +65,12 @@ export default function App() {
       const saved = localStorage.getItem('chicken_agency_store_config');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed.name && parsed.fontSize) return parsed;
+        if (parsed.name && parsed.fontSize) {
+          if (parsed.name === 'Apex Poultry Agency' || parsed.name === 'SSS CHICKEN AGENCY') {
+            return { ...parsed, name: 'SSS CHICKEN AND EGG AGENCY' };
+          }
+          return parsed;
+        }
       }
     } catch {
       // Fallback
@@ -79,30 +88,87 @@ export default function App() {
   const [hotels, setHotels] = useState<HotelItem[]>(() => loadHotels());
   const [payments, setPayments] = useState<HotelPayment[]>(() => loadHotelPayments());
 
-  // Automatic 31-day data cleanup on application startup
+  // Cleanup & Archival backup prompt modal state
+  const [cleanupModalState, setCleanupModalState] = useState<{
+    isOpen: boolean;
+    billsToArchive: number;
+    paymentsToArchive: number;
+  }>({
+    isOpen: false,
+    billsToArchive: 0,
+    paymentsToArchive: 0,
+  });
+
+  // Check data retention and initialize on-device phone storage on application startup
   useEffect(() => {
+    // 1. Initialize persistent on-device phone storage
+    initPhoneStorage().then(() => {
+      const refreshedBills = loadBills();
+      if (refreshedBills.length > 0) setBills(refreshedBills);
+      const refreshedHotels = loadHotels();
+      if (refreshedHotels.length > 0) setHotels(refreshedHotels);
+      const refreshedPayments = loadHotelPayments();
+      if (refreshedPayments.length > 0) setPayments(refreshedPayments);
+    });
+
     try {
-      const cleanup = execute31DayDataCleanup();
-      if (cleanup.totalRemoved > 0) {
-        setBills(loadBills());
-        setPayments(loadHotelPayments());
-        setDailyPrices(getTodayDailyPrices());
+      const pending = checkPendingCleanup(settings.retentionDays);
+      if (pending.billsToArchive > 0) {
+        setCleanupModalState({
+          isOpen: true,
+          billsToArchive: pending.billsToArchive,
+          paymentsToArchive: pending.paymentsToArchive,
+        });
+      } else if (pending.willDeleteData) {
+        const cleanup = executeDataCleanup(settings.retentionDays);
+        if (cleanup.totalRemoved > 0) {
+          setBills(loadBills());
+          setPayments(loadHotelPayments());
+          setDailyPrices(getTodayDailyPrices());
+        }
       }
     } catch (e) {
-      console.error('Initial 31-day data retention cleanup error:', e);
+      console.error('Data retention check error:', e);
     }
   }, []);
+
+  const handleDownloadBackupAndCleanup = () => {
+    try {
+      exportAllDataToFile();
+    } catch (e) {
+      console.error('Backup export error:', e);
+    }
+    const result = executeDataCleanup(settings.retentionDays);
+    if (result.totalRemoved > 0) {
+      setBills(loadBills());
+      setPayments(loadHotelPayments());
+      setDailyPrices(getTodayDailyPrices());
+    }
+    setCleanupModalState({ isOpen: false, billsToArchive: 0, paymentsToArchive: 0 });
+  };
+
+  const handleCleanupNow = () => {
+    const result = executeDataCleanup(settings.retentionDays);
+    if (result.totalRemoved > 0) {
+      setBills(loadBills());
+      setPayments(loadHotelPayments());
+      setDailyPrices(getTodayDailyPrices());
+    }
+    setCleanupModalState({ isOpen: false, billsToArchive: 0, paymentsToArchive: 0 });
+  };
 
   // Receipt Modal State (for Print / WhatsApp Share / Reprint)
   const [receiptState, setReceiptState] = useState<{
     isOpen: boolean;
     bill: Bill | null;
     isDraft: boolean;
+    autoPrintBluetooth?: boolean;
     onSaved?: () => void;
   }>({
     isOpen: false,
     bill: null,
     isDraft: false,
+    autoPrintBluetooth: false,
   });
 
   // Keep store config persisted
@@ -269,11 +335,17 @@ export default function App() {
   };
 
   // Open Receipt Modal
-  const handleOpenReceipt = (bill: Bill, isDraft = false, onSaved?: () => void) => {
+  const handleOpenReceipt = (
+    bill: Bill,
+    isDraft = false,
+    onSaved?: () => void,
+    autoPrintBluetooth = false
+  ) => {
     setReceiptState({
       isOpen: true,
       bill,
       isDraft,
+      autoPrintBluetooth,
       onSaved,
     });
   };
@@ -348,7 +420,6 @@ export default function App() {
                 onBackToMain={() => setCurrentPage('billing')}
                 onExitToPortal={() => setActiveScreen('main')}
                 onBackToPortal={() => setActiveScreen('main')}
-                onNavigateToSettings={() => setCurrentPage('settings')}
               />
             </div>
 
@@ -418,19 +489,6 @@ export default function App() {
                   onReprintBill={(bill) => handleOpenReceipt(bill, false)}
                 />
               )}
-
-              {currentPage === 'settings' && (
-                <SettingsPage
-                  settings={settings}
-                  bills={bills}
-                  hotels={hotels}
-                  language={language}
-                  onSaveSettings={handleSaveSettings}
-                  onSaveHotels={handleSaveHotels}
-                  onDataRestored={refreshAllData}
-                  onNavigateToMain={() => setActiveScreen('main')}
-                />
-              )}
             </main>
 
             {/* Fixed Bottom Navigation Bar - Pinned at Bottom */}
@@ -469,8 +527,27 @@ export default function App() {
           language={language}
           hotels={hotels}
           products={products}
+          payments={payments}
+          bills={bills}
+          autoPrintBluetooth={receiptState.autoPrintBluetooth}
           onConfirmSave={handleConfirmSaveDraft}
           onClose={handleCloseReceipt}
+          onUpdateHotels={(newHotels) => {
+            setHotels(newHotels);
+            setBills(loadBills());
+          }}
+        />
+
+        {/* Data Retention & Archival Backup Prompt Modal */}
+        <BackupCleanupModal
+          isOpen={cleanupModalState.isOpen}
+          billsToArchiveCount={cleanupModalState.billsToArchive}
+          paymentsToArchiveCount={cleanupModalState.paymentsToArchive}
+          retentionDays={settings.retentionDays ?? 31}
+          language={language}
+          onDownloadAndCleanup={handleDownloadBackupAndCleanup}
+          onCleanupNow={handleCleanupNow}
+          onClose={() => setCleanupModalState({ isOpen: false, billsToArchive: 0, paymentsToArchive: 0 })}
         />
 
         {/* PWA Offline Banner */}

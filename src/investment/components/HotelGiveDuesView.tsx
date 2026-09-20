@@ -9,6 +9,8 @@ import {
   CheckCircle2,
   Clock,
   RefreshCw,
+  MessageCircle,
+  X,
 } from 'lucide-react';
 import { Bill, HotelItem, HotelPayment, LanguageCode, ShopSettings } from '../../types';
 import {
@@ -16,6 +18,7 @@ import {
   loadHotels as loadWholesaleHotels,
   loadHotelPayments as loadWholesalePayments,
   loadSettings as loadWholesaleSettings,
+  saveHotels,
   formatDisplayDate,
 } from '../../utils/storage';
 import { HotelBalanceSlipModal } from '../../components/HotelBalanceSlipModal';
@@ -53,6 +56,10 @@ export const HotelGiveDuesView: React.FC<HotelGiveDuesViewProps> = ({
 
   // Selected hotel for slip modal
   const [activeModalHotel, setActiveModalHotel] = useState<HotelStatsItem | null>(null);
+
+  // Quick WhatsApp phone number prompt for hotels without a phone number saved
+  const [phonePromptHotel, setPhonePromptHotel] = useState<HotelStatsItem | null>(null);
+  const [promptPhoneInput, setPromptPhoneInput] = useState<string>('');
 
   const loadAllData = () => {
     setHotels(loadWholesaleHotels());
@@ -173,12 +180,18 @@ export const HotelGiveDuesView: React.FC<HotelGiveDuesViewProps> = ({
     }, 3000);
   };
 
-  // Share handler
-  const handleShareHotel = async (item: HotelStatsItem) => {
+  // Direct WhatsApp dispatch for that hotel number
+  const sendWhatsAppDirect = (item: HotelStatsItem, phoneStr?: string) => {
+    const rawPhone = (phoneStr !== undefined ? phoneStr : item.hotel.phone) || '';
+    let cleanNumber = rawPhone.replace(/\D/g, '');
+    if (cleanNumber.length === 10) {
+      cleanNumber = '91' + cleanNumber;
+    }
+
     const shareData: HotelBalanceShareData = {
       hotelName: item.hotel.nameEn || item.hotel.nameTa,
       hotelNameTa: item.hotel.nameTa,
-      hotelPhone: item.hotel.phone,
+      hotelPhone: rawPhone,
       totalBilled: item.totalBilled,
       totalPaid: item.totalPaid,
       totalBalAdded: item.totalBalAdded,
@@ -201,29 +214,31 @@ export const HotelGiveDuesView: React.FC<HotelGiveDuesViewProps> = ({
 
     const text = generateHotelBalanceWhatsAppText(shareData, settings, language as LanguageCode);
 
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      try {
-        await navigator.share({
-          title: `Balance - ${item.hotel.nameEn || item.hotel.nameTa}`,
-          text: text,
-        });
-        showToast(language === 'ta' ? 'பகிர்வு முடிந்தது' : 'Shared successfully');
-        return;
-      } catch (err: any) {
-        if (err?.name === 'AbortError') return;
-      }
+    // If new phone was entered for a registered hotel, save it
+    if (rawPhone && rawPhone !== item.hotel.phone && !item.hotel.id.startsWith('custom_')) {
+      const updatedHotels = hotels.map((h) => (h.id === item.hotel.id ? { ...h, phone: rawPhone } : h));
+      setHotels(updatedHotels);
+      saveHotels(updatedHotels);
     }
 
-    // Direct WhatsApp fallback
-    let cleanNumber = '';
-    if (item.hotel.phone && item.hotel.phone.trim().length > 0) {
-      cleanNumber = item.hotel.phone.replace(/\D/g, '');
-      if (cleanNumber.length === 10) {
-        cleanNumber = '91' + cleanNumber;
-      }
-    }
+    // Direct WhatsApp navigation strictly to this hotel's number
     openWhatsAppChatWithText(text, cleanNumber);
-    showToast(language === 'ta' ? 'வாட்ஸ்அப் திறக்கப்பட்டது' : 'Opened WhatsApp');
+    showToast(
+      cleanNumber
+        ? (language === 'ta' ? `${rawPhone} வாட்ஸ்அப் திறக்கப்படுகிறது...` : `Opening WhatsApp for ${rawPhone}...`)
+        : (language === 'ta' ? 'வாட்ஸ்அப் திறக்கப்பட்டது' : 'Opened WhatsApp')
+    );
+  };
+
+  const handleShareHotel = (item: HotelStatsItem) => {
+    if (item.hotel.phone && item.hotel.phone.trim().length > 0) {
+      // Hotel has phone number -> go directly to WhatsApp for that hotel number
+      sendWhatsAppDirect(item);
+    } else {
+      // No phone saved -> open quick prompt to enter phone number
+      setPhonePromptHotel(item);
+      setPromptPhoneInput('');
+    }
   };
 
   return (
@@ -372,15 +387,19 @@ export const HotelGiveDuesView: React.FC<HotelGiveDuesViewProps> = ({
                   )}
                 </div>
 
-                {/* Share Button (in the same line) */}
+                {/* Share Button (in the same line - goes directly to WhatsApp for hotel number) */}
                 <button
                   type="button"
                   id={`btn-share-hotel-${item.hotel.id}`}
                   onClick={() => handleShareHotel(item)}
-                  title={language === 'ta' ? 'வாட்ஸ்அப் பகிர்' : 'Share on WhatsApp'}
-                  className="shrink-0 h-8 px-2.5 sm:px-3 bg-emerald-700 hover:bg-emerald-800 active:scale-98 text-white rounded-lg font-bold text-xs flex items-center justify-center gap-1 shadow-2xs transition-all cursor-pointer"
+                  title={
+                    item.hotel.phone
+                      ? (language === 'ta' ? `${item.hotel.phone} எண்ணிற்கு வாட்ஸ்அப்பில் அனுப்ப` : `Send WhatsApp to ${item.hotel.phone}`)
+                      : (language === 'ta' ? 'வாட்ஸ்அப்பில் பகிர' : 'Share on WhatsApp')
+                  }
+                  className="shrink-0 h-8 px-2.5 sm:px-3 bg-emerald-700 hover:bg-emerald-800 active:scale-98 text-white rounded-lg font-black text-xs flex items-center justify-center gap-1 shadow-2xs transition-all cursor-pointer touch-manipulation"
                 >
-                  <Share2 className="w-3.5 h-3.5" />
+                  <MessageCircle className="w-3.5 h-3.5 fill-white shrink-0" />
                   <span>{language === 'ta' ? 'பகிர்' : 'Share'}</span>
                 </button>
               </div>
@@ -388,6 +407,59 @@ export const HotelGiveDuesView: React.FC<HotelGiveDuesViewProps> = ({
           })
         )}
       </div>
+
+      {/* Quick WhatsApp Number Prompt Modal */}
+      {phonePromptHotel && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-xs w-full p-4 shadow-xl border border-emerald-200 animate-in zoom-in-95">
+            <div className="flex items-center justify-between pb-2 border-b border-neutral-100">
+              <div className="flex items-center gap-2">
+                <MessageCircle className="w-4 h-4 text-emerald-600 fill-emerald-600" />
+                <h3 className="text-xs font-black text-neutral-900">
+                  {language === 'ta' ? 'வாட்ஸ்அப் எண்' : 'WhatsApp Number'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPhonePromptHotel(null)}
+                className="p-1 rounded-lg hover:bg-neutral-100 text-neutral-500 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs font-bold text-neutral-600 mt-2 mb-2">
+              {language === 'ta'
+                ? `${phonePromptHotel.hotel.nameTa || phonePromptHotel.hotel.nameEn} ஹோட்டலின் வாட்ஸ்அப் எண்:`
+                : `Enter WhatsApp number for ${phonePromptHotel.hotel.nameEn}:`}
+            </p>
+
+            <input
+              type="tel"
+              autoFocus
+              placeholder="e.g. 9876543210"
+              value={promptPhoneInput}
+              onChange={(e) => setPromptPhoneInput(e.target.value)}
+              className="w-full text-sm font-black bg-neutral-50 border-2 border-emerald-300 rounded-xl px-3 py-2 outline-hidden focus:border-emerald-600 focus:bg-white transition-all mb-3"
+            />
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const targetItem = phonePromptHotel;
+                  setPhonePromptHotel(null);
+                  sendWhatsAppDirect(targetItem, promptPhoneInput);
+                }}
+                className="flex-1 py-2 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+              >
+                <MessageCircle className="w-3.5 h-3.5 fill-white" />
+                <span>{language === 'ta' ? 'வாட்ஸ்அப்பில் அனுப்பு' : 'Send WhatsApp'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Statement Slip Modal */}
       {activeModalHotel && (

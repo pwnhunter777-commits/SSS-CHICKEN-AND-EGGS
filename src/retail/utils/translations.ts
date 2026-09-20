@@ -158,7 +158,7 @@ export const TRANSLATIONS: Record<Language, Record<string, string>> = {
     textSizeMaximum: 'Maximum (140%)',
     resetDefaultTextSize: 'Reset to Default (100%)',
     textSizePreviewTitle: 'Live Preview',
-    textSizePreviewSample: 'SSS Chicken - Live Chicken ₹220 / Kg',
+    textSizePreviewSample: 'SSS Chicken & Egg - Live Chicken ₹220 / Kg',
     textSizeUpdated: 'Text size updated',
 
     // Password & Security PIN (PWD)
@@ -382,7 +382,7 @@ export const TRANSLATIONS: Record<Language, Record<string, string>> = {
     textSizeMaximum: 'அதிகபட்சம் (140%)',
     resetDefaultTextSize: 'இயல்புக்கு மாற்று (100%)',
     textSizePreviewTitle: 'முன்னோட்டம்',
-    textSizePreviewSample: 'SSS கோழி - உயிருடன் ₹220 / Kg',
+    textSizePreviewSample: 'SSS சிக்கன் & முட்டை - உயிருடன் ₹220 / Kg',
     textSizeUpdated: 'எழுத்து அளவு புதுப்பிக்கப்பட்டது',
 
     // Password & Security PIN (PWD)

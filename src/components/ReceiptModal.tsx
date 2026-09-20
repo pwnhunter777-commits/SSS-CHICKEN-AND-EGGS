@@ -1,22 +1,33 @@
-import React, { useState } from 'react';
-import { QRCodeCanvas } from 'qrcode.react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   X,
   Printer,
-  Bluetooth,
   MessageCircle,
   Download,
   Check,
   Building2,
   Calendar,
-  IndianRupee,
-  Share2,
+  Layers,
+  ExternalLink,
+  Phone,
+  AlertCircle,
 } from 'lucide-react';
-import { Bill, getShopDisplayAddress, getShopDisplayName, HotelItem, LanguageCode, ProductItem, ShopSettings } from '../types';
-import { printThermalReceiptViaBluetooth } from '../utils/bluetoothPrinter';
-import { formatDisplayDate, formatDisplayTime } from '../utils/storage';
+import {
+  Bill,
+  getShopDisplayName,
+  HotelItem,
+  HotelPayment,
+  LanguageCode,
+  ProductItem,
+  resolveHotelDisplayName,
+  resolveItemDisplayName,
+  ShopSettings,
+} from '../types';
+import { formatDisplayDate, formatDisplayTime, getHotelPhone, saveOrUpdateHotelPhone } from '../utils/storage';
 import { TRANSLATIONS } from '../utils/translations';
 import { downloadBillPdf, shareBillAsPdfToWhatsApp } from '../utils/whatsapp';
+import { printViaBluetooth } from '../utils/bluetoothPrinter';
+import { QRCodeCanvas } from 'qrcode.react';
 
 interface ReceiptModalProps {
   isOpen: boolean;
@@ -26,8 +37,12 @@ interface ReceiptModalProps {
   language: LanguageCode;
   hotels?: HotelItem[];
   products?: ProductItem[];
+  payments?: HotelPayment[];
+  bills?: Bill[];
+  autoPrintBluetooth?: boolean;
   onConfirmSave?: () => void;
   onClose: () => void;
+  onUpdateHotels?: (hotels: HotelItem[]) => void;
 }
 
 export const ReceiptModal: React.FC<ReceiptModalProps> = ({
@@ -38,53 +53,128 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   language,
   hotels = [],
   products = [],
+  payments = [],
+  bills = [],
+  autoPrintBluetooth = false,
   onConfirmSave,
   onClose,
+  onUpdateHotels,
 }) => {
   const [printStatus, setPrintStatus] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const t = TRANSLATIONS[language] || TRANSLATIONS.en;
+  const [billLang, setBillLang] = useState<LanguageCode>(language);
+  const [paymentNotice, setPaymentNotice] = useState<string | null>(null);
 
-  if (!isOpen || !bill) return null;
+  // Hotel Phone Management State
+  const [hotelPhone, setHotelPhone] = useState<string>('');
+  const [showPhonePrompt, setShowPhonePrompt] = useState<boolean>(false);
+  const [phoneInput, setPhoneInput] = useState<string>('');
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
-  const shopName = getShopDisplayName(settings, language);
-  const shopAddress = getShopDisplayAddress(settings, language);
-  const upiId = settings.upiId || 'NAZIRAHAMED0003@okhdfcbank';
+  useEffect(() => {
+    setBillLang(language);
+  }, [language, isOpen]);
 
-  // Calculate UPI pay URI
-  const finalPayable = Math.round(
-    bill.previousBalance !== undefined && bill.previousBalance !== 0
-      ? (bill.netTotalWithBalance ?? (bill.totalAmount + bill.previousBalance))
-      : bill.totalAmount
-  );
-  const upiPayUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(
-    settings.shopName || 'SSS Chicken'
-  )}&am=${finalPayable}&cu=INR&tn=${encodeURIComponent(`Bill #${bill.billNumber}`)}`;
+  const t = TRANSLATIONS[billLang] || TRANSLATIONS.en;
 
   // Find customer phone if registered
-  const matchedHotel = hotels.find(
-    (h) =>
-      h.nameEn.toLowerCase() === bill.hotelName.toLowerCase() ||
-      h.nameTa.toLowerCase() === bill.hotelName.toLowerCase() ||
-      (bill.hotelId && h.id === bill.hotelId)
-  );
-  const recipientPhone = matchedHotel?.phone || '';
+  const matchedHotel = useMemo(() => {
+    if (!bill) return undefined;
+    return hotels.find(
+      (h) =>
+        h.nameEn.toLowerCase() === bill.hotelName.toLowerCase() ||
+        h.nameTa.toLowerCase() === bill.hotelName.toLowerCase() ||
+        (bill.hotelId && h.id === bill.hotelId)
+    );
+  }, [hotels, bill]);
+
+  // Sync hotel phone state whenever bill or hotels change
+  useEffect(() => {
+    if (bill) {
+      const p = (
+        bill.hotelPhone ||
+        matchedHotel?.phone ||
+        getHotelPhone(bill.hotelId || bill.hotelName, hotels) ||
+        ''
+      ).trim();
+      setHotelPhone(p);
+      setPhoneInput(p);
+    }
+  }, [bill, matchedHotel, hotels]);
+
+  const recipientPhone = hotelPhone || bill?.hotelPhone || matchedHotel?.phone || '';
+
+  // Determine current hotel balance accurately
+  const hotelBal = useMemo(() => {
+    if (bill?.previousBalance !== undefined) {
+      return bill.previousBalance;
+    }
+    if (!bill || !bills || !payments) return 0;
+
+    const bHotelName = (bill.hotelName || '').trim().toLowerCase();
+    const bHotelId = bill.hotelId;
+
+    const matched = hotels.find(
+      (h) =>
+        (bHotelId && h.id === bHotelId) ||
+        h.nameEn.trim().toLowerCase() === bHotelName ||
+        h.nameTa.trim().toLowerCase() === bHotelName
+    );
+
+    const targetId = matched?.id || bHotelId;
+    const targetNameEn = (matched?.nameEn || bHotelName).trim().toLowerCase();
+    const targetNameTa = (matched?.nameTa || '').trim().toLowerCase();
+
+    const isMatchBill = (b: Bill) => {
+      if (b.id === bill.id) return false;
+      if (targetId && b.hotelId && b.hotelId === targetId) return true;
+      const name = (b.hotelName || '').trim().toLowerCase();
+      return name === targetNameEn || (Boolean(targetNameTa) && name === targetNameTa);
+    };
+
+    const isMatchPayment = (p: HotelPayment) => {
+      if (targetId && p.hotelId && p.hotelId === targetId) return true;
+      const name = (p.hotelName || '').trim().toLowerCase();
+      return name === targetNameEn || (Boolean(targetNameTa) && name === targetNameTa);
+    };
+
+    const hotelBills = bills.filter(isMatchBill);
+    const hotelPayments = payments.filter(isMatchPayment);
+
+    const billed = hotelBills.reduce((sum, b) => sum + b.totalAmount, 0);
+    const paid = hotelPayments
+      .filter((p) => p.type !== 'balance_add')
+      .reduce((sum, p) => sum + p.amount, 0);
+    const balAdded = hotelPayments
+      .filter((p) => p.type === 'balance_add')
+      .reduce((sum, p) => sum + p.amount, 0);
+
+    return billed + balAdded - paid;
+  }, [bill, bills, payments, hotels]);
 
   const handleBluetoothPrint = async () => {
+    if (!bill) return;
     setIsProcessing(true);
-    setPrintStatus(language === 'ta' ? 'புளூடூத் பிரிண்டருடன் இணைக்கிறது...' : 'Connecting to Bluetooth printer...');
+    setPrintStatus(
+      billLang === 'ta'
+        ? 'புளூடூத் பிரிண்டருடன் இணைகிறது...'
+        : 'Connecting to Bluetooth Printer...'
+    );
     try {
-      const result = await printThermalReceiptViaBluetooth(bill, settings, 'printable-thermal-receipt');
-      if (result.success) {
-        setPrintStatus(language === 'ta' ? 'வெற்றிகரமாக அச்சிடப்பட்டது!' : 'Printed successfully!');
-        if (isDraft && onConfirmSave) {
-          onConfirmSave();
-        }
-      } else {
-        setPrintStatus(result.message || (language === 'ta' ? 'அச்சிட முடியவில்லை' : 'Print failed'));
+      const result = await printViaBluetooth(
+        bill,
+        settings,
+        'printable-thermal-receipt'
+      );
+      setPrintStatus(result.message);
+      if (result.success && isDraft && onConfirmSave) {
+        onConfirmSave();
       }
-    } catch (err: any) {
-      setPrintStatus(err?.message || 'Print error');
+    } catch (e: any) {
+      setPrintStatus(
+        e?.message ||
+          (billLang === 'ta' ? 'புளூடூத் பிழை' : 'Bluetooth print error')
+      );
     } finally {
       setIsProcessing(false);
       setTimeout(() => setPrintStatus(null), 4000);
@@ -92,6 +182,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   };
 
   const handleSystemPrint = () => {
+    if (!bill) return;
     window.print();
     if (isDraft && onConfirmSave) {
       onConfirmSave();
@@ -99,42 +190,50 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   };
 
   const handleDownloadPdf = async () => {
+    if (!bill) return;
     setIsProcessing(true);
-    setPrintStatus(language === 'ta' ? 'PDF தயாராகிறது...' : 'Generating PDF...');
+    setPrintStatus(billLang === 'ta' ? 'PDF தயாராகிறது...' : 'Generating PDF...');
     try {
       const ok = await downloadBillPdf(
         bill,
         settings,
         recipientPhone,
         'printable-thermal-receipt',
-        language,
+        billLang,
         hotels,
         products
       );
       if (ok) {
-        setPrintStatus(language === 'ta' ? 'PDF பதிவிறக்கம் செய்யப்பட்டது!' : 'PDF downloaded!');
+        setPrintStatus(
+          billLang === 'ta' ? 'PDF பதிவிறக்கம் செய்யப்பட்டது!' : 'PDF downloaded!'
+        );
         if (isDraft && onConfirmSave) {
           onConfirmSave();
         }
       }
     } catch {
-      setPrintStatus(language === 'ta' ? 'PDF பிழை ஏற்பட்டது' : 'Error generating PDF');
+      setPrintStatus(billLang === 'ta' ? 'PDF பிழை ஏற்பட்டது' : 'Error generating PDF');
     } finally {
       setIsProcessing(false);
       setTimeout(() => setPrintStatus(null), 3500);
     }
   };
 
-  const handleWhatsAppShare = async () => {
+  const executeWhatsAppShare = async (targetPhone: string) => {
+    if (!bill) return;
     setIsProcessing(true);
-    setPrintStatus(language === 'ta' ? 'வாட்ஸ்அப் PDF உருவாக்கப்படுகிறது...' : 'Sharing WhatsApp PDF...');
+    setPrintStatus(
+      billLang === 'ta'
+        ? 'வாட்ஸ்அப் PDF உருவாக்கப்படுகிறது...'
+        : 'Sharing WhatsApp PDF...'
+    );
     try {
       const res = await shareBillAsPdfToWhatsApp(
         bill,
         settings,
-        recipientPhone,
+        targetPhone,
         'printable-thermal-receipt',
-        language,
+        billLang,
         hotels,
         products
       );
@@ -143,221 +242,502 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
         onConfirmSave();
       }
     } catch {
-      setPrintStatus(language === 'ta' ? 'பகிர்வதில் பிழை' : 'Share failed');
+      setPrintStatus(billLang === 'ta' ? 'பகிர்வதில் பிழை' : 'Share failed');
     } finally {
       setIsProcessing(false);
       setTimeout(() => setPrintStatus(null), 4000);
     }
   };
 
+  const handleWhatsAppShareClick = () => {
+    if (!bill) return;
+    const cur = (hotelPhone || bill.hotelPhone || matchedHotel?.phone || '').trim();
+    const cleanDigits = cur.replace(/\D/g, '');
+    if (cleanDigits.length < 10) {
+      // Prompt user to enter hotel WhatsApp phone number
+      setPhoneInput(cleanDigits);
+      setPhoneError(null);
+      setShowPhonePrompt(true);
+      return;
+    }
+    executeWhatsAppShare(cur);
+  };
+
+  const handleSavePhoneAndShare = (skipSave = false) => {
+    if (!bill) return;
+    if (skipSave) {
+      setShowPhonePrompt(false);
+      setPhoneError(null);
+      executeWhatsAppShare('');
+      return;
+    }
+
+    const cleaned = phoneInput.replace(/\D/g, '');
+    if (cleaned.length < 10) {
+      setPhoneError(
+        billLang === 'ta'
+          ? 'சரியான 10 இலக்க செல்போன் எண்ணை உள்ளிடவும்.'
+          : 'Please enter a valid 10-digit mobile number.'
+      );
+      return;
+    }
+
+    const phone10 = cleaned.slice(-10);
+    // 1. Save in storage (updates hotel item in STORAGE_KEYS.HOTELS and all bills for this hotel)
+    const targetIdOrName = bill.hotelId || bill.hotelName;
+    const updatedHotels = saveOrUpdateHotelPhone(targetIdOrName, phone10);
+
+    // 2. Notify parent so memory state updates everywhere (Investment Settings, Billing, Register)
+    if (onUpdateHotels) {
+      onUpdateHotels(updatedHotels);
+    }
+
+    // 3. Update local state
+    setHotelPhone(phone10);
+    bill.hotelPhone = phone10;
+    setShowPhonePrompt(false);
+    setPhoneError(null);
+
+    // 4. Trigger WhatsApp Share with the new phone number
+    executeWhatsAppShare(phone10);
+  };
+
+  // Auto trigger Bluetooth print if requested from quick print action
+  useEffect(() => {
+    if (isOpen && autoPrintBluetooth && bill) {
+      handleBluetoothPrint();
+    }
+  }, [isOpen, autoPrintBluetooth, bill]);
+
+  if (!isOpen || !bill) return null;
+
+  const isTamil = billLang === 'ta';
+  // Store details ALWAYS in English itself (as explicitly requested)
+  const englishShopName = (settings.shopNameEn || settings.shopName || 'SSS CHICKEN AGENCY').toUpperCase();
+  const englishAddress = (settings.addressEn || settings.address || 'NO 6, PONDY MAIN ROAD, SULTHANPET, VILLIANUR, PUDUCHERRY - 605 110').toUpperCase();
+  const englishPhone = settings.phoneNumber || '8680000003';
+  const englishGst = settings.gstNumber || '34AQPN8846J2ZF';
+
+  // Customer / Hotel Name and Bill Meta
+  const displayHotelName = resolveHotelDisplayName(bill.hotelName, bill.hotelId, hotels, billLang);
+  const billDateStr = formatDisplayDate(bill.date, billLang);
+  const billTimeStr = formatDisplayTime(bill.createdAt, billLang);
+  const billAmountInt = Math.round(bill.totalAmount);
+  const currPrefix = isTamil ? 'ரூ.' : 'Rs.';
+  const upiId = settings.upiId || 'NAZIRAHAMED0003@okhdfcbank';
+
+  const isAndroid = typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent);
+  const isMobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  // Standard universal UPI URI (works across GPay, PhonePe, Paytm, Cred, BHIM)
+  const upiPayUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(
+    englishShopName
+  )}&am=${billAmountInt}&cu=INR&tn=${encodeURIComponent(`Bill #${bill.billNumber}`)}`;
+
+  // Android-specific Google Pay Intent URI (directly launches Google Pay app)
+  const gpayIntentUri = `intent://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(
+    englishShopName
+  )}&am=${billAmountInt}&cu=INR&tn=${encodeURIComponent(`Bill #${bill.billNumber}`)}#Intent;scheme=upi;package=com.google.android.apps.nbu.paisa.user;end`;
+
+  // The primary Google Pay URI to use
+  const gpayLaunchUri = isAndroid ? gpayIntentUri : upiPayUri;
+
+  const handleOpenGPay = (e?: React.MouseEvent<HTMLAnchorElement>) => {
+    // 1. Copy UPI ID to clipboard
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(upiId);
+      }
+    } catch {
+      // ignore
+    }
+
+    // 2. Visual feedback
+    if (!isMobile) {
+      setPaymentNotice(
+        billLang === 'ta'
+          ? `UPI ID (${upiId}) நகலெடுக்கப்பட்டது! மொபைலில் Google Pay மூலம் QR-ஐ ஸ்கேன் செய்யவும்.`
+          : `UPI ID (${upiId}) copied! Please scan the QR code using Google Pay on your phone.`
+      );
+    } else {
+      setPaymentNotice(
+        billLang === 'ta'
+          ? `Google Pay திறக்கப்படுகிறது... (தொகை: ₹${billAmountInt.toLocaleString('en-IN')})`
+          : `Opening Google Pay... (Amount: ₹${billAmountInt.toLocaleString('en-IN')})`
+      );
+    }
+
+    setTimeout(() => {
+      setPaymentNotice(null);
+    }, 5000);
+
+    // 3. Fallback for iframes or environments where default click is blocked
+    try {
+      const isInsideIframe = window.self !== window.top;
+      if (isInsideIframe) {
+        window.open(gpayLaunchUri, '_blank');
+      }
+    } catch {
+      // ignore
+    }
+  };
+
   return (
     <div
       id="receipt-modal-backdrop"
-      className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-2 sm:p-3 overflow-y-auto animate-in fade-in duration-150"
     >
       <div
         id="receipt-modal-container"
-        className="bg-white rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl flex flex-col max-h-[92vh] border border-emerald-200"
+        className="bg-white rounded-2xl w-full max-w-[460px] sm:max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[92dvh] border border-emerald-200 transition-all duration-200"
       >
-        {/* Top Header Controls */}
-        <div className="bg-emerald-800 text-white p-3.5 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Printer className="w-5 h-5 text-emerald-200" />
-            <span className="text-sm font-bold text-white">
-              {isDraft ? (language === 'ta' ? 'பில் மாதிரிக்காட்சி' : 'Bill Preview') : t.billSummary}
+        {/* Modal Header Bar: Normal Size with Clean Title & Language Toggle & Close */}
+        <div className="bg-emerald-800 text-white px-3 py-2 flex items-center justify-between border-b border-emerald-900/30 gap-2">
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+            <Printer className="w-4 h-4 text-emerald-200 shrink-0" />
+            <span className="text-xs sm:text-sm font-black text-white leading-tight truncate">
+              {isDraft ? (billLang === 'ta' ? 'பில் மாதிரிக்காட்சி' : 'Bill Preview') : t.billSummary}
+            </span>
+            <span className="px-1.5 py-0.5 rounded-md bg-emerald-700 text-emerald-100 text-[9px] font-black border border-emerald-600/50 shrink-0 font-mono">
+              #{bill.billNumber}
             </span>
           </div>
-          <button
-            id="btn-close-receipt-modal"
-            type="button"
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Language Switcher in Receipt Modal */}
+            <div className="flex items-center bg-emerald-950/60 p-0.5 rounded-lg border border-emerald-700/50">
+              <button
+                type="button"
+                onClick={() => setBillLang('en')}
+                className={`px-2 py-0.5 rounded text-[10px] font-black transition-all cursor-pointer ${
+                  billLang === 'en'
+                    ? 'bg-white text-emerald-900 shadow-xs'
+                    : 'text-emerald-200 hover:text-white'
+                }`}
+                title="English Bill"
+              >
+                EN
+              </button>
+              <button
+                type="button"
+                onClick={() => setBillLang('ta')}
+                className={`px-2 py-0.5 rounded text-[10px] font-black transition-all cursor-pointer ${
+                  billLang === 'ta'
+                    ? 'bg-white text-emerald-900 shadow-xs'
+                    : 'text-emerald-200 hover:text-white'
+                }`}
+                title="தமிழ் பில்"
+              >
+                தமிழ்
+              </button>
+            </div>
+
+            <button
+              id="btn-close-receipt-modal"
+              type="button"
+              onClick={onClose}
+              className="min-h-[2.2rem] min-w-[2.2rem] rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer touch-manipulation"
+              aria-label="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Status Toast */}
         {printStatus && (
           <div className="bg-emerald-600 text-white text-xs font-bold py-2 px-3 text-center flex items-center justify-center gap-2 animate-in fade-in">
-            <Check className="w-4 h-4" />
+            <Check className="w-4 h-4 shrink-0" />
             <span>{printStatus}</span>
           </div>
         )}
 
-        {/* Printable Receipt Paper Container */}
-        <div className="p-4 overflow-y-auto flex-1 bg-slate-50 flex justify-center">
+        {/* Bill Preview Container */}
+        <div className="p-2.5 sm:p-4 overflow-y-auto overflow-x-auto flex-1 bg-slate-100 flex justify-center items-start">
           <div
             id="printable-thermal-receipt"
-            className="w-full bg-white p-4 rounded-xl shadow-xs border border-gray-200 text-gray-900 font-sans leading-tight text-xs max-w-[340px]"
+            className="bg-white p-3.5 sm:p-5 rounded-[22px] border-2 border-slate-900 text-slate-900 font-sans w-full max-w-[420px] min-w-[335px] mx-auto shadow-sm"
           >
-            {/* Header: Shop Name & Details */}
-            <div className="text-center pb-3 border-b border-dashed border-gray-300">
-              <h2 className="text-base font-black uppercase text-gray-900 tracking-tight">
-                {shopName}
+            {/* STORE IDENTITY: Always in English itself */}
+            <div className="text-center">
+              <h2 className="text-lg sm:text-xl font-black uppercase text-slate-950 tracking-wide font-sans leading-tight">
+                {englishShopName}
               </h2>
-              <p className="text-[10px] text-gray-600 mt-0.5 leading-snug">
-                {shopAddress}
-              </p>
-              <p className="text-[11px] font-bold text-gray-800 mt-1">
-                Cell: {settings.phoneNumber || '8680000003'}
-              </p>
-              {settings.gstNumber && (
-                <p className="text-[10px] font-mono text-gray-700">
-                  GST: {settings.gstNumber}
-                </p>
-              )}
-            </div>
-
-            {/* Bill Meta: Bill #, Date, Time, Hotel */}
-            <div className="py-2.5 border-b border-dashed border-gray-300 text-[11px] space-y-1">
-              <div className="flex justify-between font-bold">
-                <span>Bill No: #{bill.billNumber}</span>
-                <span>{formatDisplayDate(bill.date)}</span>
+              <div className="text-[10px] sm:text-[11px] font-bold text-slate-700 uppercase tracking-tight mt-1 leading-snug">
+                {englishAddress}
               </div>
-              <div className="flex justify-between text-gray-700">
-                <span className="font-bold flex items-center gap-1">
-                  <Building2 className="w-3 h-3 text-emerald-700" />
-                  {bill.hotelName}
-                </span>
-                <span className="text-[10px] text-gray-500">
-                  {formatDisplayTime(bill.createdAt)}
-                </span>
+              <div className="text-[10.5px] sm:text-xs font-black text-slate-900 mt-1 tracking-tight">
+                Phone: {englishPhone} &nbsp;|&nbsp; GSTIN: {englishGst}
               </div>
             </div>
 
-            {/* Line Items Table */}
-            <div className="py-2 border-b border-dashed border-gray-300">
-              <table className="w-full text-left text-[11px]">
+            {/* Thin Divider Line */}
+            <hr className="border-t border-slate-300 my-2.5" />
+
+            {/* HOTEL / CUSTOMER META BOX */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 grid grid-cols-2 gap-2 text-left">
+              {/* Left: Customer Info */}
+              <div className="min-w-0 pr-1">
+                <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block">
+                  {isTamil ? 'ஹோட்டல் / வாடிக்கையாளர்:' : 'HOTEL / CUSTOMER:'}
+                </span>
+                <h3 className="text-sm sm:text-base font-black text-slate-950 break-words mt-0.5 leading-tight">
+                  {displayHotelName}
+                </h3>
+                {hotelPhone ? (
+                  <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                    <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-black text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                      <Phone className="w-3 h-3 text-emerald-600 shrink-0" />
+                      <span>Ph: {hotelPhone}</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPhoneInput(hotelPhone);
+                        setPhoneError(null);
+                        setShowPhonePrompt(true);
+                      }}
+                      className="text-[10px] sm:text-[10.5px] text-emerald-700 underline font-bold hover:text-emerald-900 cursor-pointer"
+                    >
+                      {isTamil ? 'மாற்ற' : 'Change'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPhoneInput('');
+                        setPhoneError(null);
+                        setShowPhonePrompt(true);
+                      }}
+                      className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black text-amber-900 bg-amber-50 hover:bg-amber-100 active:bg-amber-200 px-2 py-0.5 rounded-md border border-amber-300 transition-colors cursor-pointer"
+                    >
+                      <Phone className="w-3 h-3 text-amber-700 shrink-0" />
+                      <span>{isTamil ? '+ போன் எண் சேர்க்க' : '+ Add Hotel Phone'}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Right: Bill No, Date, Time */}
+              <div className="text-right flex flex-col justify-between pl-1">
+                <div className="text-xs sm:text-sm font-black text-slate-950 whitespace-nowrap">
+                  <span className="font-extrabold">{isTamil ? 'பில் எண்' : 'Bill No'}:</span> #{bill.billNumber}
+                </div>
+                <div className="text-[10px] sm:text-[10.5px] font-bold text-slate-600 mt-0.5 whitespace-nowrap">
+                  <span className="text-slate-500">{isTamil ? 'தேதி' : 'Date'}:</span> {billDateStr}
+                </div>
+                {billTimeStr && (
+                  <div className="text-[10px] sm:text-[10.5px] font-bold text-slate-500 mt-0.5 whitespace-nowrap">
+                    <span className="text-slate-400">{isTamil ? 'நேரம்' : 'Time'}:</span> {billTimeStr}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ITEMS TABLE */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden mt-2.5">
+              <table className="w-full text-left border-collapse table-fixed">
                 <thead>
-                  <tr className="border-b border-gray-200 font-bold text-gray-700">
-                    <th className="pb-1 text-left">Item</th>
-                    <th className="pb-1 text-right">Rate</th>
-                    <th className="pb-1 text-right">Kg</th>
-                    <th className="pb-1 text-right">Amt</th>
+                  <tr className="bg-[#0f172a] text-white text-[9.5px] sm:text-[10px] font-black uppercase tracking-wider">
+                    <th className="py-2 px-1 text-center w-[8%] border-r border-slate-700">#</th>
+                    <th className="py-2 px-1.5 text-left w-[38%] border-r border-slate-700">
+                      {isTamil ? 'பொருள் பெயர்' : 'ITEM NAME'}
+                    </th>
+                    <th className="py-2 px-1 text-center w-[20%] border-r border-slate-700">
+                      {isTamil ? 'எடை (கிலோ)' : 'WEIGHT (KG)'}
+                    </th>
+                    <th className="py-2 px-1 text-right w-[17%] border-r border-slate-700">
+                      <span className="block leading-tight">{isTamil ? 'விலை (ரூ)' : 'RATE (RS)'}</span>
+                    </th>
+                    <th className="py-2 px-1.5 text-right w-[17%]">
+                      <span className="block leading-tight">{isTamil ? 'தொகை (ரூ)' : 'AMOUNT (RS)'}</span>
+                    </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 font-medium">
-                  {bill.items.map((item, idx) => (
-                    <tr key={idx} className="py-1">
-                      <td className="py-1 text-left max-w-[120px] truncate">
-                        {item.productName}
-                      </td>
-                      <td className="py-1 text-right text-gray-600">
-                        {Math.round(item.pricePerKg)}
-                      </td>
-                      <td className="py-1 text-right font-bold text-gray-800">
-                        {item.kg.toFixed(2)}
-                      </td>
-                      <td className="py-1 text-right font-black text-gray-900">
-                        ₹{Math.round(item.amount).toLocaleString('en-IN')}
-                      </td>
-                    </tr>
-                  ))}
+                <tbody className="divide-y divide-slate-200 text-xs">
+                  {bill.items.map((item, idx) => {
+                    const prodName = resolveItemDisplayName(item, products, billLang);
+                    return (
+                      <tr key={idx} className={idx % 2 === 1 ? 'bg-slate-50/70' : 'bg-white'}>
+                        <td className="py-2 px-1 text-center font-bold text-slate-700 border-r border-slate-200">
+                          {idx + 1}
+                        </td>
+                        <td className="py-2 px-1.5 font-black text-slate-900 border-r border-slate-200 break-words leading-tight">
+                          {prodName}
+                        </td>
+                        <td className="py-2 px-1 text-center font-bold text-slate-800 border-r border-slate-200 font-mono whitespace-nowrap text-[11px] sm:text-xs">
+                          {item.kg.toFixed(2)}
+                        </td>
+                        <td className="py-2 px-1 text-right font-bold text-slate-700 border-r border-slate-200 font-mono text-[10.5px] sm:text-[11px]">
+                          <span className="text-[9px] text-slate-500 mr-0.5">{currPrefix}</span>
+                          {Math.round(item.pricePerKg)}
+                        </td>
+                        <td className="py-2 px-1.5 text-right font-black text-slate-950 font-mono text-xs sm:text-sm whitespace-nowrap">
+                          <span className="text-[9px] text-slate-500 mr-0.5">{currPrefix}</span>
+                          {Math.round(item.amount).toLocaleString('en-IN')}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
 
-            {/* Summary: Total KG & Total Amount */}
-            <div className="py-2.5 border-b border-dashed border-gray-300 space-y-1 text-xs">
-              <div className="flex justify-between font-bold text-gray-700">
-                <span>Total Weight:</span>
-                <span>{bill.totalKg.toFixed(2)} Kg</span>
-              </div>
-              <div className="flex justify-between font-black text-sm text-emerald-950 pt-0.5">
-                <span>Bill Amount:</span>
-                <span>₹{Math.round(bill.totalAmount).toLocaleString('en-IN')}</span>
-              </div>
-
-              {/* Previous Balance if applicable */}
-              {bill.previousBalance !== undefined && bill.previousBalance !== 0 && (
-                <>
-                  <div className="flex justify-between text-[11px] font-bold text-amber-800 pt-1">
-                    <span>Previous Balance:</span>
-                    <span>₹{Math.round(bill.previousBalance).toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="flex justify-between font-black text-base text-gray-950 pt-1 border-t border-gray-200">
-                    <span>Net Payable:</span>
-                    <span>₹{finalPayable.toLocaleString('en-IN')}</span>
-                  </div>
-                </>
-              )}
+            {/* TOTAL WEIGHT ROW */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex items-center justify-between mt-3 text-xs">
+              <span className="font-black text-slate-800 uppercase tracking-wide text-[11px] sm:text-xs">
+                {isTamil ? 'மொத்த எடை:' : 'TOTAL WEIGHT:'}
+              </span>
+              <span className="font-black text-slate-950 font-mono text-xs sm:text-sm">
+                {bill.totalKg.toFixed(2)}
+              </span>
             </div>
 
-            {/* UPI QR Code Canvas */}
-            <div className="pt-3 text-center space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-600">
-                Scan to Pay via UPI
-              </p>
-              <div className="flex justify-center p-1 bg-white inline-block mx-auto rounded-lg border border-gray-200">
+            {/* CURRENT BILL AMOUNT ROW (ONLY Current Bill Amount) */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex items-center justify-between mt-2 text-xs">
+              <span className="font-black text-slate-800 tracking-wide text-[11px] sm:text-xs">
+                {isTamil ? 'பில் தொகை:' : 'Current Bill Amount:'}
+              </span>
+              <span className="font-black text-slate-950 font-mono text-sm sm:text-base">
+                {currPrefix} {billAmountInt.toLocaleString('en-IN')}
+              </span>
+            </div>
+
+            {/* GRAND TOTAL BANNER: STRICTLY ONLY BILL AMOUNT */}
+            <div className="bg-[#0f172a] text-white rounded-2xl p-3 text-center mt-3 shadow-sm">
+              <span className="text-[10px] font-black tracking-widest uppercase text-slate-300 block">
+                {isTamil ? 'மொத்தத் தொகை' : 'GRAND TOTAL'}
+              </span>
+              <div className="text-2xl sm:text-3xl font-black text-white font-mono mt-0.5 tracking-tight">
+                {currPrefix} {billAmountInt.toLocaleString('en-IN')}/-
+              </div>
+            </div>
+
+            {/* QR CODE & DIRECT GPAY / UPI LINK TO PAY */}
+            <div className="mt-3 text-center flex flex-col items-center">
+              {/* Clickable QR Code */}
+              <a
+                href={gpayLaunchUri}
+                onClick={handleOpenGPay}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 bg-white rounded-xl border border-slate-300 shadow-2xs inline-block hover:border-blue-500 hover:shadow-md transition-all active:scale-95 cursor-pointer"
+                title={isTamil ? 'Google Pay மூலம் செலுத்த கிளிக் செய்க' : 'Click to Pay with Google Pay (GPay)'}
+              >
                 <QRCodeCanvas
                   id="bill-upi-qr-canvas"
                   value={upiPayUri}
-                  size={100}
+                  size={115}
                   level="M"
                   includeMargin={false}
                 />
-              </div>
-              <p className="text-[10px] font-mono text-gray-600">
-                UPI: {upiId}
-              </p>
-              <p className="text-[9px] font-semibold text-gray-500 pt-1">
-                Thank you, visit again! • நன்றி, மீண்டும் வருக!
-              </p>
+              </a>
+
+              {/* Clickable UPI ID */}
+              <a
+                href={gpayLaunchUri}
+                onClick={handleOpenGPay}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[10.5px] sm:text-[11px] font-mono font-black text-slate-800 hover:text-blue-600 transition-colors mt-2 cursor-pointer underline flex items-center justify-center gap-1"
+                title={isTamil ? 'Google Pay மூலம் செலுத்த கிளிக் செய்க' : 'Click to Pay with Google Pay (GPay)'}
+              >
+                <span>UPI ID: {upiId}</span>
+              </a>
+
+              {/* Direct Google Pay Link Button */}
+              <a
+                id="btn-bill-gpay-link"
+                href={gpayLaunchUri}
+                onClick={handleOpenGPay}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2.5 inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-[#1a73e8] hover:bg-[#1557b0] active:bg-[#0d47a1] text-white rounded-xl text-xs sm:text-[13px] font-black shadow-md hover:shadow-lg transition-all active:scale-95 border border-blue-600/60 no-underline cursor-pointer group"
+                title={isTamil ? 'Google Pay மூலம் பில் செலுத்த கிளிக் செய்க' : 'Click to Pay Bill via Google Pay'}
+              >
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    fill="#ffffff"
+                  />
+                  <path
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    fill="#34A853"
+                  />
+                  <path
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                    fill="#FBBC05"
+                  />
+                  <path
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                    fill="#EA4335"
+                  />
+                </svg>
+                <span className="font-sans">
+                  {isTamil ? 'Google Pay மூலம் செலுத்த கிளிக் செய்க' : 'Pay via Google Pay (GPay)'}
+                </span>
+                <ExternalLink className="w-3.5 h-3.5 text-blue-100 group-hover:text-white shrink-0" />
+              </a>
+
+              {/* Instant feedback notice on click or copy */}
+              {paymentNotice && (
+                <div className="mt-2 text-[11px] font-bold text-blue-950 bg-blue-50 border border-blue-200 rounded-lg py-1.5 px-3 animate-in fade-in duration-150 text-center max-w-[340px]">
+                  {paymentNotice}
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         {/* Action Buttons Panel */}
-        <div className="p-3 bg-white border-t border-slate-200 space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            {/* Bluetooth Thermal Print */}
+        <div className="p-2.5 bg-white border-t border-slate-200 space-y-1.5">
+          {/* Row 1: Print Actions */}
+          <div>
             <button
               id="btn-modal-bluetooth-print"
               type="button"
               onClick={handleBluetoothPrint}
               disabled={isProcessing}
-              className="py-2.5 px-3 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 disabled:opacity-50 text-white rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-98 cursor-pointer"
+              className="w-full min-h-[2.4rem] py-1.5 px-2.5 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 disabled:opacity-50 text-white rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-98 cursor-pointer touch-manipulation"
             >
-              <Bluetooth className="w-3.5 h-3.5" />
-              <span>{t.bluetoothPrint}</span>
-            </button>
-
-            {/* WhatsApp PDF */}
-            <button
-              id="btn-modal-whatsapp-share"
-              type="button"
-              onClick={handleWhatsAppShare}
-              disabled={isProcessing}
-              className="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:opacity-50 text-white rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-98 cursor-pointer"
-            >
-              <MessageCircle className="w-3.5 h-3.5 fill-white" />
-              <span>WhatsApp PDF</span>
+              <Printer className="w-3.5 h-3.5 text-white shrink-0" />
+              <span className="leading-normal break-words">
+                {language === 'ta' ? 'புளூடூத் பிரிண்ட்' : 'Bluetooth Print'}
+              </span>
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            {/* System Print */}
+          {/* Row 2: Digital Share Actions */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
             <button
-              id="btn-modal-system-print"
+              id="btn-modal-whatsapp-share"
               type="button"
-              onClick={handleSystemPrint}
-              className="py-2 px-3 bg-slate-800 hover:bg-slate-900 active:bg-slate-950 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              onClick={handleWhatsAppShareClick}
+              disabled={isProcessing}
+              className="min-h-[2.4rem] py-1.5 px-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:opacity-50 text-white rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-98 cursor-pointer touch-manipulation"
+              title={
+                hotelPhone
+                  ? (language === 'ta' ? `வாட்ஸ்அப்பில் அனுப்பு (${hotelPhone})` : `Share WhatsApp PDF to ${hotelPhone}`)
+                  : (language === 'ta' ? 'வாட்ஸ்அப் எண் கேட்கப்பட்டு சேமிக்கப்படும்' : 'Ask hotel phone & send WhatsApp PDF')
+              }
             >
-              <Printer className="w-3.5 h-3.5" />
-              <span>{t.systemPrint}</span>
+              <MessageCircle className="w-3.5 h-3.5 fill-white shrink-0" />
+              <span className="leading-normal">
+                {hotelPhone ? `WhatsApp PDF (${hotelPhone})` : 'WhatsApp PDF'}
+              </span>
             </button>
 
-            {/* Download PDF */}
             <button
               id="btn-modal-download-pdf"
               type="button"
               onClick={handleDownloadPdf}
               disabled={isProcessing}
-              className="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              className="min-h-[2.4rem] py-1.5 px-2.5 bg-slate-800 hover:bg-slate-900 active:bg-slate-950 disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-98 cursor-pointer touch-manipulation"
             >
-              <Download className="w-3.5 h-3.5" />
-              <span>Download PDF</span>
+              <Download className="w-3.5 h-3.5 shrink-0" />
+              <span className="leading-normal">Download PDF</span>
             </button>
           </div>
 
@@ -370,14 +750,134 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 onConfirmSave();
                 onClose();
               }}
-              className="w-full py-2.5 px-3 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
+              className="w-full min-h-[2.4rem] py-1.5 px-2.5 bg-emerald-800 hover:bg-emerald-900 active:bg-emerald-950 text-white rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-2xs transition-all cursor-pointer touch-manipulation"
             >
-              <Check className="w-4 h-4" />
-              <span>{language === 'ta' ? 'பில் உறுதிப்படுத்தி சேமிக்க' : 'Confirm & Save to Register'}</span>
+              <Check className="w-3.5 h-3.5 shrink-0" />
+              <span className="leading-normal break-words">
+                {language === 'ta'
+                  ? 'பில் உறுதிப்படுத்தி சேமிக்க'
+                  : 'Confirm & Save to Register'}
+              </span>
             </button>
           )}
         </div>
       </div>
+
+      {/* Ask for Hotel Phone Number Prompt Dialog */}
+      {showPhonePrompt && (
+        <div className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
+          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl border-2 border-emerald-600 animate-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="bg-emerald-800 text-white px-3.5 py-2.5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Phone className="w-4 h-4 text-emerald-200" />
+                <span className="text-xs sm:text-sm font-black">
+                  {billLang === 'ta' ? 'ஹோட்டல் வாட்ஸ்அப் எண்' : 'Hotel WhatsApp Number'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPhonePrompt(false);
+                  setPhoneError(null);
+                }}
+                className="w-7 h-7 rounded-lg bg-white/15 hover:bg-white/25 flex items-center justify-center text-white cursor-pointer touch-manipulation"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-3.5 space-y-3 text-left">
+              <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-2.5">
+                <span className="text-[10px] font-bold text-slate-500 uppercase block tracking-wider">
+                  {billLang === 'ta' ? 'வாடிக்கையாளர் / ஹோட்டல்:' : 'Customer / Hotel:'}
+                </span>
+                <span className="text-sm font-black text-slate-900 block mt-0.5">
+                  {displayHotelName}
+                </span>
+                <span className="text-[11px] text-emerald-900 font-semibold block mt-1 leading-snug">
+                  {billLang === 'ta'
+                    ? 'இந்த எண் முதலீட்டு அமைப்புகளில் (Settings) சேமிக்கப்பட்டு எதிர்கால பில்களுக்குப் பயன்படுத்தப்படும்.'
+                    : 'This number will be saved in Investment Settings and used for all future bills & statements.'}
+                </span>
+              </div>
+
+              {/* Phone Input with +91 Prefix */}
+              <div className="space-y-1">
+                <label className="text-[11px] font-black text-slate-700 block">
+                  {billLang === 'ta' ? 'மொபைல் / வாட்ஸ்அப் எண் (10 இலக்கங்கள்):' : 'Mobile / WhatsApp Number (10 digits):'}
+                </label>
+                <div className="flex items-center border-2 border-slate-300 focus-within:border-emerald-600 rounded-xl overflow-hidden shadow-2xs">
+                  <span className="bg-slate-100 text-slate-700 text-xs font-black px-2.5 py-2 border-r border-slate-300 select-none font-mono">
+                    +91
+                  </span>
+                  <input
+                    type="tel"
+                    value={phoneInput}
+                    onChange={(e) => {
+                      setPhoneInput(e.target.value);
+                      setPhoneError(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSavePhoneAndShare(false);
+                      }
+                    }}
+                    placeholder="9876543210"
+                    maxLength={10}
+                    autoFocus
+                    className="flex-1 px-3 py-2 text-sm font-black text-slate-900 outline-none placeholder:text-slate-400 font-mono"
+                  />
+                </div>
+                {phoneError && (
+                  <div className="text-[11px] font-bold text-red-600 flex items-center gap-1 mt-1 animate-in fade-in">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
+                    <span>{phoneError}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => handleSavePhoneAndShare(false)}
+                  className="w-full py-2.5 px-3 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-98 cursor-pointer touch-manipulation"
+                >
+                  <MessageCircle className="w-4 h-4 fill-white shrink-0" />
+                  <span>
+                    {billLang === 'ta'
+                      ? 'சேமித்து வாட்ஸ்அப்பில் அனுப்பு'
+                      : 'Save & Send WhatsApp Bill'}
+                  </span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSavePhoneAndShare(true)}
+                    className="flex-1 py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[11px] font-bold transition-all cursor-pointer text-center"
+                  >
+                    {billLang === 'ta' ? 'எண் இல்லாமல் திற' : 'Open Without Saving'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPhonePrompt(false);
+                      setPhoneError(null);
+                    }}
+                    className="py-1.5 px-3 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl text-[11px] font-bold transition-all cursor-pointer"
+                  >
+                    {billLang === 'ta' ? 'ரத்து' : 'Cancel'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

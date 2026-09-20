@@ -1,17 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Save, CheckCircle2 } from 'lucide-react';
 import { InvestmentItemType, InvestmentDayData } from '../types';
+import { saveInvestmentData, PreviousDayStock } from '../utils/storage';
+import { OpeningStockBanner } from '../components/OpeningStockBanner';
 
 interface LoadEntryPageProps {
   data: InvestmentDayData;
   onChangeData: (updated: InvestmentDayData) => void;
   language?: 'en' | 'ta';
+  previousStock?: PreviousDayStock | null;
 }
 
 export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
   data,
   onChangeData,
   language = 'en',
+  previousStock,
 }) => {
+  const [isSavedRecently, setIsSavedRecently] = useState(false);
+  const [saveToastMsg, setSaveToastMsg] = useState<string | null>(null);
+
   const isChicken = data.itemType === 'chicken';
 
   // 1 & 2: Toggle Chicken / Egg
@@ -120,8 +128,82 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
     });
   };
 
+  // Explicit Save Everything handler for Investment Load Inward
+  const handleSaveEverything = () => {
+    const cNetKg = chickenWastage > 0
+      ? Math.max(0, Math.round((chickenQuantity * (1 - chickenWastage / 100)) * 100) / 100)
+      : chickenQuantity;
+    const cNetCost = Math.round(cNetKg * chickenRate * 100) / 100;
+    const nextChicken = {
+      ...data.chickenLoad,
+      totalIncomeKg: chickenQuantity,
+      ratePerKg: chickenRate,
+      wastagePercent: chickenWastage,
+      totalAmount: cNetCost,
+    };
+
+    const nextEgg = {
+      ...data.eggLoad,
+      totalTareIncome: eggTareIncome,
+      pricePerTare: eggPricePerTare,
+      totalIncomeCount: eggTotalCount,
+      ratePerUnit: eggTareIncome > 0 ? (eggTareIncome * eggPricePerTare) / (eggTareIncome * 30) : 0,
+      wastagePercent: 0,
+    };
+
+    // Calculate spend across chicken + egg loads
+    const calcCost = Math.round((cNetCost + eggTotalPrice) * 100) / 100;
+    const nextSales = {
+      ...data.sales,
+      loadPriceSpend: calcCost > 0 ? calcCost : data.sales.loadPriceSpend,
+      totalIncomeKg: cNetKg > 0 ? cNetKg : data.sales.totalIncomeKg,
+    };
+
+    const updatedData: InvestmentDayData = {
+      ...data,
+      chickenLoad: nextChicken,
+      eggLoad: nextEgg,
+      sales: nextSales,
+    };
+
+    onChangeData(updatedData);
+    saveInvestmentData(updatedData);
+
+    setIsSavedRecently(true);
+    const msg = language === 'ta'
+      ? 'லோடு விவரங்கள் அனைத்தும் போனில் சேமிக்கப்பட்டது!'
+      : 'All Load Inward data saved successfully to phone!';
+    setSaveToastMsg(msg);
+
+    setTimeout(() => {
+      setIsSavedRecently(false);
+    }, 2500);
+    setTimeout(() => {
+      setSaveToastMsg(null);
+    }, 3500);
+  };
+
   return (
     <div className="flex flex-col flex-1 w-full max-w-md mx-auto px-4 py-3 select-none">
+      {/* Toast Notification */}
+      {saveToastMsg && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-emerald-950 text-white text-xs sm:text-sm font-black px-4 py-2.5 rounded-full shadow-xl border-2 border-emerald-400 flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{saveToastMsg}</span>
+        </div>
+      )}
+
+      {/* Opening Stock from Previous Day Banner */}
+      {previousStock && (
+        <OpeningStockBanner
+          previousStock={previousStock}
+          currentData={data}
+          onChangeData={onChangeData}
+          language={language}
+          variant="card"
+        />
+      )}
+
       {/* Top Switcher - Chicken / Egg */}
       <div className="grid grid-cols-2 rounded-2xl bg-slate-200/80 p-1 mb-4 border border-slate-300 shadow-2xs">
         <button
@@ -257,8 +339,13 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
                     {language === 'ta' ? 'தட்டு' : 'Tares'}
                   </span>
                 </div>
-                <div className="text-xs font-bold text-neutral-600 mt-1">
-                  <span>{eggTotalCount.toLocaleString()} {language === 'ta' ? 'முட்டை' : 'Eggs'}</span>
+                <div className="text-xs font-bold text-neutral-600 mt-1 space-y-0.5">
+                  <div>{eggTotalCount.toLocaleString()} {language === 'ta' ? 'முட்டை' : 'Eggs'}</div>
+                  {data.openingStock?.appliedToLoad && Number(data.openingStock.eggNos || 0) > 0 && (
+                    <div className="text-[11px] font-black text-orange-800 bg-orange-50 px-2 py-0.5 rounded-md border border-orange-200 inline-block">
+                      + {Math.floor((data.openingStock.eggNos || 0) / 30)} {language === 'ta' ? 'தட்டு தொடக்க இருப்பு' : 'Opening Tares'} ({data.openingStock.eggNos} {language === 'ta' ? 'முட்டை' : 'Eggs'})
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -397,13 +484,20 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
                   {chickenNetKg}
                   <span className="text-xs font-bold text-amber-700 ml-1">kg</span>
                 </div>
-                <div className="text-xs font-bold text-neutral-600 mt-1">
-                  {chickenWastage > 0 ? (
-                    <span>
-                      {chickenQuantity} kg - {wastageKg} kg ({chickenWastage}%)
-                    </span>
-                  ) : (
-                    <span>{chickenQuantity} kg {language === 'ta' ? 'மொத்தம்' : 'Total'}</span>
+                <div className="text-xs font-bold text-neutral-600 mt-1 space-y-0.5">
+                  <div>
+                    {chickenWastage > 0 ? (
+                      <span>
+                        {chickenQuantity} kg - {wastageKg} kg ({chickenWastage}%)
+                      </span>
+                    ) : (
+                      <span>{chickenQuantity} kg {language === 'ta' ? 'புதிய லோடு' : 'New Load'}</span>
+                    )}
+                  </div>
+                  {data.openingStock?.appliedToLoad && Number(data.openingStock.chickenKg || 0) > 0 && (
+                    <div className="text-[11px] font-black text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 inline-block">
+                      + {data.openingStock.chickenKg} kg {language === 'ta' ? 'தொடக்க இருப்பு' : 'Opening'} = {(chickenNetKg + Number(data.openingStock.chickenKg)).toFixed(1)} kg
+                    </div>
                   )}
                 </div>
               </div>
@@ -426,6 +520,33 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
           </div>
         </div>
       )}
+
+      {/* Prominent Save Everything Button */}
+      <div className="pt-4 pb-3">
+        <button
+          type="button"
+          id="btn-save-load-inward"
+          onClick={handleSaveEverything}
+          className={`w-full min-h-[3rem] px-4 py-2.5 rounded-2xl font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-md transition-all active:scale-98 cursor-pointer touch-manipulation ${
+            isSavedRecently
+              ? 'bg-emerald-800 text-white ring-2 ring-emerald-400 shadow-emerald-900/30'
+              : 'bg-gradient-to-r from-emerald-700 via-emerald-800 to-emerald-900 hover:from-emerald-800 hover:to-emerald-950 active:bg-emerald-950 text-white shadow-emerald-900/20'
+          }`}
+          title={language === 'ta' ? 'அனைத்து லோடு விவரங்களையும் போனில் சேமிக்க' : 'Save all load inward data to phone'}
+        >
+          {isSavedRecently ? (
+            <>
+              <CheckCircle2 className="w-5 h-5 text-emerald-300" />
+              <span>{language === 'ta' ? 'வெற்றிகரமாக சேமிக்கப்பட்டது!' : 'Saved Successfully!'}</span>
+            </>
+          ) : (
+            <>
+              <Save className="w-5 h-5 text-emerald-200" />
+              <span>{language === 'ta' ? 'அனைத்தையும் சேமிக்க (Save Everything)' : 'Save Everything'}</span>
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 };

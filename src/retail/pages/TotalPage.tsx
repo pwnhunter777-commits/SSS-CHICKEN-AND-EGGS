@@ -192,7 +192,7 @@ export const TotalPage: React.FC<TotalPageProps> = ({ language }) => {
             : 'All-Time';
 
       const rows: string[][] = [
-        [settings.shopName || 'SSS CHICKEN AGENCY', 'Retail Sales Report'],
+        [settings.shopName || 'SSS CHICKEN AND EGG AGENCY', 'Retail Sales Report'],
         ['Report Period', reportDate],
         ['Total Bills', String(targetBills.length)],
         ['Grand Total Revenue (Rs)', overallTotalAmount.toFixed(2)],

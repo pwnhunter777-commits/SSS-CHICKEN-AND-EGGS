@@ -1,18 +1,16 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Bluetooth,
   Check,
   Plus,
   RefreshCw,
-  Building2,
-  ShoppingBag,
   X,
   ChevronDown,
   IndianRupee,
   ArrowRight,
   Trash2,
   Send,
-  ShieldCheck,
+  FileText,
+  Printer,
 } from 'lucide-react';
 import {
   Bill,
@@ -39,7 +37,7 @@ interface BillingPageProps {
   settings: ShopSettings;
   language: LanguageCode;
   onSaveBill: (bill: Bill) => void;
-  onOpenReceipt: (bill: Bill, isDraft?: boolean, onSaved?: () => void) => void;
+  onOpenReceipt: (bill: Bill, isDraft?: boolean, onSaved?: () => void, autoPrintBluetooth?: boolean) => void;
   onNavigateToDailyPrice: () => void;
   onNavigateToHotel?: () => void;
   onAddHotel?: (nameEn: string, nameTa: string) => void;
@@ -301,11 +299,11 @@ export const BillingPage: React.FC<BillingPageProps> = ({
     if (_triggerBluetooth) {
       onSaveBill(newBill);
       setBillingInputs({});
-      onOpenReceipt(newBill, false);
+      onOpenReceipt(newBill, false, undefined, true);
     } else {
       onOpenReceipt(newBill, true, () => {
         setBillingInputs({});
-      });
+      }, false);
     }
   };
 
@@ -362,44 +360,53 @@ export const BillingPage: React.FC<BillingPageProps> = ({
   };
 
   return (
-    <div id="page-billing" className="pb-6 pt-2 px-4 max-w-md mx-auto animate-in fade-in">
-      {/* Phone Storage & 31-Day Policy Info */}
-      <div className="flex items-center justify-between px-1 mb-2.5 text-[11px] font-semibold text-slate-500">
-        <span className="flex items-center gap-1 text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-md font-bold text-[11px]">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-          <span>{language === 'ta' ? 'மொபைலில் சேமிப்பு • 31 நாள் தானியங்கி நீக்கம்' : 'Saved on Phone • 31-Day Auto-Delete'}</span>
-        </span>
-        <span className="text-slate-500 font-mono text-[10px] bg-slate-100 px-1.5 py-0.5 rounded">
-          #{getNextBillNumber()}
-        </span>
-      </div>
-
+    <div id="page-billing" className="pb-8 pt-1.5 px-2.5 sm:px-3.5 max-w-md mx-auto animate-in fade-in">
       {/* Missing Daily Prices Banner */}
       {!dailyPrices && (
-        <div className="mb-3 bg-amber-50 border border-amber-300 rounded-2xl p-3 flex items-center justify-between gap-2 shadow-xs">
-          <div className="text-xs text-amber-900">
+        <div className="mb-2 bg-amber-50 border border-amber-300 rounded-xl p-2 flex items-center justify-between gap-2 shadow-2xs">
+          <div className="text-xs text-amber-900 leading-tight break-words flex-1">
             <span className="font-bold">{t.pricesRequiredNotice}:</span>{' '}
             {language === 'ta' ? 'இன்றைய விலை நிர்ணயிக்கப்படவில்லை.' : 'Daily rates not set for today.'}
           </div>
           <button
             type="button"
             onClick={onNavigateToDailyPrice}
-            className="text-xs font-black text-white bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 px-3 py-1.5 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer"
+            className="min-h-[2.4rem] text-xs font-black text-white bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 px-3 py-1 rounded-lg shadow-2xs transition-all active:scale-95 cursor-pointer touch-manipulation flex-shrink-0"
           >
-            {t.dailyPrice}
+            <span className="leading-normal">{t.dailyPrice}</span>
           </button>
         </div>
       )}
 
       {/* Hotel Selection Section with Dropdown and Add Button */}
-      <div className="bg-white border border-slate-200/90 rounded-3xl p-4 shadow-xs mb-3 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs font-black text-slate-800 uppercase tracking-wide">
-            <div className="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-800 flex items-center justify-center">
-              <Building2 className="w-3.5 h-3.5" />
+      <div className="bg-white border border-slate-200/90 rounded-xl p-2 sm:p-2.5 shadow-2xs mb-2 space-y-2">
+        {/* Dropdown & Add Hotel Button in single row */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 min-w-0">
+            <select
+              id="hotel-dropdown-select"
+              value={isCustomHotel ? '__custom__' : selectedHotelId}
+              onChange={handleDropdownChange}
+              className="w-full min-h-[2.5rem] px-3 pr-8 bg-slate-50 hover:bg-white border-2 border-slate-200 focus:border-emerald-600 focus:bg-white rounded-lg text-xs sm:text-sm font-bold text-slate-900 outline-none appearance-none transition-all cursor-pointer shadow-2xs leading-normal"
+            >
+              <optgroup label={t.selectHotel}>
+                {hotels.map((hotel) => (
+                  <option key={hotel.id} value={hotel.id} className="py-1 font-semibold text-gray-900">
+                    {getHotelName(hotel, language)}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label={t.other}>
+                <option value="__custom__" className="py-1 font-bold text-emerald-800">
+                  {language === 'ta' ? 'மற்ற வாடிக்கையாளர்...' : 'Other / One-time Customer...'}
+                </option>
+              </optgroup>
+            </select>
+            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+              <ChevronDown className="w-4 h-4 stroke-[2.5]" />
             </div>
-            <span>{t.selectHotel}</span>
           </div>
+
           <button
             id="btn-open-add-hotel"
             type="button"
@@ -408,15 +415,16 @@ export const BillingPage: React.FC<BillingPageProps> = ({
               setNewHotelNameEn('');
               setNewHotelNameTa('');
             }}
-            className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white rounded-xl text-xs font-black flex items-center gap-1 transition-all active:scale-95 shadow-xs shadow-emerald-700/20 cursor-pointer"
+            className="min-h-[2.5rem] px-3 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white rounded-lg text-xs font-black flex items-center gap-1 transition-all active:scale-95 shadow-2xs cursor-pointer shrink-0 touch-manipulation"
           >
-            <span>{t.addHotel}</span>
+            <Plus className="w-4 h-4" />
+            <span className="leading-normal">{t.addHotel}</span>
           </button>
         </div>
 
         {/* Notification when hotel added */}
         {addNotification && (
-          <div className="bg-emerald-600 text-white p-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs animate-in fade-in">
+          <div className="bg-emerald-600 text-white p-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-2xs animate-in fade-in leading-normal break-words">
             <Check className="w-4 h-4 flex-shrink-0" />
             <span>{addNotification}</span>
           </div>
@@ -426,28 +434,28 @@ export const BillingPage: React.FC<BillingPageProps> = ({
         {isAddingHotel && (
           <form
             onSubmit={handleSaveNewHotel}
-            className="bg-emerald-50/60 border border-emerald-200 rounded-2xl p-3 space-y-2.5 animate-in fade-in slide-in-from-top-1"
+            className="bg-emerald-50/60 border border-emerald-200 rounded-xl p-2.5 space-y-2 animate-in fade-in slide-in-from-top-1"
           >
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-emerald-950 uppercase tracking-wider">
+              <span className="text-[11px] font-bold text-emerald-950 uppercase tracking-wider leading-normal">
                 {t.addHotel}
               </span>
               <button
                 type="button"
                 onClick={() => setIsAddingHotel(false)}
-                className="text-gray-400 hover:text-gray-700 p-0.5 cursor-pointer"
+                className="text-gray-400 hover:text-gray-700 p-1 min-h-[2rem] min-w-[2rem] flex items-center justify-center cursor-pointer touch-manipulation"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <input
                 id="input-new-hotel-en"
                 type="text"
                 value={newHotelNameEn}
                 onChange={(e) => setNewHotelNameEn(e.target.value)}
                 placeholder={t.hotelNameEn + ' (e.g. Star Biriyani)'}
-                className="w-full px-3 py-2 bg-white border border-emerald-300 rounded-xl text-xs font-bold text-gray-900 outline-none focus:border-emerald-700 focus:ring-1 focus:ring-emerald-700"
+                className="w-full min-h-[2.4rem] px-2.5 py-1.5 bg-white border border-emerald-300 rounded-lg text-xs sm:text-sm font-bold text-gray-900 outline-none focus:border-emerald-700 leading-normal"
                 autoFocus
               />
               <input
@@ -456,64 +464,38 @@ export const BillingPage: React.FC<BillingPageProps> = ({
                 value={newHotelNameTa}
                 onChange={(e) => setNewHotelNameTa(e.target.value)}
                 placeholder={t.hotelNameTa + ' (உ.ம். ஸ்டார் பிரியாணி)'}
-                className="w-full px-3 py-2 bg-white border border-emerald-300 rounded-xl text-xs font-bold text-gray-900 outline-none focus:border-emerald-700 focus:ring-1 focus:ring-emerald-700"
+                className="w-full min-h-[2.4rem] px-2.5 py-1.5 bg-white border border-emerald-300 rounded-lg text-xs sm:text-sm font-bold text-gray-900 outline-none focus:border-emerald-700 leading-normal"
               />
             </div>
-            <div className="flex justify-end gap-2 pt-1">
+            <div className="flex justify-end gap-2 pt-0.5">
               <button
                 type="button"
                 onClick={() => setIsAddingHotel(false)}
-                className="px-3.5 py-1.5 bg-slate-700 hover:bg-slate-800 active:bg-slate-900 text-white rounded-xl text-xs font-black shadow-xs transition-all active:scale-95 cursor-pointer"
+                className="min-h-[2.4rem] px-3 py-1 bg-slate-700 hover:bg-slate-800 active:bg-slate-900 text-white rounded-lg text-xs font-bold shadow-2xs transition-all active:scale-95 cursor-pointer touch-manipulation flex items-center justify-center"
               >
-                {t.cancel}
+                <span className="leading-normal">{t.cancel}</span>
               </button>
               <button
                 id="btn-save-new-hotel-billing"
                 type="submit"
-                className="px-4 py-1.5 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white rounded-xl text-xs font-black whitespace-nowrap shadow-md shadow-emerald-700/25 transition-all active:scale-95 cursor-pointer"
+                className="min-h-[2.4rem] px-3.5 py-1 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white rounded-lg text-xs font-black shadow-2xs transition-all active:scale-95 cursor-pointer touch-manipulation flex items-center justify-center"
               >
-                {t.save}
+                <span className="leading-normal">{t.save}</span>
               </button>
             </div>
           </form>
         )}
 
-        {/* Dropdown for Hotel Selection */}
-        <div className="relative">
-          <select
-            id="hotel-dropdown-select"
-            value={isCustomHotel ? '__custom__' : selectedHotelId}
-            onChange={handleDropdownChange}
-            className="w-full min-h-[50px] px-4 pr-10 bg-slate-50 hover:bg-white border-2 border-slate-200 focus:border-emerald-600 focus:bg-white rounded-2xl text-sm sm:text-base font-black text-slate-900 outline-none appearance-none transition-all cursor-pointer shadow-xs leading-normal"
-          >
-            <optgroup label={t.selectHotel}>
-              {hotels.map((hotel) => (
-                <option key={hotel.id} value={hotel.id} className="py-1 font-semibold text-gray-900">
-                  {getHotelName(hotel, language)}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label={t.other}>
-              <option value="__custom__" className="py-1 font-bold text-emerald-800">
-                {language === 'ta' ? 'மற்ற வாடிக்கையாளர்...' : 'Other / One-time Customer...'}
-              </option>
-            </optgroup>
-          </select>
-          <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
-            <ChevronDown className="w-5 h-5 stroke-[2.5]" />
-          </div>
-        </div>
-
         {/* Custom Hotel Input if selected from dropdown */}
         {isCustomHotel && (
-          <div className="pt-1 animate-in fade-in">
+          <div className="pt-0.5 animate-in fade-in">
             <input
               id="custom-hotel-text-input"
               type="text"
               value={customHotelInput}
               onChange={(e) => setCustomHotelInput(e.target.value)}
               placeholder={language === 'ta' ? 'வாடிக்கையாளர் பெயரை உள்ளிடவும்...' : 'Type customer or hotel name for this bill...'}
-              className="w-full min-h-[46px] px-4 py-2.5 bg-emerald-50/60 border-2 border-emerald-400 rounded-xl text-sm sm:text-base font-bold text-gray-900 outline-none focus:border-emerald-700 focus:bg-white leading-normal"
+              className="w-full min-h-[2.5rem] px-3 py-1.5 bg-emerald-50/60 border-2 border-emerald-400 rounded-lg text-xs sm:text-sm font-bold text-gray-900 outline-none focus:border-emerald-700 focus:bg-white leading-normal"
               autoFocus
             />
           </div>
@@ -523,7 +505,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({
       {/* Hotel Balance Display Container */}
       <div
         id="billing-hotel-balance-container"
-        className={`mb-3 rounded-3xl p-3.5 sm:p-4 border-2 shadow-xs transition-all ${
+        className={`mb-2 rounded-xl p-2 sm:p-2.5 border shadow-2xs transition-all ${
           hotelBalance > 0
             ? 'bg-gradient-to-r from-amber-50/95 via-amber-50/70 to-emerald-50/60 border-amber-300'
             : hotelBalance === 0
@@ -531,11 +513,11 @@ export const BillingPage: React.FC<BillingPageProps> = ({
             : 'bg-sky-50/70 border-sky-200'
         }`}
       >
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
           {/* Left: Balance Amount & Label */}
-          <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <div
-              className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-xs ${
+              className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 shadow-2xs ${
                 hotelBalance > 0
                   ? 'bg-amber-600 text-white'
                   : hotelBalance === 0
@@ -543,17 +525,15 @@ export const BillingPage: React.FC<BillingPageProps> = ({
                   : 'bg-sky-600 text-white'
               }`}
             >
-              <IndianRupee className="w-4 h-4" />
+              <IndianRupee className="w-3.5 h-3.5" />
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-xs sm:text-sm font-bold text-gray-700">
-                  {language === 'ta' ? 'ஹோட்டல் பாக்கி' : 'Hotel Balance'}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline gap-1.5 flex-wrap">
+                <span className="text-[10px] sm:text-[11px] font-bold text-gray-600 uppercase leading-none">
+                  {language === 'ta' ? 'ஹோட்டல் பாக்கி' : 'Hotel Balance'}:
                 </span>
-              </div>
-              <div className="flex items-baseline gap-1.5">
                 <span
-                  className={`text-lg sm:text-xl font-black tracking-tight ${
+                  className={`text-xs sm:text-sm font-black tracking-tight leading-none ${
                     hotelBalance > 0
                       ? 'text-amber-900'
                       : hotelBalance === 0
@@ -563,8 +543,8 @@ export const BillingPage: React.FC<BillingPageProps> = ({
                 >
                   ₹{Math.abs(Math.round(hotelBalance)).toLocaleString('en-IN')}
                 </span>
-                <span className="text-xs text-gray-600 font-bold truncate max-w-[130px]">
-                  {currentHotelDisplayName}
+                <span className="text-[10px] text-gray-500 font-semibold break-words leading-none">
+                  ({currentHotelDisplayName})
                 </span>
               </div>
             </div>
@@ -573,11 +553,11 @@ export const BillingPage: React.FC<BillingPageProps> = ({
           {/* Right: Net Total With Balance preview or Link to Hotel Page */}
           <div className="text-right flex items-center gap-1.5 flex-shrink-0">
             {totalAmount > 0 ? (
-              <div className="bg-white/95 border-2 border-emerald-300 rounded-2xl px-3 py-1.5 text-right shadow-2xs">
-                <span className="text-[10px] font-bold text-gray-500 block uppercase leading-tight">
+              <div className="bg-white/95 border border-emerald-300 rounded-lg px-2.5 py-1 text-right shadow-2xs min-h-[2.4rem] flex flex-col justify-center">
+                <span className="text-[9px] font-bold text-gray-500 block uppercase leading-none">
                   {language === 'ta' ? 'மொத்த பாக்கி' : 'Total Due'}
                 </span>
-                <span className="text-sm sm:text-base font-black text-emerald-950">
+                <span className="text-xs sm:text-sm font-black text-emerald-950 leading-none mt-0.5">
                   ₹{Math.round(totalAmount + (hotelBalance > 0 ? hotelBalance : 0)).toLocaleString('en-IN')}
                 </span>
               </div>
@@ -586,59 +566,55 @@ export const BillingPage: React.FC<BillingPageProps> = ({
                 id="btn-billing-goto-hotel-ledger"
                 type="button"
                 onClick={onNavigateToHotel}
-                className="text-xs font-black text-white bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 px-3.5 py-2 rounded-xl shadow-xs flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                className="min-h-[2.4rem] text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 px-3 py-1 rounded-lg shadow-2xs flex items-center gap-1 transition-all active:scale-95 cursor-pointer touch-manipulation"
                 title={language === 'ta' ? 'ஹோட்டல் கணக்கு பார்க்க' : 'View Hotel Ledger'}
               >
-                <span>{language === 'ta' ? 'கணக்கு' : 'Ledger'}</span>
-                <ArrowRight className="w-4 h-4" />
+                <span className="leading-normal">{language === 'ta' ? 'கணக்கு' : 'Ledger'}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </button>
             ) : null}
           </div>
         </div>
       </div>
 
-      {/* Products Section Header */}
-      <div className="flex items-center justify-between mb-2 px-1 gap-2 flex-wrap">
-        <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-950 uppercase tracking-wide">
-          <ShoppingBag className="w-4 h-4 text-emerald-700" />
-          <span>
-            {t.chickenProducts} ({products.length})
-          </span>
+      {/* Products Section Header Actions */}
+      {(onAddProduct || activeBillItems.length > 0) && (
+        <div className="flex items-center justify-end mb-1.5 px-0.5 gap-1.5 flex-wrap">
+          <div className="flex items-center gap-1.5 ml-auto">
+            {onAddProduct && (
+              <button
+                id="btn-add-product-billing"
+                type="button"
+                onClick={() => {
+                  setIsAddingProduct((prev) => !prev);
+                  setNewProductNameEn('');
+                  setNewProductNameTa('');
+                  setNewProductPrice('');
+                }}
+                className="min-h-[2.4rem] px-3 py-1 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white rounded-lg text-xs font-black flex items-center gap-1 transition-all active:scale-95 shadow-2xs cursor-pointer touch-manipulation"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span className="leading-normal">+ {language === 'ta' ? 'பொருள்' : 'Add Item'}</span>
+              </button>
+            )}
+            {activeBillItems.length > 0 && (
+              <button
+                id="btn-clear-all-billing"
+                type="button"
+                onClick={() => setShowClearAllConfirm(true)}
+                className="min-h-[2.4rem] text-xs font-black text-white bg-rose-600 hover:bg-rose-700 active:bg-rose-800 flex items-center gap-1 px-3 py-1 rounded-lg shadow-2xs transition-all active:scale-95 cursor-pointer touch-manipulation"
+              >
+                <RefreshCw className="w-3 h-3 text-white" />
+                <span className="leading-normal">{t.resetAll}</span>
+              </button>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          {onAddProduct && (
-            <button
-              id="btn-add-product-billing"
-              type="button"
-              onClick={() => {
-                setIsAddingProduct((prev) => !prev);
-                setNewProductNameEn('');
-                setNewProductNameTa('');
-                setNewProductPrice('');
-              }}
-              className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white rounded-xl text-xs font-black flex items-center gap-1 transition-all active:scale-95 shadow-xs cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>+ {language === 'ta' ? 'பொருள்' : 'Add Item'}</span>
-            </button>
-          )}
-          {activeBillItems.length > 0 && (
-            <button
-              id="btn-clear-all-billing"
-              type="button"
-              onClick={() => setShowClearAllConfirm(true)}
-              className="text-[11px] font-black text-white bg-rose-600 hover:bg-rose-700 active:bg-rose-800 flex items-center gap-1 px-2.5 py-1.5 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer"
-            >
-              <RefreshCw className="w-3 h-3 text-white" />
-              <span>{t.resetAll}</span>
-            </button>
-          )}
-        </div>
-      </div>
+      )}
 
       {/* Notification when product added */}
       {productAddNotification && (
-        <div className="mb-2.5 bg-emerald-600 text-white p-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs animate-in fade-in">
+        <div className="mb-2 bg-emerald-600 text-white p-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-2xs animate-in fade-in leading-normal break-words">
           <Check className="w-4 h-4 flex-shrink-0" />
           <span>{productAddNotification}</span>
         </div>
@@ -648,65 +624,65 @@ export const BillingPage: React.FC<BillingPageProps> = ({
       {isAddingProduct && (
         <form
           onSubmit={handleSaveNewProduct}
-          className="mb-3 bg-emerald-50/95 border border-emerald-300 rounded-2xl p-3 space-y-2.5 animate-in fade-in slide-in-from-top-1"
+          className="mb-2 bg-emerald-50/95 border border-emerald-300 rounded-xl p-2.5 space-y-2 animate-in fade-in slide-in-from-top-1"
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-emerald-950 uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-emerald-950 uppercase tracking-wider leading-normal">
               {language === 'ta' ? 'புதிய பொருள் சேர்க்க' : 'Add New Item / Product'}
             </span>
             <button
               type="button"
               onClick={() => setIsAddingProduct(false)}
-              className="text-gray-400 hover:text-gray-700 p-0.5 cursor-pointer"
+              className="text-gray-400 hover:text-gray-700 p-1 min-h-[2rem] min-w-[2rem] flex items-center justify-center cursor-pointer touch-manipulation"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <input
               type="text"
               value={newProductNameEn}
               onChange={(e) => setNewProductNameEn(e.target.value)}
               placeholder="Item name in English (e.g. Tandoori Chicken)"
-              className="w-full px-3 py-2 bg-white border border-emerald-200 rounded-xl text-xs font-bold text-gray-900 outline-none focus:border-emerald-600"
+              className="w-full min-h-[2.4rem] px-2.5 py-1.5 bg-white border border-emerald-200 rounded-lg text-xs sm:text-sm font-bold text-gray-900 outline-none focus:border-emerald-600 leading-normal"
             />
             <input
               type="text"
               value={newProductNameTa}
               onChange={(e) => setNewProductNameTa(e.target.value)}
               placeholder="பொருள் பெயர் தமிழில் (உ.ம். தந்தூரி சிக்கன்)"
-              className="w-full px-3 py-2 bg-white border border-emerald-200 rounded-xl text-xs font-bold text-gray-900 outline-none focus:border-emerald-600"
+              className="w-full min-h-[2.4rem] px-2.5 py-1.5 bg-white border border-emerald-200 rounded-lg text-xs sm:text-sm font-bold text-gray-900 outline-none focus:border-emerald-600 leading-normal"
             />
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-500">₹</span>
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-500">₹</span>
               <input
                 type="number"
                 value={newProductPrice}
                 onChange={(e) => setNewProductPrice(e.target.value)}
                 placeholder={language === 'ta' ? 'கிலோ விலை (₹)' : 'Price per KG (₹)'}
-                className="w-full pl-7 pr-3 py-2 bg-white border border-emerald-200 rounded-xl text-xs font-bold text-gray-900 outline-none focus:border-emerald-600"
+                className="w-full min-h-[2.4rem] pl-6 pr-2.5 py-1.5 bg-white border border-emerald-200 rounded-lg text-xs sm:text-sm font-bold text-gray-900 outline-none focus:border-emerald-600 leading-normal"
               />
             </div>
           </div>
-          <div className="flex justify-end gap-2 pt-1">
+          <div className="flex justify-end gap-2 pt-0.5">
             <button
               type="button"
               onClick={() => setIsAddingProduct(false)}
-              className="px-3.5 py-1.5 text-xs font-black text-white bg-slate-700 hover:bg-slate-800 active:bg-slate-900 rounded-xl shadow-xs transition-all active:scale-95 cursor-pointer"
+              className="min-h-[2.4rem] px-3 py-1 text-xs font-black text-white bg-slate-700 hover:bg-slate-800 active:bg-slate-900 rounded-lg shadow-2xs transition-all active:scale-95 cursor-pointer touch-manipulation flex items-center justify-center"
             >
-              {language === 'ta' ? 'ரத்து' : 'Cancel'}
+              <span className="leading-normal">{language === 'ta' ? 'ரத்து' : 'Cancel'}</span>
             </button>
             <button
               type="submit"
-              className="px-4 py-1.5 text-xs font-black text-white bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 rounded-xl shadow-md shadow-emerald-700/20 transition-all active:scale-95 cursor-pointer"
+              className="min-h-[2.4rem] px-3.5 py-1 text-xs font-black text-white bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 rounded-lg shadow-2xs transition-all active:scale-95 cursor-pointer touch-manipulation flex items-center justify-center"
             >
-              {language === 'ta' ? 'சேமி' : 'Add Item'}
+              <span className="leading-normal">{language === 'ta' ? 'சேமி' : 'Add Item'}</span>
             </button>
           </div>
         </form>
       )}
 
-      {/* Chicken Products List */}
+      {/* Chicken Products List - Compact Divs */}
       <div className="space-y-1.5">
         {products.map((product) => {
           const defaultRate = getProductRate(product);
@@ -722,14 +698,14 @@ export const BillingPage: React.FC<BillingPageProps> = ({
             <div
               key={product.id}
               id={`billing-card-${product.id}`}
-              className={`rounded-xl p-2 sm:p-2.5 transition-all border flex flex-col gap-1.5 ${
+              className={`rounded-xl px-2.5 py-1.5 sm:py-2 transition-all border flex flex-col gap-1.5 ${
                 isItemActive
-                  ? 'bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/40 border-2 border-emerald-600 shadow-sm ring-1 ring-emerald-500/20'
+                  ? 'bg-gradient-to-br from-emerald-50/70 via-white to-emerald-50/40 border-2 border-emerald-600 shadow-2xs'
                   : 'bg-white border-slate-200/90 hover:border-emerald-300 shadow-2xs'
               }`}
             >
               {/* TOP ROW: PRODUCT NAME (LEFT) & DELETE BUTTON (RIGHT) */}
-              <div className="flex items-center justify-between gap-1.5">
+              <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0 flex-1 flex items-center gap-1.5">
                   <span
                     className={`w-2 h-2 rounded-full flex-shrink-0 transition-colors ${
@@ -737,7 +713,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({
                     }`}
                   />
                   <div className="min-w-0 flex-1">
-                    <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 truncate uppercase tracking-tight leading-tight">
+                    <h4 className="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-tight leading-tight break-words">
                       {prodDisplayName}
                     </h4>
                   </div>
@@ -747,28 +723,20 @@ export const BillingPage: React.FC<BillingPageProps> = ({
                   id={`btn-delete-${product.id}`}
                   type="button"
                   onClick={() => setItemToDelete(product)}
-                  className="flex items-center gap-1 px-2 py-1 min-h-[28px] rounded-lg text-[10px] font-bold transition-all active:scale-95 touch-manipulation shadow-2xs bg-rose-50 hover:bg-rose-600 hover:text-white active:bg-rose-700 text-rose-700 border border-rose-200/90 flex-shrink-0 cursor-pointer"
+                  className="flex items-center gap-1 px-2 py-1 min-h-[2.2rem] rounded-lg text-[11px] font-black transition-all active:scale-95 touch-manipulation shadow-2xs bg-rose-50 hover:bg-rose-600 hover:text-white active:bg-rose-700 text-rose-700 border border-rose-200/90 flex-shrink-0 cursor-pointer"
                   title={language === 'ta' ? 'பொருளை நீக்கு' : 'Delete / Clear item'}
                 >
-                  <Trash2 className="w-3 h-3" />
-                  <span className="uppercase tracking-wider font-bold">
-                    {language === 'ta' ? 'நீக்கு' : 'DELETE'}
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span className="uppercase tracking-wider font-bold leading-none">
+                    {language === 'ta' ? 'நீக்கு' : 'DEL'}
                   </span>
                 </button>
               </div>
 
               {/* BOTTOM ROW: 3 INPUTS [ KG ] [ PRICE ] [ KG PRICE ] */}
-              <div className="grid grid-cols-3 gap-1.5 pt-0.5">
+              <div className="grid grid-cols-3 gap-1.5">
                 {/* 1. KG INPUT */}
                 <div className="flex flex-col">
-                  <label
-                    htmlFor={`input-kg-${product.id}`}
-                    className={`text-[10px] font-bold uppercase py-0.5 px-1 rounded mb-0.5 text-center tracking-wider block leading-none truncate ${
-                      isItemActive ? 'text-emerald-900 bg-emerald-100/70 font-black' : 'text-slate-600 bg-slate-100'
-                    }`}
-                  >
-                    {language === 'ta' ? 'அளவு (KG)' : 'KG'}
-                  </label>
                   <input
                     id={`input-kg-${product.id}`}
                     type="text"
@@ -776,49 +744,35 @@ export const BillingPage: React.FC<BillingPageProps> = ({
                     value={currentKg}
                     onChange={(e) => handleKgChange(product.id, e.target.value)}
                     placeholder="KG"
-                    className={`w-full min-h-[38px] px-1.5 py-1 rounded-lg text-sm sm:text-base font-extrabold outline-none text-center transition-all flex items-center justify-center leading-normal ${
+                    aria-label={language === 'ta' ? 'அளவு (KG)' : 'KG'}
+                    className={`w-full min-h-[2.4rem] px-1.5 py-1 rounded-lg text-xs sm:text-sm font-black outline-none text-center transition-all flex items-center justify-center leading-normal ${
                       parseFloat(currentKg) > 0
-                        ? 'bg-emerald-50/70 border-2 border-emerald-600 ring-2 ring-emerald-500/15 text-emerald-950 shadow-xs'
-                        : 'bg-white border-2 border-slate-200 focus:border-emerald-600 focus:bg-emerald-50/20 text-slate-900 shadow-2xs placeholder:text-slate-300'
+                        ? 'bg-emerald-50/70 border-2 border-emerald-600 ring-1 ring-emerald-500/15 text-emerald-950 shadow-2xs'
+                        : 'bg-white border-2 border-slate-200 focus:border-emerald-600 focus:bg-emerald-50/20 text-slate-900 shadow-2xs placeholder:text-slate-400'
                     }`}
                   />
                 </div>
 
                 {/* 2. PRICE INPUT */}
                 <div className="flex flex-col">
-                  <label
-                    htmlFor={`input-price-${product.id}`}
-                    className={`text-[10px] font-bold uppercase py-0.5 px-1 rounded mb-0.5 text-center tracking-wider block leading-none truncate ${
-                      isItemActive ? 'text-emerald-900 bg-emerald-100/70 font-black' : 'text-slate-600 bg-slate-100'
-                    }`}
-                  >
-                    {language === 'ta' ? 'தொகை (₹)' : 'PRICE (₹)'}
-                  </label>
                   <input
                     id={`input-price-${product.id}`}
                     type="text"
                     inputMode="decimal"
                     value={currentPrice}
                     onChange={(e) => handlePriceChange(product.id, e.target.value)}
-                    placeholder="PRICE"
-                    className={`w-full min-h-[38px] px-1.5 py-1 rounded-lg text-sm sm:text-base font-extrabold outline-none text-center transition-all flex items-center justify-center leading-normal ${
+                    placeholder="PRICE (₹)"
+                    aria-label={language === 'ta' ? 'தொகை (₹)' : 'Price (₹)'}
+                    className={`w-full min-h-[2.4rem] px-1.5 py-1 rounded-lg text-xs sm:text-sm font-black outline-none text-center transition-all flex items-center justify-center leading-normal ${
                       parseFloat(currentPrice) > 0
-                        ? 'bg-emerald-50/70 border-2 border-emerald-600 ring-2 ring-emerald-500/15 text-emerald-950 shadow-xs'
-                        : 'bg-white border-2 border-slate-200 focus:border-emerald-600 focus:bg-emerald-50/20 text-slate-900 shadow-2xs placeholder:text-slate-300'
+                        ? 'bg-emerald-50/70 border-2 border-emerald-600 ring-1 ring-emerald-500/15 text-emerald-950 shadow-2xs'
+                        : 'bg-white border-2 border-slate-200 focus:border-emerald-600 focus:bg-emerald-50/20 text-slate-900 shadow-2xs placeholder:text-slate-400'
                     }`}
                   />
                 </div>
 
                 {/* 3. KG PRICE INPUT */}
                 <div className="flex flex-col">
-                  <label
-                    htmlFor={`input-rate-${product.id}`}
-                    className={`text-[10px] font-bold uppercase py-0.5 px-1 rounded mb-0.5 text-center tracking-wider block leading-none truncate ${
-                      isItemActive ? 'text-emerald-900 bg-emerald-100/70 font-black' : 'text-slate-600 bg-slate-100'
-                    }`}
-                  >
-                    {language === 'ta' ? 'கிலோ விலை' : 'KG RATE'}
-                  </label>
                   <input
                     id={`input-rate-${product.id}`}
                     type="text"
@@ -826,7 +780,8 @@ export const BillingPage: React.FC<BillingPageProps> = ({
                     value={displayedRate}
                     onChange={(e) => handleRateChange(product.id, e.target.value)}
                     placeholder="RATE"
-                    className="w-full min-h-[38px] px-1.5 py-1 bg-slate-50 hover:bg-white focus:bg-white border-2 border-slate-200 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 rounded-lg text-sm sm:text-base font-extrabold text-slate-900 outline-none text-center shadow-2xs transition-all placeholder:text-slate-300 flex items-center justify-center leading-normal"
+                    aria-label={language === 'ta' ? 'கிலோ விலை' : 'KG Rate'}
+                    className="w-full min-h-[2.4rem] px-1.5 py-1 bg-slate-50 hover:bg-white focus:bg-white border-2 border-slate-200 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500/20 rounded-lg text-xs sm:text-sm font-black text-slate-900 outline-none text-center shadow-2xs transition-all placeholder:text-slate-400 flex items-center justify-center leading-normal"
                   />
                 </div>
               </div>
@@ -835,53 +790,46 @@ export const BillingPage: React.FC<BillingPageProps> = ({
         })}
       </div>
 
-      {/* Fixed Bottom Total & Actions Bar */}
-      <div className="mt-4 sticky bottom-2 z-20 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-3xl p-4 shadow-xl shadow-slate-900/10">
-        {/* Bill Summary */}
-        <div className="flex items-center justify-between mb-3 px-1">
-          <div>
-            <span className="text-xs font-bold uppercase text-slate-500 block">
-              {t.totalKg}
-            </span>
-            <span className="text-xl sm:text-2xl font-black text-slate-900">
-              {totalKg.toFixed(2)} {t.kgUnit}
-            </span>
+      {/* Live Total Pill & Bottom Actions Bar */}
+      <div className="mt-3 space-y-2">
+        {/* Compact Live Total Strip */}
+        <div className="bg-slate-900 text-white rounded-xl px-3 py-2 flex items-center justify-between shadow-2xs border border-slate-800">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-300">
+            <span>{language === 'ta' ? 'மொத்த எடை' : 'Total Qty'}:</span>
+            <span className="text-white font-black text-sm">{totalKg.toFixed(2)} KG</span>
           </div>
-          <div className="text-right">
-            <span className="text-xs font-bold uppercase text-slate-500 block">
-              {t.totalAmount}
-            </span>
-            <span className="text-2xl sm:text-3xl font-black text-emerald-700">
-              ₹{Math.round(totalAmount).toLocaleString('en-IN')}
-            </span>
+          <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-300">
+            <span>{language === 'ta' ? 'பில் தொகை' : 'Bill'}:</span>
+            <span className="text-emerald-400 font-black text-base">₹{Math.round(totalAmount).toLocaleString('en-IN')}</span>
           </div>
         </div>
 
-        {/* Action Buttons: Create Bill and Bluetooth Print */}
-        <div className="grid grid-cols-2 gap-2.5">
-          {/* Create & Send Bill */}
+        {/* Action Buttons: Bluetooth Print (19cm) & Create Bill */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <button
+            id="btn-bluetooth-print-bill"
+            type="button"
+            onClick={() => handleCreateBill(true)}
+            disabled={activeBillItems.length === 0}
+            className="w-full min-h-[2.75rem] py-2 px-2.5 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-xs sm:text-sm rounded-xl shadow-2xs flex items-center justify-center gap-1.5 transition-all active:scale-98 cursor-pointer touch-manipulation"
+            title={language === 'ta' ? 'புளூடூத் மூலம் 19cm பில் பிரிண்ட் செய்க' : 'Print 19cm Bill via Bluetooth'}
+          >
+            <Printer className="w-4 h-4 text-white flex-shrink-0" />
+            <span className="font-extrabold leading-normal truncate">
+              {language === 'ta' ? 'புளூடூத் பிரிண்ட்' : 'Bluetooth Print'}
+            </span>
+          </button>
+
           <button
             id="btn-create-bill"
             type="button"
             onClick={() => handleCreateBill(false)}
             disabled={activeBillItems.length === 0}
-            className="min-h-[48px] py-3 px-3 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-sm sm:text-base rounded-2xl shadow-md shadow-emerald-700/25 flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer"
-            title={language === 'ta' ? 'பில் உருவாக்க மற்றும் அனுப்ப' : 'Create & Send Bill'}
+            className="w-full min-h-[2.75rem] py-2 px-2.5 bg-slate-900 hover:bg-slate-800 active:bg-black disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-xs sm:text-sm rounded-xl shadow-2xs flex items-center justify-center gap-1.5 transition-all active:scale-98 cursor-pointer touch-manipulation"
+            title={language === 'ta' ? 'பில் மாதிரிக்காட்சி & சேமிக்க' : 'Preview & Create Bill'}
           >
-            <Send className="w-4 h-4 text-white" />
-            <span>{t.createBill}</span>
-          </button>
-
-          {/* Bluetooth Print Button */}
-          <button
-            id="btn-bluetooth-billing-print"
-            type="button"
-            onClick={() => handleCreateBill(true)}
-            disabled={activeBillItems.length === 0}
-            className="min-h-[48px] py-3 px-3 bg-slate-900 hover:bg-black active:bg-slate-950 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-sm sm:text-base rounded-2xl shadow-md shadow-slate-900/25 flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer"
-          >
-            <Bluetooth className="w-4 h-4 text-white" />
-            <span>{t.bluetoothPrint}</span>
+            <Send className="w-4 h-4 text-emerald-300 flex-shrink-0" />
+            <span className="font-extrabold leading-normal truncate">{t.createBill}</span>
           </button>
         </div>
       </div>

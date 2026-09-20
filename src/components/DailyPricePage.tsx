@@ -95,19 +95,19 @@ export const DailyPricePage: React.FC<DailyPricePageProps> = ({
   };
 
   return (
-    <div id="page-daily-price" className="pb-8 pt-3 px-4 max-w-md mx-auto animate-in fade-in">
+    <div id="page-daily-price" className="pb-6 pt-2 px-2.5 max-w-md mx-auto animate-in fade-in space-y-2">
       {/* Top Banner / Today Status Indicator */}
-      <div className="mb-4">
+      <div>
         {isSavedForToday ? (
-          <div className="bg-emerald-50 border border-emerald-300 rounded-2xl p-3 flex items-start gap-3 shadow-xs">
-            <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 mt-0.5">
-              <Check className="w-5 h-5" />
+          <div className="bg-emerald-50 border border-emerald-300 rounded-xl p-2.5 flex items-start gap-2 shadow-2xs">
+            <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 mt-0.5">
+              <Check className="w-3.5 h-3.5" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-xs font-bold text-emerald-900 uppercase tracking-wide">
+              <h3 className="text-xs font-black text-emerald-900 uppercase tracking-wide leading-tight">
                 {t.pricesReadyNotice}
               </h3>
-              <p className="text-[11px] text-emerald-700 mt-0.5">
+              <p className="text-[10px] text-emerald-700 mt-0.5 leading-tight font-bold">
                 {language === 'ta'
                   ? `இன்றைய விலைகள் சேமிக்கப்பட்டுள்ளன (${dailyPrices?.date}). நீங்கள் எப்போது வேண்டுமானாலும் மாற்றலாம்.`
                   : `Prices saved for today (${dailyPrices?.date}). You can edit and save anytime or proceed to billing.`}
@@ -115,22 +115,22 @@ export const DailyPricePage: React.FC<DailyPricePageProps> = ({
               <button
                 type="button"
                 onClick={onNavigateToBilling}
-                className="mt-2 text-xs font-black text-white bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 px-3.5 py-1.5 rounded-xl shadow-xs inline-flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                className="mt-1.5 min-h-[2.2rem] text-xs font-black text-white bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 px-3 py-1 rounded-lg shadow-2xs inline-flex items-center gap-1 transition-all active:scale-95 cursor-pointer touch-manipulation"
               >
-                <span>{t.goToBilling}</span>
+                <span className="leading-normal">{t.goToBilling}</span>
               </button>
             </div>
           </div>
         ) : (
-          <div className="bg-amber-50 border border-amber-300 rounded-2xl p-3 flex items-start gap-3 shadow-xs">
-            <div className="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center flex-shrink-0 mt-0.5">
-              <AlertCircle className="w-5 h-5" />
+          <div className="bg-amber-50 border border-amber-300 rounded-xl p-2.5 flex items-start gap-2 shadow-2xs">
+            <div className="w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center flex-shrink-0 mt-0.5">
+              <AlertCircle className="w-3.5 h-3.5" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-xs font-bold text-amber-900 uppercase tracking-wide">
+              <h3 className="text-xs font-black text-amber-900 uppercase tracking-wide leading-tight">
                 {t.pricesRequiredNotice}
               </h3>
-              <p className="text-[11px] text-amber-700 mt-0.5">
+              <p className="text-[10px] text-amber-700 mt-0.5 leading-tight font-bold">
                 {language === 'ta'
                   ? 'கீழே இன்றைய விலைகளை உள்ளிட்டு சேமிக்கவும். அவை பில்லிங் பக்கத்தில் தானாகப் பயன்படுத்தப்படும்.'
                   : "Set and save today's rates below. They will be used automatically on the Billing page."}
@@ -142,30 +142,31 @@ export const DailyPricePage: React.FC<DailyPricePageProps> = ({
 
       {/* Success Notification Feedback */}
       {feedback && (
-        <div className="mb-4 bg-emerald-600 text-white p-3 rounded-2xl text-xs font-bold flex items-center gap-2 shadow-md animate-in fade-in slide-from-top-2">
-          <Check className="w-4 h-4 flex-shrink-0" />
+        <div className="bg-emerald-600 text-white p-2 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-2xs animate-in fade-in slide-from-top-2">
+          <Check className="w-3.5 h-3.5 flex-shrink-0" />
           <span>{feedback}</span>
         </div>
       )}
 
       {/* Page Title & Add Product Top Button */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <Tag className="w-5 h-5 text-emerald-700" />
-          <h2 className="text-base font-bold text-emerald-950">{t.dailyPrice}</h2>
+      <div className="flex items-center justify-between gap-1.5">
+        <div className="flex items-center gap-1.5">
+          <Tag className="w-4 h-4 text-emerald-700 flex-shrink-0" />
+          <h2 className="text-xs sm:text-sm font-black text-emerald-950 leading-tight">{t.dailyPrice}</h2>
         </div>
         <button
           id="btn-open-add-product"
           type="button"
           onClick={() => setShowAddModal(true)}
-          className="bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 active:scale-95 text-white text-xs font-black px-3.5 py-1.5 rounded-2xl flex items-center gap-1.5 shadow-md shadow-emerald-700/20 transition-all cursor-pointer"
+          className="min-h-[2.4rem] bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 active:scale-95 text-white text-xs font-black px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-2xs shadow-emerald-700/20 transition-all cursor-pointer touch-manipulation"
         >
-          <span>{t.addProduct}</span>
+          <Plus className="w-3.5 h-3.5" />
+          <span className="leading-normal">{t.addProduct}</span>
         </button>
       </div>
 
       {/* Products List */}
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {products.map((product, index) => {
           const currentPrice = priceMap[product.id] ?? '';
           const displayName = getProductName(product, language);
@@ -173,24 +174,24 @@ export const DailyPricePage: React.FC<DailyPricePageProps> = ({
             <div
               key={product.id}
               id={`product-card-${product.id}`}
-              className="bg-white border border-slate-200/90 hover:border-emerald-400 rounded-2xl px-4 py-3 shadow-xs transition-all flex items-center justify-between gap-2.5"
+              className="bg-white border border-slate-200/90 hover:border-emerald-400 rounded-xl px-2.5 py-1.5 shadow-2xs transition-all flex items-center justify-between gap-2 min-h-[3rem]"
             >
               {/* Product Info */}
-              <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                <span className="w-7 h-7 rounded-full bg-slate-100 text-slate-600 text-xs font-black flex items-center justify-center flex-shrink-0">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-700 text-[10px] font-black flex items-center justify-center flex-shrink-0">
                   {index + 1}
                 </span>
-                <div className="min-w-0">
-                  <h4 className="text-sm sm:text-base font-black text-slate-900 truncate uppercase tracking-tight leading-tight">
+                <div className="min-w-0 flex-1">
+                  <h4 className="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-tight leading-tight break-words">
                     {displayName}
                   </h4>
                 </div>
               </div>
 
               {/* Price Input & Delete Button */}
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-1.5 flex-shrink-0">
                 <div className="relative flex items-center">
-                  <span className="absolute left-2.5 text-sm sm:text-base font-black text-emerald-700 pointer-events-none">₹</span>
+                  <span className="absolute left-2.5 text-xs sm:text-sm font-black text-emerald-700 pointer-events-none">₹</span>
                   <input
                     id={`price-input-${product.id}`}
                     type="text"
@@ -198,7 +199,7 @@ export const DailyPricePage: React.FC<DailyPricePageProps> = ({
                     value={currentPrice}
                     onChange={(e) => handlePriceChange(product.id, e.target.value)}
                     placeholder="0"
-                    className="w-24 sm:w-28 min-h-[46px] pl-7 pr-3 py-2 bg-slate-50 hover:bg-white focus:bg-white border-2 border-slate-200 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 rounded-xl text-right text-base sm:text-lg font-black text-slate-900 outline-none transition-all shadow-2xs placeholder:text-slate-300 leading-normal"
+                    className="w-20 sm:w-24 min-h-[2.4rem] pl-6 pr-2 py-1 bg-slate-50 hover:bg-white focus:bg-white border-2 border-slate-200 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500/20 rounded-lg text-right text-xs sm:text-sm font-black text-slate-900 outline-none transition-all shadow-2xs placeholder:text-slate-300 leading-normal"
                   />
                 </div>
                 <button
@@ -206,9 +207,9 @@ export const DailyPricePage: React.FC<DailyPricePageProps> = ({
                   type="button"
                   onClick={() => setProductToDelete(product)}
                   title={t.deleteProduct}
-                  className="w-10 h-10 min-h-[40px] rounded-xl bg-rose-50 hover:bg-rose-600 hover:text-white active:bg-rose-700 text-rose-700 border border-rose-200/90 shadow-2xs flex items-center justify-center transition-all active:scale-95 cursor-pointer"
+                  className="w-8 h-8 min-h-[2rem] min-w-[2rem] rounded-lg bg-rose-50 hover:bg-rose-600 hover:text-white active:bg-rose-700 text-rose-700 border border-rose-200/90 shadow-2xs flex items-center justify-center transition-all active:scale-95 cursor-pointer touch-manipulation"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
@@ -216,39 +217,39 @@ export const DailyPricePage: React.FC<DailyPricePageProps> = ({
         })}
       </div>
 
-      {/* Save Price Floating / Bottom Action Bar */}
-      <div className="mt-5 sticky bottom-20 z-20">
+      {/* Save Price Bottom Action Bar - Appears at the end of the page */}
+      <div className="pt-1">
         <button
           id="btn-save-daily-prices"
           type="button"
           onClick={handleSavePrices}
-          className="w-full min-h-[50px] py-3.5 px-4 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white font-black text-base sm:text-lg rounded-2xl shadow-lg shadow-emerald-700/25 flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer"
+          className="w-full min-h-[2.6rem] py-2 px-3 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white font-black text-xs sm:text-sm rounded-xl shadow-2xs shadow-emerald-700/25 flex items-center justify-center gap-1.5 transition-all active:scale-98 cursor-pointer touch-manipulation"
         >
-          <Check className="w-5 h-5" />
-          <span>{t.savePrice}</span>
+          <Check className="w-4 h-4" />
+          <span className="leading-normal">{t.savePrice}</span>
         </button>
       </div>
 
       {/* Add Product Modal (Asks English & Tamil names) */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-emerald-950/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-3xl p-5 w-full max-w-sm shadow-2xl border border-emerald-100">
-            <h3 className="text-base font-bold text-emerald-900 mb-1 flex items-center gap-2">
-              <Plus className="w-5 h-5 text-emerald-600" />
-              <span>{t.addProduct}</span>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-emerald-950/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-2xl p-3.5 w-full max-w-sm max-h-[92dvh] overflow-y-auto shadow-2xl border border-emerald-100">
+            <h3 className="text-xs sm:text-sm font-black text-emerald-900 mb-1 flex items-center gap-1.5">
+              <Plus className="w-4 h-4 text-emerald-600" />
+              <span className="leading-tight">{t.addProduct}</span>
             </h3>
-            <p className="text-xs text-gray-500 mb-3.5">
+            <p className="text-[10px] text-gray-500 mb-2 leading-tight break-words font-bold">
               {t.enterCustomProduct}
             </p>
             {addError && (
-              <div className="mb-3 p-2.5 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-xl">
+              <div className="mb-2 p-2 bg-amber-50 border border-amber-200 text-amber-800 text-[10px] rounded-lg leading-tight break-words font-bold">
                 {addError}
               </div>
             )}
-            <form onSubmit={handleAddProductSubmit} className="space-y-3">
+            <form onSubmit={handleAddProductSubmit} className="space-y-2">
               {/* English Name Input */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
+                <label className="block text-[10px] font-black text-gray-700 mb-0.5 leading-tight">
                   {t.productNameEn} <span className="text-emerald-700">*</span>
                 </label>
                 <input
@@ -257,14 +258,14 @@ export const DailyPricePage: React.FC<DailyPricePageProps> = ({
                   value={newProductNameEn}
                   onChange={(e) => setNewProductNameEn(e.target.value)}
                   placeholder="e.g. Lollipop Chicken, Gizzard"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500/20 rounded-xl text-xs sm:text-sm font-medium text-gray-900 outline-none"
+                  className="w-full min-h-[2.4rem] px-2.5 py-1.5 bg-white border border-gray-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500/20 rounded-lg text-xs font-black text-gray-900 outline-none leading-normal"
                   autoFocus
                 />
               </div>
 
               {/* Tamil Name Input */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
+                <label className="block text-[10px] font-black text-gray-700 mb-0.5 leading-tight">
                   {t.productNameTa} <span className="text-emerald-700">*</span>
                 </label>
                 <input
@@ -273,13 +274,13 @@ export const DailyPricePage: React.FC<DailyPricePageProps> = ({
                   value={newProductNameTa}
                   onChange={(e) => setNewProductNameTa(e.target.value)}
                   placeholder="உ.ம். லாலிபாப் சிக்கன்"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500/20 rounded-xl text-xs sm:text-sm font-medium text-gray-900 outline-none"
+                  className="w-full min-h-[2.4rem] px-2.5 py-1.5 bg-white border border-gray-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500/20 rounded-lg text-xs font-black text-gray-900 outline-none leading-normal"
                 />
               </div>
 
               {/* Price / KG */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
+                <label className="block text-[10px] font-black text-gray-700 mb-0.5 leading-tight">
                   {t.pricePerKg} (₹) <span className="text-emerald-700">*</span>
                 </label>
                 <input
@@ -289,27 +290,27 @@ export const DailyPricePage: React.FC<DailyPricePageProps> = ({
                   value={newProductPrice}
                   onChange={(e) => setNewProductPrice(e.target.value)}
                   placeholder="e.g. 280"
-                  className="w-full px-3 py-2 bg-white border border-gray-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500/20 rounded-xl text-xs sm:text-sm font-bold text-gray-900 outline-none"
+                  className="w-full min-h-[2.4rem] px-2.5 py-1.5 bg-white border border-gray-300 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-500/20 rounded-lg text-xs font-black text-gray-900 outline-none leading-normal"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2 pt-2">
+              <div className="grid grid-cols-2 gap-1.5 pt-1">
                 <button
                   type="button"
                   onClick={() => {
                     setShowAddModal(false);
                     setAddError('');
                   }}
-                  className="py-2.5 px-3 bg-slate-700 hover:bg-slate-800 active:bg-slate-900 text-white rounded-xl font-black text-xs shadow-xs transition-all active:scale-95 cursor-pointer"
+                  className="min-h-[2.4rem] py-1.5 px-2 bg-slate-700 hover:bg-slate-800 active:bg-slate-900 text-white rounded-lg font-black text-xs shadow-2xs transition-all active:scale-95 cursor-pointer touch-manipulation flex items-center justify-center"
                 >
-                  {t.cancel}
+                  <span className="leading-normal">{t.cancel}</span>
                 </button>
                 <button
                   id="btn-confirm-add-product"
                   type="submit"
-                  className="py-2.5 px-3 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white rounded-xl font-black text-xs shadow-md shadow-emerald-700/25 transition-all active:scale-95 cursor-pointer"
+                  className="min-h-[2.4rem] py-1.5 px-2 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white rounded-lg font-black text-xs shadow-2xs shadow-emerald-700/25 transition-all active:scale-95 cursor-pointer touch-manipulation flex items-center justify-center"
                 >
-                  {t.save}
+                  <span className="leading-normal">{t.save}</span>
                 </button>
               </div>
             </form>

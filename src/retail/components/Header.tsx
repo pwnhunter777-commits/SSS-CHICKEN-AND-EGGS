@@ -86,7 +86,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           <div className="truncate">
             <h1 className="text-base sm:text-lg font-black tracking-tight text-white leading-tight truncate">
-              {settings.shopName || 'SSS CHICKEN AGENCY'}
+              {settings.shopName || 'SSS CHICKEN AND EGG AGENCY'}
             </h1>
             <div className="flex items-center gap-1 text-[11px] text-emerald-100 font-medium">
               <Calendar className="w-3 h-3 shrink-0" />

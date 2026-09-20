@@ -43,20 +43,20 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   return (
     <div
       id="login-mobile-screen"
-      className="flex flex-col flex-1 w-full max-w-md mx-auto px-6 py-6 sm:py-8 justify-between"
+      className="flex flex-col flex-1 w-full max-w-sm mx-auto px-4 py-3 sm:py-4 justify-between"
     >
       {/* Minimal Top Bar with back link */}
-      <div className="flex items-center justify-between w-full mb-6">
+      <div className="flex items-center justify-between w-full mb-3">
         <button
           id="login-back-btn"
           onClick={onBackToMain}
-          className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-neutral-900 transition-colors py-1.5 px-2 rounded-lg hover:bg-neutral-100"
+          className="flex items-center gap-1 text-xs font-black text-neutral-600 hover:text-neutral-900 transition-colors py-1 px-2.5 min-h-[2.4rem] rounded-lg hover:bg-neutral-100 touch-manipulation cursor-pointer"
           aria-label="Return to Agency Hub"
         >
           <ArrowLeft size={16} />
-          <span>Back</span>
+          <span className="leading-tight">Back</span>
         </button>
-        <span className="text-[11px] font-semibold tracking-wider uppercase text-neutral-400">
+        <span className="text-[10px] font-black tracking-wider uppercase text-neutral-400">
           Secure Portal
         </span>
       </div>
@@ -64,32 +64,32 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       {/* Center Essential Login Content */}
       <div className="my-auto w-full">
         {/* Top Center Chicken Logo */}
-        <div className="flex justify-center mb-4">
-          <ChickenLogo size="md" id="login-chicken-logo" />
+        <div className="flex justify-center mb-2">
+          <ChickenLogo size="sm" id="login-chicken-logo" />
         </div>
 
         {/* Agency Name */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-4">
           <h1
             id="login-agency-title"
-            style={{ fontSize: `${Math.min(storeConfig.fontSize, 32)}px`, lineHeight: 1.2 }}
-            className="font-bold tracking-tight text-neutral-900 text-center break-words"
+            style={{ fontSize: `${Math.min(storeConfig.fontSize, 22)}px`, lineHeight: 1.2 }}
+            className="font-black tracking-tight text-neutral-900 text-center break-words"
           >
             {storeConfig.name}
           </h1>
-          <p className="text-xs text-neutral-500 mt-1 font-medium">Sign in to your account</p>
+          <p className="text-[11px] text-neutral-500 mt-0.5 font-bold leading-tight">Sign in to your account</p>
         </div>
 
         {/* Essential Login Form */}
         <form
           id="agency-login-form"
           onSubmit={handleSubmit}
-          className="w-full space-y-4"
+          className="w-full space-y-2.5"
         >
           {errorMessage && (
             <div
               id="login-error-alert"
-              className="p-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl"
+              className="p-2 text-xs font-black text-red-700 bg-red-50 border border-red-200 rounded-lg leading-tight break-words"
             >
               {errorMessage}
             </div>
@@ -98,7 +98,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           <div>
             <label
               htmlFor="login-identifier-input"
-              className="block text-xs font-medium text-neutral-700 mb-1.5"
+              className="block text-[10px] font-black text-neutral-700 mb-1 leading-tight"
             >
               Email or Agency ID
             </label>
@@ -110,14 +110,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
               placeholder="name@agency.com"
-              className="w-full px-4 py-3 bg-white border border-neutral-300 rounded-xl text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-700 focus:border-emerald-700 transition-all shadow-2xs"
+              className="w-full min-h-[2.4rem] px-3 py-1.5 bg-white border border-neutral-300 rounded-lg text-xs font-black text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-emerald-700 focus:border-emerald-700 transition-all shadow-2xs leading-normal"
             />
           </div>
 
           <div>
             <label
               htmlFor="login-password-input"
-              className="block text-xs font-medium text-neutral-700 mb-1.5"
+              className="block text-[10px] font-black text-neutral-700 mb-1 leading-tight"
             >
               Password
             </label>
@@ -129,21 +129,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full px-4 py-3 bg-white border border-neutral-300 rounded-xl text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-700 focus:border-emerald-700 transition-all shadow-2xs"
+              className="w-full min-h-[2.4rem] px-3 py-1.5 bg-white border border-neutral-300 rounded-lg text-xs font-black text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-emerald-700 focus:border-emerald-700 transition-all shadow-2xs leading-normal"
             />
           </div>
 
-          <div className="pt-2">
+          <div className="pt-1">
             <button
               id="login-submit-btn"
               type="submit"
               disabled={isLoading}
-              className="w-full py-3.5 px-4 bg-emerald-700 text-white rounded-xl text-sm font-bold hover:bg-emerald-800 active:scale-[0.99] transition-all duration-150 shadow-sm shadow-emerald-800/30 disabled:opacity-60 flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full min-h-[2.4rem] py-2 px-3 bg-emerald-700 text-white rounded-lg text-xs font-black hover:bg-emerald-800 active:scale-[0.99] transition-all duration-150 shadow-2xs shadow-emerald-800/30 disabled:opacity-60 flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation"
             >
               {isLoading ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
-                <span>Sign In</span>
+                <span className="leading-tight">Sign In</span>
               )}
             </button>
           </div>

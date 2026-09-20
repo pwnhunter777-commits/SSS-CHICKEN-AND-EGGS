@@ -1,19 +1,62 @@
 @import "tailwindcss";
 
 @layer base {
+  html {
+    /* Slightly enlarged root font size so all rem-based typography scales up gracefully */
+    font-size: 18px;
+    font-weight: 700 !important;
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Plus Jakarta Sans', 'Noto Sans Tamil', 'Mukta Malar', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Universal bold typography across the entire application */
+    font-weight: 700 !important;
+    font-size: 1.05rem;
+    letter-spacing: -0.01em;
+  }
+
+  /* Force all elements, text nodes, controls, and containers to be bold */
+  *,
+  *::before,
+  *::after,
+  body,
+  body *,
+  #root,
+  #root * {
+    font-weight: 700 !important;
     -webkit-font-smoothing: antialiased;
   }
 
-  /* Universal Box Alignment & Elderly Accessibility:
-     Ensures text inside inputs, select boxes, buttons, and badges never clips or drifts
-     even when the font size is scaled up to 160% */
+  /* Override any classes that attempt to set normal or medium weights */
+  .font-thin,
+  .font-extralight,
+  .font-light,
+  .font-normal,
+  .font-medium,
+  .font-semibold {
+    font-weight: 700 !important;
+  }
+
+  /* Extra strong emphasis for titles, buttons, badges, amounts, and headers */
+  h1, h2, h3, h4, h5, h6,
+  th, strong, b,
+  .font-bold, .font-black, .font-extrabold,
+  button, [role="button"],
+  .text-base, .text-lg, .text-xl, .text-2xl, .text-3xl {
+    font-weight: 900 !important;
+  }
+
+  /* Universal compact box alignment and enlarged input text */
   input, select, textarea {
+    font-size: 1.05rem !important;
     line-height: normal !important;
     vertical-align: middle;
     box-sizing: border-box;
+    font-weight: 700 !important;
   }
 
   input[type="text"],
@@ -23,9 +66,85 @@
     align-items: center;
   }
 
-  input::placeholder {
+  input::placeholder,
+  textarea::placeholder {
     line-height: normal !important;
     vertical-align: middle;
+    font-weight: 700 !important;
+    font-size: 0.95rem !important;
+    opacity: 0.7;
+  }
+
+  /* Enlarge micro-text and arbitrary pixel classes across wholesale, retail, and investment */
+  .text-\[8px\],
+  .text-\[8\.5px\] {
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+  }
+
+  .text-\[9px\],
+  .text-\[9\.5px\] {
+    font-size: 12px !important;
+    line-height: 1.35 !important;
+  }
+
+  .text-\[10px\],
+  .text-\[10\.5px\] {
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+  }
+
+  .text-\[11px\],
+  .text-\[11\.5px\] {
+    font-size: 13.5px !important;
+    line-height: 1.4 !important;
+  }
+
+  .text-\[12px\],
+  .text-\[12\.5px\] {
+    font-size: 14.5px !important;
+    line-height: 1.45 !important;
+  }
+
+  .text-\[13px\] {
+    font-size: 15px !important;
+    line-height: 1.45 !important;
+  }
+
+  /* Scale up standard Tailwind font sizes for increased readability */
+  .text-xs {
+    font-size: 0.85rem !important;
+    line-height: 1.25rem !important;
+  }
+
+  .text-sm {
+    font-size: 0.975rem !important;
+    line-height: 1.4rem !important;
+  }
+
+  .text-base {
+    font-size: 1.125rem !important;
+    line-height: 1.6rem !important;
+  }
+
+  .text-lg {
+    font-size: 1.25rem !important;
+    line-height: 1.75rem !important;
+  }
+
+  .text-xl {
+    font-size: 1.4rem !important;
+    line-height: 1.85rem !important;
+  }
+
+  .text-2xl {
+    font-size: 1.7rem !important;
+    line-height: 2.1rem !important;
+  }
+
+  .text-3xl {
+    font-size: 2.1rem !important;
+    line-height: 2.4rem !important;
   }
 }
 
@@ -42,6 +161,12 @@ body.app-bold-mode .font-extrabold {
   font-weight: 900 !important;
 }
 
+/* Compact layout mode: tightens spacing, margins, and card padding */
+.compact-div {
+  padding: 0.5rem 0.75rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
 @layer utilities {
   .safe-area-pb {
     padding-bottom: env(safe-area-inset-bottom, 0.5rem);
@@ -49,14 +174,14 @@ body.app-bold-mode .font-extrabold {
 }
 
 @page {
-  size: auto;
+  size: 19cm auto;
   margin: 4mm 6mm;
 }
 
 @media print {
   html, body {
-    width: 148mm !important;
-    max-width: 148mm !important;
+    width: 19cm !important;
+    max-width: 19cm !important;
     margin: 0 auto !important;
     padding: 0 !important;
     background: #ffffff !important;
@@ -79,14 +204,14 @@ body.app-bold-mode .font-extrabold {
     left: 0;
     top: 0;
     width: 100% !important;
-    max-width: 100% !important;
+    max-width: 90mm !important;
     margin: 0 auto !important;
-    padding: 4mm 6mm !important;
-    border: 2px solid #000000 !important;
+    padding: 2mm 4mm !important;
+    border: none !important;
     border-radius: 0 !important;
     box-shadow: none !important;
     background: #ffffff !important;
-    font-size: 11pt !important;
+    font-size: 10pt !important;
     line-height: 1.3 !important;
   }
 

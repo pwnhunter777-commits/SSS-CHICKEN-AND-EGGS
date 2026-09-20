@@ -4,17 +4,20 @@ import { TotalPage as WholesaleTotalView } from '../../components/TotalPage';
 import { TotalPage as RetailTotalView } from '../../retail/pages/TotalPage';
 import { HotelGiveDuesView } from '../components/HotelGiveDuesView';
 import { loadBills as loadWholesaleBills, loadProducts as loadWholesaleProducts } from '../../utils/storage';
-import { fetchDailyBillsSummary } from '../utils/storage';
+import { fetchDailyBillsSummary, PreviousDayStock } from '../utils/storage';
 import { Bill, ProductItem, LanguageCode } from '../../types';
+import { PackageOpen, ArrowRight } from 'lucide-react';
 
 interface StockRemainingPageProps {
   data: InvestmentDayData;
   language?: LanguageCode;
+  previousStock?: PreviousDayStock | null;
 }
 
 export const StockRemainingPage: React.FC<StockRemainingPageProps> = ({
   data,
   language = 'en',
+  previousStock,
 }) => {
   const [subTab, setSubTab] = useState<SummarySubTab>('summary');
   const [wBills, setWBills] = useState<Bill[]>([]);
@@ -47,9 +50,16 @@ export const StockRemainingPage: React.FC<StockRemainingPageProps> = ({
     : chickenGross;
   const incomingKg = chickenNet > 0 ? chickenNet : Number(data.sales?.totalIncomeKg || 0);
 
+  // Opening stock from previous day (if applied)
+  const isOpeningApplied = Boolean(data.openingStock?.appliedToLoad);
+  const openingChickenKg = isOpeningApplied ? Number(data.openingStock?.chickenKg || 0) : 0;
+  const totalAvailableChickenKg = Math.round((incomingKg + openingChickenKg) * 1000) / 1000;
+
   // Egg Load Inward calculations
   const eggInwardTares = Number(data.eggLoad?.totalTareIncome || 0);
   const eggInwardNos = eggInwardTares * 30;
+  const openingEggNos = isOpeningApplied ? Number(data.openingStock?.eggNos || 0) : 0;
+  const totalAvailableEggNos = eggInwardNos + openingEggNos;
 
   const loadCostSpend = combinedLoadCost > 0 ? combinedLoadCost : Number(data.sales?.loadPriceSpend || 0);
 
@@ -74,12 +84,12 @@ export const StockRemainingPage: React.FC<StockRemainingPageProps> = ({
   const totalShopProfit = Math.round((totalCollectedAmount - loadCostSpend) * 100) / 100;
   const value19 = totalShopProfit; // 19 is same as 16
 
-  // 20: Chicken Stock remaining (Incoming KG 10 minus Sold KG 18)
-  const chickenStockRemaining = Math.round((incomingKg - totalShopSaleKg) * 1000) / 1000;
+  // 20: Chicken Stock remaining (Total Available KG minus Sold KG)
+  const chickenStockRemaining = Math.round((totalAvailableChickenKg - totalShopSaleKg) * 1000) / 1000;
   const stockRemaining = chickenStockRemaining;
 
-  // Egg Stock remaining (Inward eggs minus Sold eggs)
-  const eggStockRemainingNos = eggInwardNos - eggSoldNos;
+  // Egg Stock remaining (Total Available eggs minus Sold eggs)
+  const eggStockRemainingNos = totalAvailableEggNos - eggSoldNos;
   const eggStockRemainingTares = Math.floor(eggStockRemainingNos / 30);
   const eggStockRemainingRem = Math.abs(eggStockRemainingNos) % 30;
 
@@ -211,6 +221,24 @@ export const StockRemainingPage: React.FC<StockRemainingPageProps> = ({
                   {chickenStockRemaining} <span className="text-xs font-bold uppercase text-neutral-400">kg</span>
                 </div>
               </div>
+
+              {/* Inward & Sold Breakdown */}
+              <div className="mt-1 pt-1 border-t border-emerald-100 text-[10px] text-slate-500 font-medium flex flex-col gap-0.5">
+                {openingChickenKg > 0 && (
+                  <div className="text-amber-800 font-bold flex justify-between">
+                    <span>{language === 'ta' ? 'தொடக்க இருப்பு:' : 'Opening:'}</span>
+                    <span>+{openingChickenKg} kg</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span>{language === 'ta' ? 'இன்றைய லோடு:' : 'Inward:'}</span>
+                  <span>+{incomingKg} kg</span>
+                </div>
+                <div className="flex justify-between text-rose-700">
+                  <span>{language === 'ta' ? 'விற்பனை:' : 'Sold:'}</span>
+                  <span>-{totalShopSaleKg} kg</span>
+                </div>
+              </div>
             </div>
 
             {/* Right: Remaining Egg Stock BIG */}
@@ -230,6 +258,24 @@ export const StockRemainingPage: React.FC<StockRemainingPageProps> = ({
                       + {eggStockRemainingRem}
                     </span>
                   )}
+                </div>
+              </div>
+
+              {/* Egg Breakdown */}
+              <div className="mt-1 pt-1 border-t border-orange-200/80 text-[10px] text-slate-500 font-medium flex flex-col gap-0.5">
+                {openingEggNos > 0 && (
+                  <div className="text-orange-900 font-bold flex justify-between">
+                    <span>{language === 'ta' ? 'தொடக்க இருப்பு:' : 'Opening:'}</span>
+                    <span>+{Math.floor(openingEggNos / 30)} {language === 'ta' ? 'தட்டு' : 'T'}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span>{language === 'ta' ? 'இன்றைய லோடு:' : 'Inward:'}</span>
+                  <span>+{eggInwardTares} {language === 'ta' ? 'தட்டு' : 'T'}</span>
+                </div>
+                <div className="flex justify-between text-rose-700">
+                  <span>{language === 'ta' ? 'விற்றது:' : 'Sold:'}</span>
+                  <span>-{eggSoldNos} {language === 'ta' ? 'முட்டை' : 'nos'}</span>
                 </div>
               </div>
             </div>

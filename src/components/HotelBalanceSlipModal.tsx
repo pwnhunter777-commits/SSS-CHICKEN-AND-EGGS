@@ -73,7 +73,7 @@ export const HotelBalanceSlipModal: React.FC<HotelBalanceSlipModalProps> = ({
 
   // Calculate UPI pay URI for balance
   const upiPayUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(
-    settings.shopName || 'SSS Chicken'
+    settings.shopName || 'SSS Chicken and Egg Agency'
   )}&am=${Math.max(0, balanceInt)}&cu=INR&tn=${encodeURIComponent(`Balance ${hotel.nameEn}`)}`;
 
   const statementData: HotelBalanceShareData = {
@@ -188,21 +188,21 @@ export const HotelBalanceSlipModal: React.FC<HotelBalanceSlipModalProps> = ({
   return (
     <div
       id="hotel-balance-slip-modal-backdrop"
-      className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-2 sm:p-3 overflow-y-auto animate-in fade-in duration-150"
     >
       <div
         id="hotel-balance-slip-modal-container"
-        className="bg-white rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl flex flex-col max-h-[92vh] border border-emerald-200"
+        className="bg-white rounded-2xl max-w-sm w-full overflow-hidden shadow-2xl flex flex-col max-h-[92dvh] border border-emerald-200"
       >
         {/* Top Header Controls */}
-        <div className="bg-emerald-800 text-white p-3.5 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Receipt className="w-5 h-5 text-emerald-200" />
-            <div>
-              <span className="text-sm font-bold text-white block leading-tight">
+        <div className="bg-emerald-800 text-white p-2.5 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <Receipt className="w-4 h-4 text-emerald-200 flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <span className="text-xs sm:text-sm font-black text-white block leading-tight break-words">
                 {language === 'ta' ? 'பாக்கி கணக்கு ரசீது' : 'Hotel Balance Bill Slip'}
               </span>
-              <span className="text-[10px] text-emerald-200 font-medium">
+              <span className="text-[10px] text-emerald-200 font-bold block break-words leading-tight">
                 {hotelDisplayName}
               </span>
             </div>
@@ -211,7 +211,7 @@ export const HotelBalanceSlipModal: React.FC<HotelBalanceSlipModalProps> = ({
             id="btn-close-balance-slip-modal"
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="min-h-[2.2rem] min-w-[2.2rem] rounded-xl bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer flex-shrink-0 touch-manipulation"
           >
             <X className="w-4 h-4" />
           </button>
@@ -301,11 +301,15 @@ export const HotelBalanceSlipModal: React.FC<HotelBalanceSlipModalProps> = ({
                 <span>{hotelStats.totalKg.toFixed(2)} Kg</span>
               </div>
 
-              {hotelStats.totalBalAdded > 0 && (
-                <div className="flex justify-between text-amber-800 font-medium">
-                  <span>Balance Added (+):</span>
-                  <span className="font-bold text-amber-900">
-                    +₹{Math.round(hotelStats.totalBalAdded).toLocaleString('en-IN')}
+              {hotelStats.totalBalAdded !== 0 && (
+                <div className={`flex justify-between font-medium ${hotelStats.totalBalAdded > 0 ? 'text-amber-800' : 'text-sky-800'}`}>
+                  <span>
+                    {hotelStats.totalBalAdded > 0
+                      ? language === 'ta' ? 'பாக்கி கூட்டல் / ஆரம்ப இருப்பு (+):' : 'Bal Added / Opening Bal (+):'
+                      : language === 'ta' ? 'ஆரம்ப முன்பணம் (-):' : 'Opening Credit (-):'}
+                  </span>
+                  <span className={`font-bold ${hotelStats.totalBalAdded > 0 ? 'text-amber-900' : 'text-sky-900'}`}>
+                    {hotelStats.totalBalAdded > 0 ? '+' : '-'}₹{Math.abs(Math.round(hotelStats.totalBalAdded)).toLocaleString('en-IN')}
                   </span>
                 </div>
               )}
@@ -388,38 +392,38 @@ export const HotelBalanceSlipModal: React.FC<HotelBalanceSlipModalProps> = ({
         </div>
 
         {/* WhatsApp Phone Number Config Strip */}
-        <div className="px-3.5 py-2 bg-emerald-50/70 border-t border-emerald-100 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-1.5 text-emerald-900 font-bold">
-            <MessageCircle className="w-3.5 h-3.5 text-emerald-600 fill-emerald-600" />
+        <div className="px-3.5 py-2.5 bg-emerald-50/70 border-t border-emerald-100 flex items-center justify-between text-xs gap-2 flex-wrap min-h-[3rem]">
+          <div className="flex items-center gap-1.5 text-emerald-900 font-bold leading-normal">
+            <MessageCircle className="w-4 h-4 text-emerald-600 fill-emerald-600 flex-shrink-0" />
             <span>{language === 'ta' ? 'வாட்ஸ்அப் எண்:' : 'WhatsApp:'}</span>
           </div>
 
           {isEditingPhone ? (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <input
                 type="tel"
                 value={customPhone}
                 onChange={(e) => setCustomPhone(e.target.value)}
                 placeholder="9876543210"
-                className="w-32 px-2 py-1 bg-white border border-emerald-300 rounded-lg text-xs font-bold text-gray-900 focus:outline-none"
+                className="w-32 min-h-[3rem] px-2.5 py-1.5 bg-white border border-emerald-300 rounded-xl text-xs font-bold text-gray-900 focus:outline-none"
               />
               <button
                 type="button"
                 onClick={() => setIsEditingPhone(false)}
-                className="px-2 py-1 bg-emerald-700 text-white rounded-lg text-[10px] font-bold cursor-pointer"
+                className="min-h-[3rem] px-3 py-1.5 bg-emerald-700 text-white rounded-xl text-xs font-bold cursor-pointer touch-manipulation flex items-center justify-center"
               >
                 OK
               </button>
             </div>
           ) : (
             <div className="flex items-center gap-1.5">
-              <span className="font-mono font-bold text-emerald-950">
+              <span className="font-mono font-black text-emerald-950 leading-none">
                 {customPhone || (language === 'ta' ? 'எண் இல்லை' : 'Not set')}
               </span>
               <button
                 type="button"
                 onClick={() => setIsEditingPhone(true)}
-                className="text-[10px] text-emerald-700 underline font-semibold cursor-pointer"
+                className="min-h-[2.2rem] px-1.5 text-xs text-emerald-700 underline font-bold cursor-pointer touch-manipulation flex items-center"
               >
                 {customPhone ? (language === 'ta' ? 'மாற்று' : 'Edit') : (language === 'ta' ? 'சேர்' : 'Add')}
               </button>
@@ -428,18 +432,18 @@ export const HotelBalanceSlipModal: React.FC<HotelBalanceSlipModalProps> = ({
         </div>
 
         {/* Action Buttons Panel (Identical to Bill Receipt Modal) */}
-        <div className="p-3 bg-white border-t border-slate-200 space-y-2">
-          <div className="grid grid-cols-2 gap-2">
+        <div className="p-2.5 bg-white border-t border-slate-200 space-y-1.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
             {/* WhatsApp PDF Share */}
             <button
               id="btn-modal-hotel-balance-whatsapp"
               type="button"
               onClick={handleWhatsAppShare}
               disabled={isProcessing}
-              className="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:opacity-50 text-white rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-98 cursor-pointer"
+              className="min-h-[2.4rem] py-1.5 px-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:opacity-50 text-white rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-98 cursor-pointer touch-manipulation"
             >
-              <MessageCircle className="w-3.5 h-3.5 fill-white" />
-              <span>WhatsApp PDF</span>
+              <MessageCircle className="w-3.5 h-3.5 fill-white flex-shrink-0" />
+              <span className="leading-normal">WhatsApp PDF</span>
             </button>
 
             {/* Bluetooth Thermal Print */}
@@ -448,10 +452,10 @@ export const HotelBalanceSlipModal: React.FC<HotelBalanceSlipModalProps> = ({
               type="button"
               onClick={handleBluetoothPrint}
               disabled={isProcessing}
-              className="py-2.5 px-3 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 disabled:opacity-50 text-white rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-xs transition-all active:scale-98 cursor-pointer"
+              className="min-h-[2.4rem] py-1.5 px-2.5 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 disabled:opacity-50 text-white rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-98 cursor-pointer touch-manipulation"
             >
-              <Bluetooth className="w-3.5 h-3.5" />
-              <span>{t.bluetoothPrint}</span>
+              <Bluetooth className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="leading-normal">{t.bluetoothPrint}</span>
             </button>
           </div>
 
@@ -462,10 +466,10 @@ export const HotelBalanceSlipModal: React.FC<HotelBalanceSlipModalProps> = ({
               type="button"
               onClick={handleDownloadPdf}
               disabled={isProcessing}
-              className="py-2 px-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all cursor-pointer"
+              className="min-h-[2.4rem] py-1.5 px-1.5 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all cursor-pointer touch-manipulation"
             >
-              <Download className="w-3.5 h-3.5" />
-              <span className="truncate">PDF</span>
+              <Download className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="leading-normal">PDF</span>
             </button>
 
             {/* System Print */}
@@ -473,10 +477,10 @@ export const HotelBalanceSlipModal: React.FC<HotelBalanceSlipModalProps> = ({
               id="btn-modal-hotel-balance-system-print"
               type="button"
               onClick={handleSystemPrint}
-              className="py-2 px-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all cursor-pointer"
+              className="min-h-[2.4rem] py-1.5 px-1.5 bg-slate-800 hover:bg-slate-900 active:bg-black text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all cursor-pointer touch-manipulation"
             >
-              <Printer className="w-3.5 h-3.5" />
-              <span className="truncate">{t.systemPrint}</span>
+              <Printer className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="leading-normal">{t.systemPrint}</span>
             </button>
 
             {/* Copy Message */}
@@ -484,11 +488,11 @@ export const HotelBalanceSlipModal: React.FC<HotelBalanceSlipModalProps> = ({
               id="btn-modal-hotel-balance-copy-text"
               type="button"
               onClick={handleCopyMessage}
-              className="py-2 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 rounded-xl text-xs font-bold flex items-center justify-center gap-1 border border-emerald-200 transition-all cursor-pointer"
+              className="min-h-[2.4rem] py-1.5 px-1.5 bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 text-emerald-900 rounded-xl text-xs font-bold flex items-center justify-center gap-1 border border-emerald-200 transition-all cursor-pointer touch-manipulation"
               title="Copy WhatsApp text"
             >
-              <Copy className="w-3.5 h-3.5 text-emerald-700" />
-              <span className="truncate">{language === 'ta' ? 'நகல்' : 'Copy'}</span>
+              <Copy className="w-3.5 h-3.5 text-emerald-700 flex-shrink-0" />
+              <span className="leading-normal">{language === 'ta' ? 'நகல்' : 'Copy'}</span>
             </button>
           </div>
         </div>

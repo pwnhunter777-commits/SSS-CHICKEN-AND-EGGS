@@ -2,6 +2,7 @@ import { InvestmentDayData, InvestmentItemType } from '../types';
 import { loadBills as loadWholesaleBills } from '../../utils/storage';
 import { loadBills as loadRetailBills } from '../../retail/utils/storage';
 import { isOlderThan31Days } from '../../utils/retention';
+import { saveToPhoneDB } from '../../utils/idbPhoneStorage';
 
 const STORAGE_KEY_PREFIX = 'apex_investment_daily_';
 
@@ -68,7 +69,11 @@ export function loadInvestmentData(dateStr: string = getTodayDateKey()): Investm
 
 export function saveInvestmentData(data: InvestmentDayData): void {
   try {
-    localStorage.setItem(`${STORAGE_KEY_PREFIX}${data.date}`, JSON.stringify(data));
+    const key = `${STORAGE_KEY_PREFIX}${data.date}`;
+    const serialized = JSON.stringify(data);
+    localStorage.setItem(key, serialized);
+    // Also save permanently to on-device IndexedDB
+    saveToPhoneDB(key, data);
   } catch (err) {
     console.error('Error saving investment data', err);
   }
@@ -170,3 +175,137 @@ export function fetchDailyBillsSummary(dateStr: string = getTodayDateKey()) {
     eggQty: finalEggQty,
   };
 }
+
+export interface PreviousDayStock {
+  date: string;
+  daysAgo: number;
+  chickenRemainingKg: number;
+  chickenIncomingKg: number;
+  chickenSoldKg: number;
+  eggRemainingNos: number;
+  eggRemainingTares: number;
+  eggRemainingRem: number;
+  eggInwardNos: number;
+  eggSoldNos: number;
+  hasActivity: boolean;
+}
+
+export function getPreviousDateKey(dateStr: string, offsetDays: number = 1): string {
+  const parts = dateStr.split('-');
+  const y = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10) - 1;
+  const d = parseInt(parts[2], 10);
+  const dt = new Date(y, m, d);
+  dt.setDate(dt.getDate() - offsetDays);
+  const year = dt.getFullYear();
+  const month = String(dt.getMonth() + 1).padStart(2, '0');
+  const day = String(dt.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function calculateDayStockRemaining(dateStr: string): {
+  chickenRemainingKg: number;
+  chickenIncomingKg: number;
+  chickenSoldKg: number;
+  eggRemainingNos: number;
+  eggRemainingTares: number;
+  eggRemainingRem: number;
+  eggInwardNos: number;
+  eggSoldNos: number;
+  hasActivity: boolean;
+} {
+  const dayData = loadInvestmentData(dateStr);
+  const billSummary = fetchDailyBillsSummary(dateStr);
+
+  // Chicken incoming
+  const chickenGross = Number(dayData.chickenLoad?.totalIncomeKg || 0);
+  const chickenWastage = Number(dayData.chickenLoad?.wastagePercent || 0);
+  const chickenNet = chickenWastage > 0
+    ? Math.max(0, Math.round((chickenGross * (1 - chickenWastage / 100)) * 100) / 100)
+    : chickenGross;
+  const chickenIncomingKg = chickenNet > 0 ? chickenNet : Number(dayData.sales?.totalIncomeKg || 0);
+
+  // Chicken sold
+  const wholesaleKg = billSummary.wholesaleKg > 0 ? billSummary.wholesaleKg : Number(dayData.sales?.wholesaleKg || 0);
+  const retailKg = billSummary.retailKg > 0 ? billSummary.retailKg : Number(dayData.sales?.retailKg || 0);
+  const chickenSoldKg = Math.round((wholesaleKg + retailKg) * 1000) / 1000;
+
+  // Opening chicken if applied
+  const openingChicken = dayData.openingStock?.appliedToLoad ? (Number(dayData.openingStock.chickenKg) || 0) : 0;
+  const totalAvailableChicken = chickenIncomingKg + openingChicken;
+
+  const chickenRemainingKg = Math.round((totalAvailableChicken - chickenSoldKg) * 1000) / 1000;
+
+  // Egg incoming
+  const eggInwardTares = Number(dayData.eggLoad?.totalTareIncome || (dayData.eggLoad?.totalIncomeCount ? dayData.eggLoad.totalIncomeCount / 30 : 0));
+  const eggInwardNos = Math.round(eggInwardTares * 30);
+
+  // Egg sold
+  const eggSoldNos = billSummary.eggQty > 0 ? billSummary.eggQty : Number(dayData.sales?.eggQty || 0);
+
+  const openingEggNos = dayData.openingStock?.appliedToLoad ? (Number(dayData.openingStock.eggNos) || 0) : 0;
+  const totalAvailableEggs = eggInwardNos + openingEggNos;
+
+  const eggRemainingNos = totalAvailableEggs - eggSoldNos;
+  const eggRemainingTares = Math.floor(eggRemainingNos / 30);
+  const eggRemainingRem = Math.abs(eggRemainingNos) % 30;
+
+  const hasActivity = chickenIncomingKg > 0 || chickenSoldKg > 0 || eggInwardNos > 0 || eggSoldNos > 0;
+
+  return {
+    chickenRemainingKg,
+    chickenIncomingKg,
+    chickenSoldKg,
+    eggRemainingNos,
+    eggRemainingTares,
+    eggRemainingRem,
+    eggInwardNos,
+    eggSoldNos,
+    hasActivity,
+  };
+}
+
+export function getPreviousDayStock(currentDateStr: string): PreviousDayStock | null {
+  // Always get the immediate previous calendar day (D-1 / yesterday)
+  const prevDateKey = getPreviousDateKey(currentDateStr, 1);
+  const yesterdayStock = calculateDayStockRemaining(prevDateKey);
+
+  // If yesterday had direct activity recorded, return yesterday's calculated remaining stock
+  if (yesterdayStock.hasActivity) {
+    return {
+      date: prevDateKey,
+      daysAgo: 1,
+      ...yesterdayStock,
+    };
+  }
+
+  // If yesterday had no entries recorded (e.g. shop closed or not logged),
+  // carry forward the latest known stock balance as yesterday's closing stock
+  for (let i = 2; i <= 30; i++) {
+    const pastKey = getPreviousDateKey(currentDateStr, i);
+    const pastStock = calculateDayStockRemaining(pastKey);
+    if (pastStock.hasActivity) {
+      return {
+        date: prevDateKey, // Represents the stock as of yesterday
+        daysAgo: 1,
+        chickenRemainingKg: pastStock.chickenRemainingKg,
+        chickenIncomingKg: pastStock.chickenIncomingKg,
+        chickenSoldKg: pastStock.chickenSoldKg,
+        eggRemainingNos: pastStock.eggRemainingNos,
+        eggRemainingTares: pastStock.eggRemainingTares,
+        eggRemainingRem: pastStock.eggRemainingRem,
+        eggInwardNos: pastStock.eggInwardNos,
+        eggSoldNos: pastStock.eggSoldNos,
+        hasActivity: true,
+      };
+    }
+  }
+
+  // Fallback if no prior data exists
+  return {
+    date: prevDateKey,
+    daysAgo: 1,
+    ...yesterdayStock,
+  };
+}
+

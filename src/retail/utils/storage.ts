@@ -7,7 +7,7 @@ export const DEFAULT_PRODUCTS: Product[] = [
 ];
 
 export const DEFAULT_SETTINGS: ShopSettings = {
-  shopName: 'SSS CHICKEN AGENCY',
+  shopName: 'SSS CHICKEN AND EGG AGENCY',
   phoneNumber: '8680000003',
   gstNumber: '34AQPN8846J2ZF',
   address: 'NO 6, PONDY MAIN ROAD, SULTHANPET, VILLIANUR, PUDUCHERRY - 605 110',
@@ -25,7 +25,7 @@ export const DEFAULT_SETTINGS: ShopSettings = {
   protectBillDelete: true,
   protectAppLock: false,
   logoUrl: '/logo.png',
-  fontSizeScale: 1.0,
+  fontSizeScale: 1.15,
 };
 
 export const DEFAULT_AROMAKE_HOTELS: string[] = [
@@ -236,6 +236,7 @@ export function loadShopSettings(): ShopSettings {
       const isOldPlaceholder =
         !parsed.shopName ||
         parsed.shopName === 'Fresh Chicken Center' ||
+        parsed.shopName === 'SSS CHICKEN AGENCY' ||
         parsed.phoneNumber === '9876543210';
 
       const upgradedSettings: ShopSettings = {
@@ -264,9 +265,9 @@ export function loadShopSettings(): ShopSettings {
         protectAppLock: parsed.protectAppLock ?? false,
         logoUrl: parsed.logoUrl || '/logo.png',
         fontSizeScale:
-          parsed.fontSizeScale !== undefined
+          parsed.fontSizeScale !== undefined && Number(parsed.fontSizeScale) > 1.0
             ? Number(parsed.fontSizeScale)
-            : 1.0,
+            : 1.15,
         withoutSkinOffset:
           parsed.withoutSkinOffset !== undefined
             ? Number(parsed.withoutSkinOffset)
