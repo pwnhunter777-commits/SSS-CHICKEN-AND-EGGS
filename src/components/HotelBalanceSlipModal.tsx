@@ -229,132 +229,120 @@ export const HotelBalanceSlipModal: React.FC<HotelBalanceSlipModalProps> = ({
         <div className="p-4 overflow-y-auto flex-1 bg-slate-50 flex justify-center">
           <div
             id="printable-hotel-statement"
-            className="w-full bg-white p-4 rounded-xl shadow-xs border border-gray-200 text-gray-900 font-sans leading-tight text-xs max-w-[340px]"
+            className="w-full bg-white p-3 sm:p-3.5 rounded-lg border border-gray-300 text-gray-900 font-sans leading-tight text-xs max-w-[320px] select-none"
           >
             {/* Header: Shop Name & Details */}
-            <div className="text-center pb-3 border-b border-dashed border-gray-300">
-              <h2 className="text-base font-black uppercase text-gray-900 tracking-tight">
+            <div className="text-center pb-2 border-b border-dashed border-gray-300">
+              <h2 className="text-sm font-black uppercase text-gray-900 tracking-tight">
                 {shopName}
               </h2>
               {shopAddress && (
-                <p className="text-[10px] text-gray-600 mt-0.5 leading-snug">
+                <p className="text-[9.5px] text-gray-600 mt-0.5 leading-tight">
                   {shopAddress}
                 </p>
               )}
-              <p className="text-[11px] font-bold text-gray-800 mt-1">
-                Cell: {settings.phoneNumber || '8680000003'}
+              <p className="text-[10px] font-bold text-gray-800 mt-0.5">
+                Ph: {settings.phoneNumber || '8680000003'}
+                {settings.gstNumber ? ` • GST: ${settings.gstNumber}` : ''}
               </p>
-              {settings.gstNumber && (
-                <p className="text-[10px] font-mono text-gray-700">
-                  GST: {settings.gstNumber}
-                </p>
-              )}
             </div>
 
-            {/* Statement Meta Box */}
-            <div className="py-2.5 border-b border-dashed border-gray-300 text-[11px] space-y-1">
-              <div className="flex justify-between font-bold">
-                <span className="text-emerald-800">REF: {statementRefNumber}</span>
-                <span>{formatDisplayDate(new Date().toISOString().slice(0, 10))}</span>
-              </div>
-              <div className="flex justify-between text-gray-700">
-                <span className="font-bold flex items-center gap-1">
-                  <Building2 className="w-3 h-3 text-emerald-700" />
+            {/* Hotel & Date Compact Strip */}
+            <div className="py-1.5 border-b border-dashed border-gray-300 text-[10.5px]">
+              <div className="flex justify-between items-center font-bold">
+                <span className="text-gray-900 flex items-center gap-1 text-[11px] truncate">
+                  <Building2 className="w-3 h-3 text-emerald-700 shrink-0" />
                   {hotelDisplayName}
                 </span>
-                <span className="text-[10px] text-gray-500">
-                  {formatDisplayTime(new Date().toISOString())}
+                <span className="text-[9.5px] text-gray-500 shrink-0 font-normal">
+                  {formatDisplayDate(new Date().toISOString().slice(0, 10))}
                 </span>
               </div>
-              {customPhone && (
-                <div className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1">
-                  <Phone className="w-3 h-3" />
-                  <span>{customPhone}</span>
+              {(customPhone || statementRefNumber) && (
+                <div className="flex justify-between text-[9.5px] text-gray-600 mt-0.5">
+                  <span>{customPhone ? `Ph: ${customPhone}` : ''}</span>
+                  <span className="text-gray-400 font-mono">Ref: {statementRefNumber.slice(-8)}</span>
                 </div>
               )}
             </div>
 
-            {/* Statement Type Banner */}
-            <div className="py-2 text-center bg-slate-100 rounded-lg my-2 border border-slate-200">
-              <span className="text-[11px] font-black uppercase tracking-wider text-slate-800 block">
-                {language === 'ta' ? 'பாக்கி கணக்கு பட்டியல்' : 'HOTEL BALANCE STATEMENT'}
+            {/* Compact Statement Title */}
+            <div className="py-1 text-center bg-slate-100 rounded my-1.5 border border-slate-200">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-700 block">
+                {language === 'ta' ? 'பாக்கி கணக்கு ரசீது' : 'HOTEL BALANCE STATEMENT'}
               </span>
             </div>
 
-            {/* Ledger Overview Summary */}
-            <div className="py-2 border-b border-dashed border-gray-300 space-y-1.5 text-xs">
-              <div className="flex justify-between text-gray-700 font-medium">
-                <span>Total Bills ({hotelStats.hotelBills.length}):</span>
+            {/* Compact Ledger Summary */}
+            <div className="py-1.5 space-y-1 text-[11px]">
+              <div className="flex justify-between text-gray-700">
+                <span>{language === 'ta' ? 'மொத்த பில் வரவு' : 'Total Billed'} ({hotelStats.hotelBills.length}):</span>
                 <span className="font-bold text-gray-900">
                   ₹{Math.round(hotelStats.totalBilled).toLocaleString('en-IN')}
                 </span>
               </div>
-              <div className="flex justify-between text-[11px] text-gray-500 pl-2">
-                <span>Total Weight:</span>
-                <span>{hotelStats.totalKg.toFixed(2)} Kg</span>
-              </div>
 
               {hotelStats.totalBalAdded !== 0 && (
-                <div className={`flex justify-between font-medium ${hotelStats.totalBalAdded > 0 ? 'text-amber-800' : 'text-sky-800'}`}>
+                <div className={`flex justify-between ${hotelStats.totalBalAdded > 0 ? 'text-amber-800' : 'text-sky-800'}`}>
                   <span>
                     {hotelStats.totalBalAdded > 0
-                      ? language === 'ta' ? 'பாக்கி கூட்டல் / ஆரம்ப இருப்பு (+):' : 'Bal Added / Opening Bal (+):'
-                      : language === 'ta' ? 'ஆரம்ப முன்பணம் (-):' : 'Opening Credit (-):'}
+                      ? (language === 'ta' ? 'பாக்கி கூட்டல் (+):' : 'Bal Added (+):')
+                      : (language === 'ta' ? 'ஆரம்ப முன்பணம் (-):' : 'Opening Credit (-):')}
                   </span>
-                  <span className={`font-bold ${hotelStats.totalBalAdded > 0 ? 'text-amber-900' : 'text-sky-900'}`}>
+                  <span className="font-bold">
                     {hotelStats.totalBalAdded > 0 ? '+' : '-'}₹{Math.abs(Math.round(hotelStats.totalBalAdded)).toLocaleString('en-IN')}
                   </span>
                 </div>
               )}
 
-              <div className="flex justify-between text-emerald-800 font-medium">
-                <span>Total Paid ({hotelStats.hotelPayments.filter((p) => p.type !== 'balance_add').length} payments):</span>
+              <div className="flex justify-between text-emerald-800">
+                <span>{language === 'ta' ? 'செலுத்திய வரவு' : 'Total Paid'} ({hotelStats.hotelPayments.filter((p) => p.type !== 'balance_add').length}):</span>
                 <span className="font-bold text-emerald-900">
                   -₹{Math.round(hotelStats.totalPaid).toLocaleString('en-IN')}
                 </span>
               </div>
 
-              {/* Big High-Contrast Balance Banner */}
-              <div className={`mt-2 p-2.5 rounded-xl border text-center ${
+              {/* Compact High-Contrast Balance Banner */}
+              <div className={`mt-1.5 p-2 rounded-lg border text-center ${
                 balanceInt > 0
                   ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
                   : balanceInt === 0
                   ? 'bg-teal-50 border-teal-300 text-teal-950'
                   : 'bg-sky-50 border-sky-300 text-sky-950'
               }`}>
-                <span className="text-[10px] font-bold uppercase tracking-wider block mb-0.5">
+                <span className="text-[9.5px] font-bold uppercase tracking-wide block mb-0.5 text-gray-600">
                   {balanceInt > 0
-                    ? (language === 'ta' ? 'செலுத்த வேண்டிய மீதி பாக்கி' : 'NET BALANCE TO PAY')
+                    ? (language === 'ta' ? 'மீதி பாக்கி' : 'NET BALANCE DUE')
                     : balanceInt === 0
-                    ? (language === 'ta' ? 'கணக்கு முழுவதும் தீர்க்கப்பட்டது' : 'BALANCE SETTLED')
-                    : (language === 'ta' ? 'முன்பணம் உள்ளது' : 'ADVANCE BALANCE')}
+                    ? (language === 'ta' ? 'கணக்கு முடிந்தது' : 'BALANCE SETTLED')
+                    : (language === 'ta' ? 'முன்பணம்' : 'ADVANCE CREDIT')}
                 </span>
-                <div className="text-xl font-black tracking-tight">
+                <div className="text-lg font-black tracking-tight text-gray-900">
                   ₹{Math.abs(balanceInt).toLocaleString('en-IN')}
                 </div>
               </div>
             </div>
 
-            {/* Recent Transactions Snippet */}
+            {/* Recent Transactions - Compact 2 rows */}
             {hotelStats.hotelBills.length > 0 && (
-              <div className="py-2 border-b border-dashed border-gray-300">
-                <div className="text-[10px] font-bold uppercase text-gray-500 mb-1">
-                  {language === 'ta' ? 'சமீபத்திய பில்கள்' : 'Recent Transactions'}
+              <div className="pt-1.5 pb-1 border-t border-dashed border-gray-300 mt-1">
+                <div className="text-[9px] font-bold uppercase text-gray-400 mb-0.5">
+                  {language === 'ta' ? 'சமீபத்திய பில்கள்' : 'Recent Bills'}
                 </div>
-                <div className="space-y-1 text-[10px]">
-                  {hotelStats.hotelBills.slice(0, 3).map((b) => (
-                    <div key={b.id} className="flex justify-between text-gray-700">
+                <div className="space-y-0.5 text-[9.5px]">
+                  {hotelStats.hotelBills.slice(0, 2).map((b) => (
+                    <div key={b.id} className="flex justify-between text-gray-600">
                       <span>#{b.billNumber} • {formatDisplayDate(b.date)} ({b.totalKg.toFixed(1)}kg)</span>
-                      <span className="font-bold text-gray-900">₹{Math.round(b.totalAmount).toLocaleString('en-IN')}</span>
+                      <span className="font-semibold text-gray-800">₹{Math.round(b.totalAmount).toLocaleString('en-IN')}</span>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            <div className="pt-2 text-center border-t border-dashed border-gray-300 mt-3">
-              <p className="text-[9px] font-semibold text-gray-500">
-                Thank you for your business! • நன்றி, மீண்டும் வருக!
+            <div className="pt-1.5 text-center border-t border-dashed border-gray-300 mt-1.5">
+              <p className="text-[8.5px] font-medium text-gray-400">
+                Thank you! • நன்றி!
               </p>
             </div>
           </div>

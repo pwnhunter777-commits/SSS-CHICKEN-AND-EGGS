@@ -544,7 +544,7 @@ export async function generateHotelStatementPdfBlob(
   // 1. High-DPI DOM rasterization
   if (statementElem) {
     try {
-      const naturalWidth = Math.max(400, statementElem.scrollWidth || 0, statementElem.offsetWidth || 0);
+      const naturalWidth = Math.max(320, statementElem.scrollWidth || 0, statementElem.offsetWidth || 0);
       const naturalHeight = Math.max(statementElem.scrollHeight || 0, statementElem.offsetHeight || 0);
 
       const dataUrl = await toPng(statementElem, {
@@ -577,8 +577,9 @@ export async function generateHotelStatementPdfBlob(
         img.src = dataUrl;
       });
 
-      const pdfWidth = 148; // Standard A5 width in mm
-      const margin = 4;
+      // Compact thermal slip width (80mm width)
+      const pdfWidth = 80;
+      const margin = 3;
       const printableWidth = pdfWidth - margin * 2;
       const imgHeightMm = (imgHeightPx * printableWidth) / (imgWidthPx || 1);
       const dynamicPageHeight = Math.ceil(imgHeightMm + margin * 2);
@@ -597,174 +598,165 @@ export async function generateHotelStatementPdfBlob(
     }
   }
 
-  // 2. Vector PDF fallback generator
+  // 2. Vector PDF fallback generator (Small & simple slip format: 80mm width)
   try {
-    const pageWidth = 148;
-    const pageHeight = 210;
-    const margin = 8;
+    const pageWidth = 80;
+    const margin = 4;
     const contentWidth = pageWidth - margin * 2;
+    const isTa = lang === 'ta';
+
+    // Calculate dynamic height to keep it small and tight
+    let estimatedHeight = 90;
+    if (data.recentBills && data.recentBills.length > 0) estimatedHeight += 25;
 
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
-      format: [pageWidth, pageHeight],
+      format: [pageWidth, estimatedHeight],
       compress: true,
     });
 
-    pdf.setDrawColor(30, 41, 59);
-    pdf.setLineWidth(0.4);
-    pdf.rect(margin, margin, contentWidth, pageHeight - margin * 2, 'S');
-
-    let curY = margin + 6;
+    let curY = margin + 3;
     const shopName = getShopDisplayName(settings, lang);
     const shopAddress = getShopDisplayAddress(settings, lang);
 
+    // Shop Header
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(14);
+    pdf.setFontSize(11);
     pdf.setTextColor(15, 23, 42);
-    pdf.text(shopName.toUpperCase(), pageWidth / 2, curY, { align: 'center' });
-    curY += 5;
+    pdf.text(shopName.toUpperCase(), pageWidth / 2, curY, { align: 'center', maxWidth: contentWidth });
+    curY += 4.5;
 
     if (shopAddress) {
       pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(8);
-      pdf.setTextColor(51, 65, 85);
-      pdf.text(shopAddress, pageWidth / 2, curY, { align: 'center', maxWidth: 120 });
-      curY += 4;
+      pdf.setFontSize(7);
+      pdf.setTextColor(71, 85, 105);
+      pdf.text(shopAddress, pageWidth / 2, curY, { align: 'center', maxWidth: contentWidth - 4 });
+      curY += 3.5;
     }
 
     const phone = settings.phoneNumber || '8680000003';
     pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(7.5);
+    pdf.setTextColor(15, 23, 42);
+    pdf.text(`Ph: ${phone}${settings.gstNumber ? ` | GST: ${settings.gstNumber}` : ''}`, pageWidth / 2, curY, { align: 'center' });
+    curY += 3;
+
+    pdf.setDrawColor(203, 213, 225);
+    pdf.setLineWidth(0.2);
+    pdf.line(margin, curY, pageWidth - margin, curY);
+    curY += 3.5;
+
+    // Hotel & Date Line
+    pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(8.5);
     pdf.setTextColor(15, 23, 42);
-    pdf.text(`Phone: ${phone}`, pageWidth / 2, curY, { align: 'center' });
-    curY += 4;
-
-    pdf.setDrawColor(203, 213, 225);
-    pdf.line(margin + 2, curY, pageWidth - margin - 2, curY);
-    curY += 4;
-
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(10);
-    pdf.setTextColor(5, 150, 105);
-    pdf.text('HOTEL BALANCE STATEMENT', pageWidth / 2, curY, { align: 'center' });
-    curY += 6;
-
-    // Hotel Box
-    pdf.setFillColor(248, 250, 252);
-    pdf.setDrawColor(203, 213, 225);
-    pdf.roundedRect(margin + 4, curY, contentWidth - 8, 16, 1, 1, 'FD');
-
+    pdf.text(data.hotelName, margin + 1, curY);
+    
+    const todayStr = formatDisplayDate(new Date().toISOString().slice(0, 10), lang);
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8);
+    pdf.setFontSize(7);
     pdf.setTextColor(100, 116, 139);
-    pdf.text('CUSTOMER / HOTEL:', margin + 7, curY + 5);
-
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(12);
-    pdf.setTextColor(15, 23, 42);
-    pdf.text(data.hotelName, margin + 7, curY + 11);
+    pdf.text(todayStr, pageWidth - margin - 1, curY, { align: 'right' });
+    curY += 3.5;
 
     if (data.hotelPhone) {
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(8);
-      pdf.setTextColor(71, 85, 105);
-      pdf.text(`Phone: ${data.hotelPhone}`, contentWidth + margin - 7, curY + 11, { align: 'right' });
+      pdf.text(`Ph: ${data.hotelPhone}`, margin + 1, curY);
+      curY += 3;
     }
-    curY += 22;
 
-    // Summary Box
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(9);
+    // Slip Title
+    pdf.setFillColor(241, 245, 249);
+    pdf.rect(margin, curY, contentWidth, 5, 'F');
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(7.5);
     pdf.setTextColor(51, 65, 85);
-    pdf.text(`Total Billed: Rs. ${Math.round(data.totalBilled).toLocaleString('en-IN')}`, margin + 7, curY);
-    curY += 5;
-    if (data.totalBalAdded && data.totalBalAdded !== 0) {
-      const balLabel = data.totalBalAdded > 0
-        ? `Balance Added / Opening Bal: +Rs. ${Math.round(data.totalBalAdded).toLocaleString('en-IN')}`
-        : `Opening Credit: -Rs. ${Math.abs(Math.round(data.totalBalAdded)).toLocaleString('en-IN')}`;
-      pdf.text(balLabel, margin + 7, curY);
-      curY += 5;
-    }
-    pdf.text(`Total Paid: Rs. ${Math.round(data.totalPaid).toLocaleString('en-IN')}`, margin + 7, curY);
+    pdf.text(isTa ? 'பாக்கி கணக்கு ரசீது' : 'BALANCE STATEMENT', pageWidth / 2, curY + 3.5, { align: 'center' });
     curY += 7;
 
-    // Balance Banner
-    const isDue = data.balance >= 0;
-    pdf.setFillColor(isDue ? 225 : 2, isDue ? 29 : 132, isDue ? 72 : 199); // Rose for due, cyan/blue for advance
-    pdf.roundedRect(margin + 4, curY, contentWidth - 8, 14, 1, 1, 'F');
+    // Ledger Summary Lines
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7.5);
+    pdf.setTextColor(51, 65, 85);
+    
+    pdf.text(`${isTa ? 'மொத்த பில்' : 'Total Billed'} (${data.billCount}):`, margin + 1, curY);
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(12);
-    pdf.setTextColor(255, 255, 255);
+    pdf.text(`Rs. ${Math.round(data.totalBilled).toLocaleString('en-IN')}`, pageWidth - margin - 1, curY, { align: 'right' });
+    curY += 4;
+
+    if (data.totalBalAdded && data.totalBalAdded !== 0) {
+      pdf.setFont('helvetica', 'normal');
+      const balLabel = data.totalBalAdded > 0
+        ? (isTa ? 'பாக்கி கூட்டல் (+):' : 'Bal Added (+):')
+        : (isTa ? 'ஆரம்ப முன்பணம் (-):' : 'Opening Credit (-):');
+      pdf.text(balLabel, margin + 1, curY);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`${data.totalBalAdded > 0 ? '+' : '-'}Rs. ${Math.abs(Math.round(data.totalBalAdded)).toLocaleString('en-IN')}`, pageWidth - margin - 1, curY, { align: 'right' });
+      curY += 4;
+    }
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`${isTa ? 'செலுத்திய வரவு' : 'Total Paid'}:`, margin + 1, curY);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(`-Rs. ${Math.round(data.totalPaid).toLocaleString('en-IN')}`, pageWidth - margin - 1, curY, { align: 'right' });
+    curY += 5;
+
+    // Compact Balance Due Box
+    const isDue = data.balance >= 0;
+    pdf.setFillColor(isDue ? 240 : 236, isDue ? 253 : 254, isDue ? 244 : 255);
+    pdf.setDrawColor(isDue ? 134 : 147, isDue ? 239 : 197, isDue ? 172 : 253);
+    pdf.roundedRect(margin, curY, contentWidth, 11, 1, 1, 'FD');
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(7);
+    pdf.setTextColor(100, 116, 139);
     pdf.text(
       isDue
-        ? `NET BALANCE DUE: Rs. ${Math.round(data.balance).toLocaleString('en-IN')}`
-        : `ADVANCE BALANCE: Rs. ${Math.abs(Math.round(data.balance)).toLocaleString('en-IN')}`,
+        ? (isTa ? 'மீதி பாக்கி' : 'NET BALANCE DUE')
+        : (isTa ? 'முன்பணம்' : 'ADVANCE BALANCE'),
       pageWidth / 2,
-      curY + 9,
+      curY + 3.8,
       { align: 'center' }
     );
-    curY += 18;
 
-    // Optional: Recent Bills Table
+    pdf.setFontSize(11);
+    pdf.setTextColor(15, 23, 42);
+    pdf.text(
+      `Rs. ${Math.abs(Math.round(data.balance)).toLocaleString('en-IN')}`,
+      pageWidth / 2,
+      curY + 8.8,
+      { align: 'center' }
+    );
+    curY += 13.5;
+
+    // Optional: Recent 2 Bills snippet
     if (data.recentBills && data.recentBills.length > 0) {
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(8.5);
-      pdf.setTextColor(15, 23, 42);
-      pdf.text('RECENT BILLS / சமீபத்திய பில்கள்:', margin + 4, curY);
-      curY += 2;
+      pdf.setFontSize(6.5);
+      pdf.setTextColor(148, 163, 184);
+      pdf.text(isTa ? 'சமீபத்திய பில்கள்' : 'RECENT BILLS', margin + 1, curY);
+      curY += 2.5;
 
-      autoTable(pdf, {
-        startY: curY,
-        margin: { left: margin + 4, right: margin + 4 },
-        head: [['Date', 'Bill #', 'Weight (Kg)', 'Amount (Rs.)']],
-        body: data.recentBills.slice(0, 5).map((b) => [
-          b.date,
-          `#${b.billNumber}`,
-          b.kg ? `${b.kg.toFixed(2)} kg` : '-',
-          `Rs. ${Math.round(b.amount).toLocaleString('en-IN')}`,
-        ]),
-        theme: 'grid',
-        styles: { fontSize: 7.5, cellPadding: 1.5 },
-        headStyles: { fillColor: [51, 65, 85], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
-        columnStyles: {
-          0: { halign: 'center', cellWidth: 26 },
-          1: { halign: 'center', cellWidth: 20 },
-          2: { halign: 'right', cellWidth: 28 },
-          3: { halign: 'right', fontStyle: 'bold' },
-        },
+      data.recentBills.slice(0, 2).forEach((b) => {
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(6.8);
+        pdf.setTextColor(71, 85, 105);
+        pdf.text(`#${b.billNumber} • ${b.date}`, margin + 1, curY);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`Rs. ${Math.round(b.amount).toLocaleString('en-IN')}`, pageWidth - margin - 1, curY, { align: 'right' });
+        curY += 3.2;
       });
-      curY = (pdf as any).lastAutoTable?.finalY ? (pdf as any).lastAutoTable.finalY + 4 : curY + 25;
+      curY += 1.5;
     }
 
-    // Optional: Recent Payments Table
-    if (data.recentPayments && data.recentPayments.length > 0 && curY < pageHeight - 35) {
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(8.5);
-      pdf.setTextColor(15, 23, 42);
-      pdf.text('RECENT PAYMENTS / செலுத்திய தொகை:', margin + 4, curY);
-      curY += 2;
-
-      autoTable(pdf, {
-        startY: curY,
-        margin: { left: margin + 4, right: margin + 4 },
-        head: [['Date', 'Mode', 'Amount (Rs.)']],
-        body: data.recentPayments.slice(0, 4).map((p) => [
-          p.date,
-          p.mode?.toUpperCase() || 'CASH',
-          `Rs. ${Math.round(p.amount).toLocaleString('en-IN')}`,
-        ]),
-        theme: 'grid',
-        styles: { fontSize: 7.5, cellPadding: 1.5 },
-        headStyles: { fillColor: [5, 150, 105], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
-        columnStyles: {
-          0: { halign: 'center', cellWidth: 32 },
-          1: { halign: 'center', cellWidth: 35 },
-          2: { halign: 'right', fontStyle: 'bold' },
-        },
-      });
-      curY = (pdf as any).lastAutoTable?.finalY ? (pdf as any).lastAutoTable.finalY + 4 : curY + 20;
-    }
+    // Footer
+    pdf.setDrawColor(226, 232, 240);
+    pdf.line(margin, curY, pageWidth - margin, curY);
+    curY += 3;
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(6.5);
+    pdf.setTextColor(148, 163, 184);
+    pdf.text('Thank you! • நன்றி!', pageWidth / 2, curY, { align: 'center' });
 
     return pdf.output('blob');
   } catch (e) {
