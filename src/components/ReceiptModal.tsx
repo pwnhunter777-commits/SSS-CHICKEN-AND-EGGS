@@ -396,37 +396,37 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
         <div className="p-2.5 sm:p-4 overflow-y-auto overflow-x-auto flex-1 bg-slate-100 flex justify-center items-start">
           <div
             id="printable-thermal-receipt"
-            className="bg-white p-3.5 sm:p-5 rounded-[22px] border-2 border-slate-900 text-slate-900 font-sans w-full max-w-[420px] min-w-[335px] mx-auto shadow-sm"
+            className="bg-white p-2.5 sm:p-3.5 rounded-xl border-2 border-slate-900 text-slate-900 font-sans w-full max-w-[420px] min-w-[335px] mx-auto shadow-sm"
           >
             {/* STORE IDENTITY: Always in English itself */}
             <div className="text-center">
-              <h2 className="text-lg sm:text-xl font-black uppercase text-slate-950 tracking-wide font-sans leading-tight">
+              <h2 className="text-base sm:text-lg font-black uppercase text-slate-950 tracking-wide font-sans leading-tight">
                 {englishShopName}
               </h2>
-              <div className="text-[10px] sm:text-[11px] font-bold text-slate-700 uppercase tracking-tight mt-1 leading-snug">
+              <div className="text-[10px] sm:text-[10.5px] font-bold text-slate-700 uppercase tracking-tight mt-0.5 leading-snug">
                 {englishAddress}
               </div>
-              <div className="text-[10.5px] sm:text-xs font-black text-slate-900 mt-1 tracking-tight">
+              <div className="text-[10px] sm:text-[11px] font-black text-slate-900 mt-0.5 tracking-tight">
                 Phone: {englishPhone} &nbsp;|&nbsp; GSTIN: {englishGst}
               </div>
             </div>
 
             {/* Thin Divider Line */}
-            <hr className="border-t border-slate-300 my-2.5" />
+            <hr className="border-t border-slate-300 my-1.5" />
 
             {/* HOTEL / CUSTOMER META BOX */}
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 grid grid-cols-2 gap-2 text-left">
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-2 grid grid-cols-2 gap-1.5 text-left">
               {/* Left: Customer Info */}
               <div className="min-w-0 pr-1">
-                <span className="text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block">
+                <span className="text-[9px] sm:text-[9.5px] font-extrabold uppercase tracking-wider text-slate-500 block">
                   {isTamil ? 'ஹோட்டல் / வாடிக்கையாளர்:' : 'HOTEL / CUSTOMER:'}
                 </span>
-                <h3 className="text-sm sm:text-base font-black text-slate-950 break-words mt-0.5 leading-tight">
+                <h3 className="text-xs sm:text-sm font-black text-slate-950 break-words mt-0.5 leading-tight">
                   {displayHotelName}
                 </h3>
                 {hotelPhone ? (
-                  <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-                    <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-black text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                  <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
+                    <span className="inline-flex items-center gap-1 text-[10.5px] sm:text-xs font-black text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200">
                       <Phone className="w-3 h-3 text-emerald-600 shrink-0" />
                       <span>Ph: {hotelPhone}</span>
                     </span>
@@ -437,13 +437,13 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                         setPhoneError(null);
                         setShowPhonePrompt(true);
                       }}
-                      className="text-[10px] sm:text-[10.5px] text-emerald-700 underline font-bold hover:text-emerald-900 cursor-pointer"
+                      className="text-[10px] text-emerald-700 underline font-bold hover:text-emerald-900 cursor-pointer"
                     >
                       {isTamil ? 'மாற்ற' : 'Change'}
                     </button>
                   </div>
                 ) : (
-                  <div className="mt-1">
+                  <div className="mt-0.5">
                     <button
                       type="button"
                       onClick={() => {
@@ -451,7 +451,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                         setPhoneError(null);
                         setShowPhonePrompt(true);
                       }}
-                      className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-black text-amber-900 bg-amber-50 hover:bg-amber-100 active:bg-amber-200 px-2 py-0.5 rounded-md border border-amber-300 transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1 text-[9.5px] sm:text-[10.5px] font-black text-amber-900 bg-amber-50 hover:bg-amber-100 active:bg-amber-200 px-1.5 py-0.5 rounded-md border border-amber-300 transition-colors cursor-pointer"
                     >
                       <Phone className="w-3 h-3 text-amber-700 shrink-0" />
                       <span>{isTamil ? '+ போன் எண் சேர்க்க' : '+ Add Hotel Phone'}</span>
@@ -469,7 +469,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   <span className="text-slate-500">{isTamil ? 'தேதி' : 'Date'}:</span> {billDateStr}
                 </div>
                 {billTimeStr && (
-                  <div className="text-[10px] sm:text-[10.5px] font-bold text-slate-500 mt-0.5 whitespace-nowrap">
+                  <div className="text-[9.5px] sm:text-[10px] font-bold text-slate-500 mt-0.5 whitespace-nowrap">
                     <span className="text-slate-400">{isTamil ? 'நேரம்' : 'Time'}:</span> {billTimeStr}
                   </div>
                 )}
@@ -477,21 +477,21 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             </div>
 
             {/* ITEMS TABLE */}
-            <div className="border border-slate-200 rounded-xl overflow-hidden mt-2.5">
+            <div className="border border-slate-200 rounded-lg overflow-hidden mt-1.5">
               <table className="w-full text-left border-collapse table-fixed">
                 <thead>
-                  <tr className="bg-[#0f172a] text-white text-[9.5px] sm:text-[10px] font-black uppercase tracking-wider">
-                    <th className="py-2 px-1 text-center w-[8%] border-r border-slate-700">#</th>
-                    <th className="py-2 px-1.5 text-left w-[38%] border-r border-slate-700">
+                  <tr className="bg-[#0f172a] text-white text-[9px] sm:text-[9.5px] font-black uppercase tracking-wider">
+                    <th className="py-1 px-1 text-center w-[8%] border-r border-slate-700">#</th>
+                    <th className="py-1 px-1.5 text-left w-[38%] border-r border-slate-700">
                       {isTamil ? 'பொருள் பெயர்' : 'ITEM NAME'}
                     </th>
-                    <th className="py-2 px-1 text-center w-[20%] border-r border-slate-700">
+                    <th className="py-1 px-1 text-center w-[20%] border-r border-slate-700">
                       {isTamil ? 'எடை (கிலோ)' : 'WEIGHT (KG)'}
                     </th>
-                    <th className="py-2 px-1 text-right w-[17%] border-r border-slate-700">
+                    <th className="py-1 px-1 text-right w-[17%] border-r border-slate-700">
                       <span className="block leading-tight">{isTamil ? 'விலை (ரூ)' : 'RATE (RS)'}</span>
                     </th>
-                    <th className="py-2 px-1.5 text-right w-[17%]">
+                    <th className="py-1 px-1.5 text-right w-[17%]">
                       <span className="block leading-tight">{isTamil ? 'தொகை (ரூ)' : 'AMOUNT (RS)'}</span>
                     </th>
                   </tr>
@@ -501,20 +501,20 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                     const prodName = resolveItemDisplayName(item, products, billLang);
                     return (
                       <tr key={idx} className={idx % 2 === 1 ? 'bg-slate-50/70' : 'bg-white'}>
-                        <td className="py-2 px-1 text-center font-bold text-slate-700 border-r border-slate-200">
+                        <td className="py-0.5 px-1 text-center font-bold text-slate-700 border-r border-slate-200">
                           {idx + 1}
                         </td>
-                        <td className="py-2 px-1.5 font-black text-slate-900 border-r border-slate-200 break-words leading-tight">
+                        <td className="py-0.5 px-1.5 font-black text-slate-900 border-r border-slate-200 break-words leading-tight">
                           {prodName}
                         </td>
-                        <td className="py-2 px-1 text-center font-bold text-slate-800 border-r border-slate-200 font-mono whitespace-nowrap text-[11px] sm:text-xs">
+                        <td className="py-0.5 px-1 text-center font-bold text-slate-800 border-r border-slate-200 font-mono whitespace-nowrap text-[11px] sm:text-xs">
                           {item.kg.toFixed(2)}
                         </td>
-                        <td className="py-2 px-1 text-right font-bold text-slate-700 border-r border-slate-200 font-mono text-[10.5px] sm:text-[11px]">
+                        <td className="py-0.5 px-1 text-right font-bold text-slate-700 border-r border-slate-200 font-mono text-[10.5px] sm:text-[11px]">
                           <span className="text-[9px] text-slate-500 mr-0.5">{currPrefix}</span>
                           {Math.round(item.pricePerKg)}
                         </td>
-                        <td className="py-2 px-1.5 text-right font-black text-slate-950 font-mono text-xs sm:text-sm whitespace-nowrap">
+                        <td className="py-0.5 px-1.5 text-right font-black text-slate-950 font-mono text-xs sm:text-sm whitespace-nowrap">
                           <span className="text-[9px] text-slate-500 mr-0.5">{currPrefix}</span>
                           {Math.round(item.amount).toLocaleString('en-IN')}
                         </td>
@@ -525,32 +525,32 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               </table>
             </div>
 
-            {/* TOTAL WEIGHT ROW */}
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex items-center justify-between mt-3 text-xs">
-              <span className="font-black text-slate-800 uppercase tracking-wide text-[11px] sm:text-xs">
-                {isTamil ? 'மொத்த எடை:' : 'TOTAL WEIGHT:'}
-              </span>
-              <span className="font-black text-slate-950 font-mono text-xs sm:text-sm">
-                {bill.totalKg.toFixed(2)}
-              </span>
+            {/* TOTAL WEIGHT & BILL AMOUNT SUMMARY (Compact, no extra space between rows) */}
+            <div className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-0.5 mt-1 divide-y divide-slate-200 text-xs">
+              <div className="flex items-center justify-between py-1">
+                <span className="font-bold text-slate-800 uppercase tracking-wide text-[11px] sm:text-xs">
+                  {isTamil ? 'மொத்த எடை:' : 'TOTAL WEIGHT:'}
+                </span>
+                <span className="font-black text-slate-950 font-mono text-xs sm:text-sm">
+                  {bill.totalKg.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-1">
+                <span className="font-bold text-slate-800 tracking-wide text-[11px] sm:text-xs">
+                  {isTamil ? 'பில் தொகை:' : 'Current Bill Amount:'}
+                </span>
+                <span className="font-black text-slate-950 font-mono text-xs sm:text-sm">
+                  {currPrefix} {billAmountInt.toLocaleString('en-IN')}
+                </span>
+              </div>
             </div>
 
-            {/* CURRENT BILL AMOUNT ROW (ONLY Current Bill Amount) */}
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 flex items-center justify-between mt-2 text-xs">
-              <span className="font-black text-slate-800 tracking-wide text-[11px] sm:text-xs">
-                {isTamil ? 'பில் தொகை:' : 'Current Bill Amount:'}
-              </span>
-              <span className="font-black text-slate-950 font-mono text-sm sm:text-base">
-                {currPrefix} {billAmountInt.toLocaleString('en-IN')}
-              </span>
-            </div>
-
-            {/* GRAND TOTAL BANNER: STRICTLY ONLY BILL AMOUNT */}
-            <div className="bg-[#0f172a] text-white rounded-2xl p-3 text-center mt-3 shadow-sm">
-              <span className="text-[10px] font-black tracking-widest uppercase text-slate-300 block">
+            {/* GRAND TOTAL BANNER: STRICTLY ONLY BILL AMOUNT (Compact, no extra gap) */}
+            <div className="bg-[#0f172a] text-white rounded-lg py-1.5 px-2 text-center mt-1 shadow-xs">
+              <span className="text-[9.5px] font-black tracking-widest uppercase text-slate-300 block leading-tight">
                 {isTamil ? 'மொத்தத் தொகை' : 'GRAND TOTAL'}
               </span>
-              <div className="text-2xl sm:text-3xl font-black text-white font-mono mt-0.5 tracking-tight">
+              <div className="text-xl sm:text-2xl font-black text-white font-mono mt-0.5 tracking-tight leading-tight">
                 {currPrefix} {billAmountInt.toLocaleString('en-IN')}/-
               </div>
             </div>
