@@ -14,18 +14,6 @@ import {
 } from '../types';
 import { formatDisplayDate, formatDisplayTime, getHotelPhone } from './storage';
 
-function getQrCodeDataUrl(): string | null {
-  const domCanvas = document.getElementById('bill-upi-qr-canvas') as HTMLCanvasElement | null;
-  if (domCanvas) {
-    try {
-      return domCanvas.toDataURL('image/png');
-    } catch (e) {
-      console.warn('Could not export DOM QR canvas:', e);
-    }
-  }
-  return null;
-}
-
 export async function generateBillPdfBlob(
   bill: Bill,
   settings: ShopSettings,
@@ -88,40 +76,6 @@ export async function generateBillPdfBlob(
 
       pdf.addImage(dataUrl, 'PNG', margin, margin, printableWidth, imgHeightMm, undefined, 'FAST');
 
-      // Add interactive PDF hyperlinks directly on the GPay button and QR code
-      try {
-        const billAmountInt = Math.round(bill.totalAmount);
-        const upiId = settings.upiId || 'NAZIRAHAMED0003@okhdfcbank';
-        const englishShopName = (settings.shopNameEn || settings.shopName || 'SSS CHICKEN AGENCY').toUpperCase();
-        const upiPayUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(
-          englishShopName
-        )}&am=${billAmountInt}&cu=INR&tn=${encodeURIComponent(`Bill #${bill.billNumber}`)}`;
-
-        const gpayBtnElem = document.getElementById('btn-bill-gpay-link');
-        const qrCanvasElem = document.getElementById('bill-upi-qr-canvas');
-        const receiptRect = receiptElem.getBoundingClientRect();
-
-        if (gpayBtnElem && receiptRect.width > 0 && receiptRect.height > 0) {
-          const btnRect = gpayBtnElem.getBoundingClientRect();
-          const btnX = margin + ((btnRect.left - receiptRect.left) / receiptRect.width) * printableWidth;
-          const btnY = margin + ((btnRect.top - receiptRect.top) / receiptRect.height) * imgHeightMm;
-          const btnW = (btnRect.width / receiptRect.width) * printableWidth;
-          const btnH = (btnRect.height / receiptRect.height) * imgHeightMm;
-          pdf.link(btnX, btnY, btnW, btnH, { url: upiPayUri });
-        }
-
-        if (qrCanvasElem && receiptRect.width > 0 && receiptRect.height > 0) {
-          const qrRect = qrCanvasElem.getBoundingClientRect();
-          const qrX = margin + ((qrRect.left - receiptRect.left) / receiptRect.width) * printableWidth;
-          const qrY = margin + ((qrRect.top - receiptRect.top) / receiptRect.height) * imgHeightMm;
-          const qrW = (qrRect.width / receiptRect.width) * printableWidth;
-          const qrH = (qrRect.height / receiptRect.height) * imgHeightMm;
-          pdf.link(qrX, qrY, qrW, qrH, { url: upiPayUri });
-        }
-      } catch (linkErr) {
-        console.warn('Could not overlay PDF link annotations:', linkErr);
-      }
-
       return pdf.output('blob');
     } catch (domErr) {
       console.warn('DOM rasterization to PDF failed, proceeding to vector generator:', domErr);
@@ -135,8 +89,6 @@ export async function generateBillPdfBlob(
     const margin = 6;
     const contentWidth = pageWidth - margin * 2;
     const billAmount = Math.round(bill.totalAmount);
-    const qrDataUrl = getQrCodeDataUrl();
-    const upiId = settings.upiId || 'NAZIRAHAMED0003@okhdfcbank';
 
     // Store details ALWAYS in English itself (explicit user mandate)
     const englishShopName = (settings.shopNameEn || settings.shopName || 'SSS CHICKEN AGENCY').toUpperCase();
@@ -146,23 +98,18 @@ export async function generateBillPdfBlob(
 
     const finalPhone = (recipientPhone || bill.hotelPhone || getHotelPhone(bill.hotelName, hotels) || '').trim();
     const hotelName = resolveHotelDisplayName(bill.hotelName, bill.hotelId, hotels, lang);
-    const upiPayUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(
-      englishShopName
-    )}&am=${billAmount}&cu=INR&tn=${encodeURIComponent(`Bill #${bill.billNumber}`)}`;
 
     const itemCount = Math.max(1, bill.items.length);
     const tableHeight = 10 + itemCount * 7.5;
     const metaBoxH = finalPhone ? 15 : 13;
     const calcBoxH = 8; // Only bill amount box
-    const qrSectionH = qrDataUrl ? 44 : 10;
     const estimatedContentH =
       22 +
       metaBoxH + 4 +
       tableHeight + 4 +
       8 +
       calcBoxH + 4 +
-      16 +
-      qrSectionH + 6;
+      16;
 
     // Standard A5 page height (210mm), or expand dynamically if bill has many items
     const pageHeight = Math.max(210, Math.ceil(estimatedContentH + margin * 2));
@@ -340,41 +287,6 @@ export async function generateBillPdfBlob(
     pdf.text(`${curr}${billAmount.toLocaleString('en-IN')}/-`, pageWidth / 2, curY + 11.8, {
       align: 'center',
     });
-    curY += 17.5;
-
-    // QR & Google Pay (GPay) Section
-    if (qrDataUrl) {
-      const qrSize = 24;
-      const qrX = pageWidth / 2 - qrSize / 2;
-      const qrY = curY;
-      pdf.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
-      // Link on QR Code
-      pdf.link(qrX, qrY, qrSize, qrSize, { url: upiPayUri });
-      curY += qrSize + 2;
-
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(8);
-      pdf.setTextColor(15, 23, 42);
-      pdf.text(`UPI ID: ${upiId}`, pageWidth / 2, curY, { align: 'center' });
-      pdf.link(pageWidth / 2 - 25, curY - 3, 50, 4, { url: upiPayUri });
-      curY += 3.5;
-
-      // Clickable Google Pay Button in PDF
-      const btnW = 74;
-      const btnH = 6.5;
-      const btnX = (pageWidth - btnW) / 2;
-      pdf.setFillColor(26, 115, 232); // Google Pay Blue (#1a73e8)
-      pdf.roundedRect(btnX, curY, btnW, btnH, 1.5, 1.5, 'F');
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(7);
-      pdf.setTextColor(255, 255, 255);
-      const gpayText = isTamil
-        ? `Google Pay மூலம் செலுத்த கிளிக் செய்க (GPay)`
-        : `Pay via Google Pay (GPay): Rs. ${billAmount}`;
-      pdf.text(gpayText, pageWidth / 2, curY + 4.2, { align: 'center' });
-      pdf.link(btnX, curY, btnW, btnH, { url: upiPayUri });
-      curY += btnH + 3;
-    }
 
     return pdf.output('blob');
   } catch (error) {
@@ -532,7 +444,6 @@ export function generateHotelBalanceWhatsAppText(
 ): string {
   const isTa = lang === 'ta';
   const shopName = getShopDisplayName(settings, lang);
-  const upiId = settings.upiId || 'NAZIRAHAMED0003@okhdfcbank';
   const dateStr = new Date().toLocaleDateString(isTa ? 'ta-IN' : 'en-IN', {
     day: '2-digit',
     month: '2-digit',
@@ -586,17 +497,6 @@ export function generateHotelBalanceWhatsAppText(
     data.recentBills.slice(0, 3).forEach((b) => {
       msg += `  #${b.billNumber} (${b.date}): ₹${Math.round(b.amount).toLocaleString('en-IN')} [${b.kg.toFixed(1)}kg]\n`;
     });
-    msg += `━━━━━━━━━━━━━━━━━━━━\n`;
-  }
-
-  if (balanceInt > 0 && upiId) {
-    const payUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(
-      settings.shopName || 'SSS Chicken and Egg Agency'
-    )}&am=${balanceInt}&cu=INR&tn=${encodeURIComponent(`Balance Payment ${data.hotelName}`)}`;
-
-    msg += `🏦 *${isTa ? 'UPI மூலம் பணம் செலுத்த' : 'Pay via UPI'} (GPay/PhonePe/Paytm):*\n`;
-    msg += `UPI ID: ${upiId}\n`;
-    msg += `🔗 ${payUri}\n`;
     msg += `━━━━━━━━━━━━━━━━━━━━\n`;
   }
 
@@ -835,34 +735,6 @@ export async function generateHotelStatementPdfBlob(
         },
       });
       curY = (pdf as any).lastAutoTable?.finalY ? (pdf as any).lastAutoTable.finalY + 4 : curY + 20;
-    }
-
-    // UPI Payment & GPay Button
-    const upiId = settings.upiId || 'NAZIRAHAMED0003@okhdfcbank';
-    const balanceInt = Math.max(0, Math.round(data.balance));
-    const upiPayUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(
-      settings.shopName || 'SSS Chicken and Egg Agency'
-    )}&am=${balanceInt}&cu=INR&tn=${encodeURIComponent(`Balance ${data.hotelName}`)}`;
-
-    if (balanceInt > 0 && curY < pageHeight - 16) {
-      const btnW = 76;
-      const btnH = 6.5;
-      const btnX = (pageWidth - btnW) / 2;
-      pdf.setFillColor(26, 115, 232); // Google Pay Blue (#1a73e8)
-      pdf.roundedRect(btnX, curY, btnW, btnH, 1.5, 1.5, 'F');
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(7);
-      pdf.setTextColor(255, 255, 255);
-      pdf.text(`Pay Balance via GPay: Rs. ${balanceInt.toLocaleString('en-IN')}`, pageWidth / 2, curY + 4.2, { align: 'center' });
-      pdf.link(btnX, curY, btnW, btnH, { url: upiPayUri });
-      curY += btnH + 3;
-    }
-
-    if (curY < pageHeight - 8) {
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(7.5);
-      pdf.setTextColor(71, 85, 105);
-      pdf.text(`UPI Pay ID: ${upiId}`, pageWidth / 2, curY, { align: 'center' });
     }
 
     return pdf.output('blob');

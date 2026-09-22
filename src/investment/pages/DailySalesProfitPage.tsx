@@ -263,7 +263,7 @@ export const DailySalesProfitPage: React.FC<DailySalesProfitPageProps> = ({
               </span>
               {eggPrice > 0 && (
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100/90 text-orange-800 border border-orange-200">
-                  @ ₹{eggPrice}/{language === 'ta' ? 'முட்டை' : 'egg'}
+                  @ ₹{Math.round(eggPrice)}/{language === 'ta' ? 'முட்டை' : 'egg'}
                 </span>
               )}
             </div>

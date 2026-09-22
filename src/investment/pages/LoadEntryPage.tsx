@@ -62,10 +62,10 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
   const chickenNetCost = Math.round(chickenNetKg * chickenRate * 100) / 100;
 
   // Egg Values (Tare based: 1 Tare = 30 Eggs)
-  const eggTareIncome = data.eggLoad.totalTareIncome ?? (data.eggLoad.totalIncomeCount ? Math.round(data.eggLoad.totalIncomeCount / 30) : 0);
-  const eggPricePerTare = data.eggLoad.pricePerTare ?? (data.eggLoad.ratePerUnit ? Math.round(data.eggLoad.ratePerUnit * 30) : 0);
+  const eggTareIncome = Math.round(data.eggLoad.totalTareIncome ?? (data.eggLoad.totalIncomeCount ? data.eggLoad.totalIncomeCount / 30 : 0));
+  const eggPricePerTare = Math.round(data.eggLoad.pricePerTare ?? (data.eggLoad.ratePerUnit ? data.eggLoad.ratePerUnit * 30 : 0));
   const eggTotalCount = Math.round(eggTareIncome * 30);
-  const eggTotalPrice = Math.round(eggTareIncome * eggPricePerTare * 100) / 100;
+  const eggTotalPrice = Math.round(eggTareIncome * eggPricePerTare);
 
   // Handlers for Chicken updates
   const handleUpdateChicken = (field: 'wastage' | 'quantity' | 'rate', value: number) => {
@@ -103,7 +103,7 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
 
   // Handlers for Egg updates (Only ask total tare income & price of a tare)
   const handleUpdateEgg = (field: 'tareIncome' | 'pricePerTare', value: number) => {
-    const validVal = isNaN(value) ? 0 : Math.max(0, value);
+    const validVal = isNaN(value) ? 0 : Math.max(0, Math.round(value));
     const currentTares = field === 'tareIncome' ? validVal : eggTareIncome;
     const currentPrice = field === 'pricePerTare' ? validVal : eggPricePerTare;
 
@@ -112,11 +112,11 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
       totalTareIncome: currentTares,
       pricePerTare: currentPrice,
       totalIncomeCount: currentTares * 30,
-      ratePerUnit: currentTares > 0 ? (currentTares * currentPrice) / (currentTares * 30) : 0,
+      ratePerUnit: currentTares > 0 ? Math.round(currentPrice / 30) : 0,
       wastagePercent: 0,
     };
 
-    const nextMultiplied = currentTares * currentPrice;
+    const nextMultiplied = Math.round(currentTares * currentPrice);
     const nextSales = { ...data.sales };
     nextSales.loadPriceSpend = nextMultiplied;
     nextSales.totalIncomeKg = currentTares * 30; // total egg units
@@ -147,7 +147,7 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
       totalTareIncome: eggTareIncome,
       pricePerTare: eggPricePerTare,
       totalIncomeCount: eggTotalCount,
-      ratePerUnit: eggTareIncome > 0 ? (eggTareIncome * eggPricePerTare) / (eggTareIncome * 30) : 0,
+      ratePerUnit: eggTareIncome > 0 ? Math.round(eggPricePerTare / 30) : 0,
       wastagePercent: 0,
     };
 
@@ -261,7 +261,7 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
                     min="0"
                     value={eggTareIncome === 0 ? '' : eggTareIncome}
                     onChange={(e) => handleUpdateEgg('tareIncome', parseFloat(e.target.value))}
-                    placeholder="000.00"
+                    placeholder="0"
                     className="w-full font-black text-2xl bg-slate-50 hover:bg-white focus:bg-white text-slate-900 border-2 border-slate-200 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 rounded-2xl py-3 px-4 outline-hidden transition-all shadow-2xs"
                   />
                   <div className="absolute right-3.5 top-3.5 flex items-center gap-1 pointer-events-none">
@@ -288,7 +288,7 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
                     min="0"
                     value={eggPricePerTare === 0 ? '' : eggPricePerTare}
                     onChange={(e) => handleUpdateEgg('pricePerTare', parseFloat(e.target.value))}
-                    placeholder="000.00"
+                    placeholder="0"
                     className="w-full font-black text-2xl bg-neutral-50 hover:bg-neutral-100 focus:bg-white text-neutral-900 border-2 border-emerald-300 focus:border-emerald-700 rounded-2xl py-3 pl-8 pr-16 outline-hidden transition-all shadow-2xs"
                   />
                   <span className="absolute right-3 top-3.5 text-xs font-black text-emerald-800 pointer-events-none">

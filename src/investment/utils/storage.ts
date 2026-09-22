@@ -161,9 +161,9 @@ export function fetchDailyBillsSummary(dateStr: string = getTodayDateKey()) {
   const finalRKg = Math.round(retailKg * 1000) / 1000;
   const finalRPrice = finalRKg > 0 ? Math.round((finalRAmt / finalRKg) * 100) / 100 : 0;
 
-  const finalEggAmt = Math.round(eggAmount * 100) / 100;
-  const finalEggQty = Math.round(eggQty * 10) / 10;
-  const finalEggPrice = finalEggQty > 0 ? Math.round((finalEggAmt / finalEggQty) * 100) / 100 : 0;
+  const finalEggAmt = Math.round(eggAmount);
+  const finalEggQty = Math.round(eggQty);
+  const finalEggPrice = finalEggQty > 0 ? Math.round(finalEggAmt / finalEggQty) : 0;
 
   return {
     wholesalePrice: finalWPrice,

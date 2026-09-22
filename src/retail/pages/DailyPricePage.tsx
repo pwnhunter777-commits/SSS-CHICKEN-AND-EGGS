@@ -98,7 +98,7 @@ export const DailyPricePage: React.FC<DailyPricePageProps> = ({
       }));
     } else {
       const num = parseFloat(value);
-      const tare = Math.round(num * 30 * 100) / 100;
+      const tare = Math.round(num * 30);
       setTarePriceMap((prev) => ({
         ...prev,
         [productId]: String(tare),
@@ -106,7 +106,7 @@ export const DailyPricePage: React.FC<DailyPricePageProps> = ({
     }
   };
 
-  // When user enters Tare price: updates tare price AND automatically calculates 1-egg price (tare / 30)
+  // When user enters Tare price: updates tare price AND automatically calculates 1-egg price (tare / 30) without decimal points
   const handleTarePriceChange = (productId: string, value: string) => {
     setTarePriceMap((prev) => ({
       ...prev,
@@ -119,8 +119,8 @@ export const DailyPricePage: React.FC<DailyPricePageProps> = ({
       }));
     } else {
       const tareNum = parseFloat(value);
-      // 1 tare has 30 eggs -> 1 egg = tare / 30
-      const perEgg = Math.round((tareNum / 30) * 100) / 100;
+      // 1 tare has 30 eggs -> 1 egg = tare / 30 without decimal points
+      const perEgg = Math.round(tareNum / 30);
       setPriceMap((prev) => ({
         ...prev,
         [productId]: String(perEgg),

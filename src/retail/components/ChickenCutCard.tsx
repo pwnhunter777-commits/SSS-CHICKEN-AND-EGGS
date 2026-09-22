@@ -71,14 +71,11 @@ export const ChickenCutCard: React.FC<ChickenCutCardProps> = ({
     let numericKg = data.numericKg;
 
     if (variant === 'egg') {
-      // If switching to egg, calculate egg quantity from price or current kg
+      // If switching to egg, calculate egg quantity from price or current kg (without decimal points)
       if (numericAmt > 0 && nextRate > 0) {
-        const calculatedQty = numericAmt / nextRate;
+        const calculatedQty = Math.round(numericAmt / nextRate);
         numericKg = calculatedQty;
-        newKg =
-          calculatedQty % 1 === 0
-            ? String(calculatedQty)
-            : String(Number(calculatedQty.toFixed(2)));
+        newKg = String(calculatedQty);
       } else if (numericKg > 0) {
         const qty = Math.round(numericKg);
         numericKg = qty;
@@ -106,13 +103,12 @@ export const ChickenCutCard: React.FC<ChickenCutCardProps> = ({
 
   // Handle Egg Quantity or Chicken KG Input Change
   const handleKgOrQtyChange = (rawVal: string) => {
-    const num = parseFloat(rawVal);
+    const parsed = parseFloat(rawVal);
+    const num = isEgg ? (isNaN(parsed) ? 0 : Math.round(parsed)) : parsed;
     if (!isNaN(num) && num > 0) {
-      const amt = isEgg
-        ? Math.round(num * currentAdjustedRate)
-        : Math.round(num * currentAdjustedRate);
+      const amt = Math.round(num * currentAdjustedRate);
       onUpdate({
-        kg: rawVal,
+        kg: isEgg ? String(num) : rawVal,
         price: String(amt),
         numericKg: num,
         numericAmount: amt,
@@ -128,18 +124,15 @@ export const ChickenCutCard: React.FC<ChickenCutCardProps> = ({
   };
 
   // Handle Price Input Change
-  // SPECIFIC REQUIREMENT:
-  // "if the price of 1egg is 6 as per the daily price and if the user enter the price as 12 the quantity must be 2"
+  // If price entered on egg side: calculates whole egg quantity without decimal points
   const handlePriceChange = (rawPrice: string) => {
     const priceNum = parseFloat(rawPrice);
     if (!isNaN(priceNum) && priceNum > 0 && currentAdjustedRate > 0) {
       if (isEgg) {
-        const qty = priceNum / currentAdjustedRate;
-        const formattedQty =
-          qty % 1 === 0 ? String(qty) : String(Number(qty.toFixed(2)));
+        const qty = Math.round(priceNum / currentAdjustedRate);
         onUpdate({
           price: rawPrice,
-          kg: formattedQty,
+          kg: String(qty),
           numericKg: qty,
           numericAmount: priceNum,
         });
@@ -187,12 +180,10 @@ export const ChickenCutCard: React.FC<ChickenCutCardProps> = ({
   // Quick Amount Presets
   const handleQuickAmount = (amount: number) => {
     if (isEgg) {
-      const qty = amount / actualEggRate;
-      const formattedQty =
-        qty % 1 === 0 ? String(qty) : String(Number(qty.toFixed(2)));
+      const qty = Math.round(amount / actualEggRate);
       onUpdate({
         price: String(amount),
-        kg: formattedQty,
+        kg: String(qty),
         numericKg: qty,
         numericAmount: amount,
       });

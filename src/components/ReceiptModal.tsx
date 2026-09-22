@@ -8,7 +8,6 @@ import {
   Building2,
   Calendar,
   Layers,
-  ExternalLink,
   Phone,
   AlertCircle,
 } from 'lucide-react';
@@ -27,7 +26,6 @@ import { formatDisplayDate, formatDisplayTime, getHotelPhone, saveOrUpdateHotelP
 import { TRANSLATIONS } from '../utils/translations';
 import { downloadBillPdf, shareBillAsPdfToWhatsApp } from '../utils/whatsapp';
 import { printViaBluetooth } from '../utils/bluetoothPrinter';
-import { QRCodeCanvas } from 'qrcode.react';
 
 interface ReceiptModalProps {
   isOpen: boolean;
@@ -63,7 +61,6 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const [printStatus, setPrintStatus] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [billLang, setBillLang] = useState<LanguageCode>(language);
-  const [paymentNotice, setPaymentNotice] = useState<string | null>(null);
 
   // Hotel Phone Management State
   const [hotelPhone, setHotelPhone] = useState<string>('');
@@ -324,63 +321,6 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const billTimeStr = formatDisplayTime(bill.createdAt, billLang);
   const billAmountInt = Math.round(bill.totalAmount);
   const currPrefix = isTamil ? 'ரூ.' : 'Rs.';
-  const upiId = settings.upiId || 'NAZIRAHAMED0003@okhdfcbank';
-
-  const isAndroid = typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent);
-  const isMobile = typeof navigator !== 'undefined' && /android|iphone|ipad|ipod/i.test(navigator.userAgent);
-
-  // Standard universal UPI URI (works across GPay, PhonePe, Paytm, Cred, BHIM)
-  const upiPayUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(
-    englishShopName
-  )}&am=${billAmountInt}&cu=INR&tn=${encodeURIComponent(`Bill #${bill.billNumber}`)}`;
-
-  // Android-specific Google Pay Intent URI (directly launches Google Pay app)
-  const gpayIntentUri = `intent://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(
-    englishShopName
-  )}&am=${billAmountInt}&cu=INR&tn=${encodeURIComponent(`Bill #${bill.billNumber}`)}#Intent;scheme=upi;package=com.google.android.apps.nbu.paisa.user;end`;
-
-  // The primary Google Pay URI to use
-  const gpayLaunchUri = isAndroid ? gpayIntentUri : upiPayUri;
-
-  const handleOpenGPay = (e?: React.MouseEvent<HTMLAnchorElement>) => {
-    // 1. Copy UPI ID to clipboard
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(upiId);
-      }
-    } catch {
-      // ignore
-    }
-
-    // 2. Visual feedback
-    if (!isMobile) {
-      setPaymentNotice(
-        billLang === 'ta'
-          ? `UPI ID (${upiId}) நகலெடுக்கப்பட்டது! மொபைலில் Google Pay மூலம் QR-ஐ ஸ்கேன் செய்யவும்.`
-          : `UPI ID (${upiId}) copied! Please scan the QR code using Google Pay on your phone.`
-      );
-    } else {
-      setPaymentNotice(
-        billLang === 'ta'
-          ? `Google Pay திறக்கப்படுகிறது... (தொகை: ₹${billAmountInt.toLocaleString('en-IN')})`
-          : `Opening Google Pay... (Amount: ₹${billAmountInt.toLocaleString('en-IN')})`
-      );
-    }
-
-    setTimeout(() => {
-      setPaymentNotice(null);
-    }, 5000);
-
-    // 3. Fallback for iframes or environments where default click is blocked
-    try {
-      const isInsideIframe = window.self !== window.top;
-      if (isInsideIframe) {
-        window.open(gpayLaunchUri, '_blank');
-      }
-    } catch {
-      // ignore
-    }
-  };
 
   return (
     <div
@@ -613,80 +553,6 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               <div className="text-2xl sm:text-3xl font-black text-white font-mono mt-0.5 tracking-tight">
                 {currPrefix} {billAmountInt.toLocaleString('en-IN')}/-
               </div>
-            </div>
-
-            {/* QR CODE & DIRECT GPAY / UPI LINK TO PAY */}
-            <div className="mt-3 text-center flex flex-col items-center">
-              {/* Clickable QR Code */}
-              <a
-                href={gpayLaunchUri}
-                onClick={handleOpenGPay}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 bg-white rounded-xl border border-slate-300 shadow-2xs inline-block hover:border-blue-500 hover:shadow-md transition-all active:scale-95 cursor-pointer"
-                title={isTamil ? 'Google Pay மூலம் செலுத்த கிளிக் செய்க' : 'Click to Pay with Google Pay (GPay)'}
-              >
-                <QRCodeCanvas
-                  id="bill-upi-qr-canvas"
-                  value={upiPayUri}
-                  size={115}
-                  level="M"
-                  includeMargin={false}
-                />
-              </a>
-
-              {/* Clickable UPI ID */}
-              <a
-                href={gpayLaunchUri}
-                onClick={handleOpenGPay}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[10.5px] sm:text-[11px] font-mono font-black text-slate-800 hover:text-blue-600 transition-colors mt-2 cursor-pointer underline flex items-center justify-center gap-1"
-                title={isTamil ? 'Google Pay மூலம் செலுத்த கிளிக் செய்க' : 'Click to Pay with Google Pay (GPay)'}
-              >
-                <span>UPI ID: {upiId}</span>
-              </a>
-
-              {/* Direct Google Pay Link Button */}
-              <a
-                id="btn-bill-gpay-link"
-                href={gpayLaunchUri}
-                onClick={handleOpenGPay}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2.5 inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-[#1a73e8] hover:bg-[#1557b0] active:bg-[#0d47a1] text-white rounded-xl text-xs sm:text-[13px] font-black shadow-md hover:shadow-lg transition-all active:scale-95 border border-blue-600/60 no-underline cursor-pointer group"
-                title={isTamil ? 'Google Pay மூலம் பில் செலுத்த கிளிக் செய்க' : 'Click to Pay Bill via Google Pay'}
-              >
-                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    fill="#ffffff"
-                  />
-                  <path
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    fill="#34A853"
-                  />
-                  <path
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                    fill="#FBBC05"
-                  />
-                  <path
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                    fill="#EA4335"
-                  />
-                </svg>
-                <span className="font-sans">
-                  {isTamil ? 'Google Pay மூலம் செலுத்த கிளிக் செய்க' : 'Pay via Google Pay (GPay)'}
-                </span>
-                <ExternalLink className="w-3.5 h-3.5 text-blue-100 group-hover:text-white shrink-0" />
-              </a>
-
-              {/* Instant feedback notice on click or copy */}
-              {paymentNotice && (
-                <div className="mt-2 text-[11px] font-bold text-blue-950 bg-blue-50 border border-blue-200 rounded-lg py-1.5 px-3 animate-in fade-in duration-150 text-center max-w-[340px]">
-                  {paymentNotice}
-                </div>
-              )}
             </div>
           </div>
         </div>

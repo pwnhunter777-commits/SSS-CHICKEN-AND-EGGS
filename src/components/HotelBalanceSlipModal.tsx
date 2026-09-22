@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { QRCodeCanvas } from 'qrcode.react';
 import {
   X,
   Printer,
@@ -67,14 +66,8 @@ export const HotelBalanceSlipModal: React.FC<HotelBalanceSlipModalProps> = ({
 
   const shopName = getShopDisplayName(settings, language);
   const shopAddress = getShopDisplayAddress(settings, language);
-  const upiId = settings.upiId || 'NAZIRAHAMED0003@okhdfcbank';
   const balanceInt = Math.round(hotelStats.balance);
   const hotelDisplayName = language === 'ta' && hotel.nameTa ? hotel.nameTa : hotel.nameEn;
-
-  // Calculate UPI pay URI for balance
-  const upiPayUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(
-    settings.shopName || 'SSS Chicken and Egg Agency'
-  )}&am=${Math.max(0, balanceInt)}&cu=INR&tn=${encodeURIComponent(`Balance ${hotel.nameEn}`)}`;
 
   const statementData: HotelBalanceShareData = {
     hotelName: hotel.nameEn,
@@ -356,30 +349,6 @@ export const HotelBalanceSlipModal: React.FC<HotelBalanceSlipModalProps> = ({
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-
-            {/* UPI QR Code Canvas (Scan to Pay Balance) */}
-            {balanceInt > 0 && (
-              <div className="pt-3 text-center space-y-1">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-600">
-                  Scan to Pay Balance via UPI
-                </p>
-                <div className="flex justify-center p-1.5 bg-white inline-block mx-auto rounded-lg border border-gray-200 shadow-2xs">
-                  <QRCodeCanvas
-                    id="hotel-balance-upi-qr-canvas"
-                    value={upiPayUri}
-                    size={96}
-                    level="M"
-                    includeMargin={false}
-                  />
-                </div>
-                <p className="text-[10px] font-mono text-gray-700 font-bold">
-                  UPI: {upiId}
-                </p>
-                <p className="text-[9px] text-gray-500">
-                  GPay • PhonePe • Paytm • BHIM
-                </p>
               </div>
             )}
 
