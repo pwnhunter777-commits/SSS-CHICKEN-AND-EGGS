@@ -129,6 +129,9 @@ export function generateReceiptText(bill: Bill, settings: ShopSettings): string 
   receipt += `Bill No: #${bill.billNumber}\n`;
   receipt += `Date: ${bill.date}\n`;
   receipt += `Hotel: ${bill.hotelName}\n`;
+  if (bill.previousBalance !== undefined && bill.previousBalance !== 0) {
+    receipt += `Old Bal: Rs. ${Math.round(bill.previousBalance).toLocaleString('en-IN')}/-\n`;
+  }
   receipt += `${line}\n`;
 
   if (bill.items.length === 1) {
@@ -210,6 +213,9 @@ export function generateEscPosCommands(bill: Bill, settings: ShopSettings): Uint
   bytes.push(...encoder.encode(`Bill No : #${bill.billNumber}\n`));
   bytes.push(...encoder.encode(`Date    : ${bill.date}\n`));
   bytes.push(...encoder.encode(`Hotel   : ${bill.hotelName}\n`));
+  if (bill.previousBalance !== undefined && bill.previousBalance !== 0) {
+    bytes.push(...encoder.encode(`Old Bal : Rs. ${Math.round(bill.previousBalance)}/-\n`));
+  }
   bytes.push(...encoder.encode('--------------------------------\n'));
   bytes.push(...encoder.encode('ITEM           KG   RATE   AMT\n'));
   bytes.push(...encoder.encode('--------------------------------\n'));

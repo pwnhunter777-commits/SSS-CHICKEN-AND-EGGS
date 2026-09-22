@@ -149,8 +149,20 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
     return billed + balAdded - paid;
   }, [bill, bills, payments, hotels]);
 
+  // Bill instance enriched with up-to-date previousBalance & netTotalWithBalance
+  const billWithBal = useMemo(() => {
+    if (!bill) return null;
+    const prev = Math.round(hotelBal);
+    return {
+      ...bill,
+      previousBalance: prev !== 0 ? prev : undefined,
+      netTotalWithBalance: prev !== 0 ? Math.round(bill.totalAmount + prev) : Math.round(bill.totalAmount),
+    };
+  }, [bill, hotelBal]);
+
   const handleBluetoothPrint = async () => {
     if (!bill) return;
+    const activeBill = billWithBal || bill;
     setIsProcessing(true);
     setPrintStatus(
       billLang === 'ta'
@@ -159,7 +171,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
     );
     try {
       const result = await printViaBluetooth(
-        bill,
+        activeBill,
         settings,
         'printable-thermal-receipt'
       );
@@ -188,11 +200,12 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
   const handleDownloadPdf = async () => {
     if (!bill) return;
+    const activeBill = billWithBal || bill;
     setIsProcessing(true);
     setPrintStatus(billLang === 'ta' ? 'PDF தயாராகிறது...' : 'Generating PDF...');
     try {
       const ok = await downloadBillPdf(
-        bill,
+        activeBill,
         settings,
         recipientPhone,
         'printable-thermal-receipt',
@@ -218,6 +231,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
   const executeWhatsAppShare = async (targetPhone: string) => {
     if (!bill) return;
+    const activeBill = billWithBal || bill;
     setIsProcessing(true);
     setPrintStatus(
       billLang === 'ta'
@@ -226,7 +240,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
     );
     try {
       const res = await shareBillAsPdfToWhatsApp(
-        bill,
+        activeBill,
         settings,
         targetPhone,
         'printable-thermal-receipt',
@@ -320,6 +334,9 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const billDateStr = formatDisplayDate(bill.date, billLang);
   const billTimeStr = formatDisplayTime(bill.createdAt, billLang);
   const billAmountInt = Math.round(bill.totalAmount);
+  const prevBalanceInt = Math.round(hotelBal);
+  const hasPrevBalance = prevBalanceInt !== 0;
+  const netTotalInt = billAmountInt + prevBalanceInt;
   const currPrefix = isTamil ? 'ரூ.' : 'Rs.';
 
   return (
@@ -458,21 +475,30 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                     </button>
                   </div>
                 )}
+                {/* Previous Balance indicator in the front */}
+                {hasPrevBalance && (
+                  <div className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-50 border border-rose-200 text-rose-800 font-bold text-[10px] sm:text-[10.5px]">
+                    <span className="text-slate-600">{isTamil ? 'பழைய பாக்கி:' : 'Old Bal:'}</span>
+                    <span className="font-black font-mono text-rose-700">{currPrefix} {prevBalanceInt.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
               </div>
 
               {/* Right: Bill No, Date, Time */}
               <div className="text-right flex flex-col justify-between pl-1">
-                <div className="text-xs sm:text-sm font-black text-slate-950 whitespace-nowrap">
-                  <span className="font-extrabold">{isTamil ? 'பில் எண்' : 'Bill No'}:</span> #{bill.billNumber}
-                </div>
-                <div className="text-[10px] sm:text-[10.5px] font-bold text-slate-600 mt-0.5 whitespace-nowrap">
-                  <span className="text-slate-500">{isTamil ? 'தேதி' : 'Date'}:</span> {billDateStr}
-                </div>
-                {billTimeStr && (
-                  <div className="text-[9.5px] sm:text-[10px] font-bold text-slate-500 mt-0.5 whitespace-nowrap">
-                    <span className="text-slate-400">{isTamil ? 'நேரம்' : 'Time'}:</span> {billTimeStr}
+                <div>
+                  <div className="text-xs sm:text-sm font-black text-slate-950 whitespace-nowrap">
+                    <span className="font-extrabold">{isTamil ? 'பில் எண்' : 'Bill No'}:</span> #{bill.billNumber}
                   </div>
-                )}
+                  <div className="text-[10px] sm:text-[10.5px] font-bold text-slate-600 mt-0.5 whitespace-nowrap">
+                    <span className="text-slate-500">{isTamil ? 'தேதி' : 'Date'}:</span> {billDateStr}
+                  </div>
+                  {billTimeStr && (
+                    <div className="text-[9.5px] sm:text-[10px] font-bold text-slate-500 mt-0.5 whitespace-nowrap">
+                      <span className="text-slate-400">{isTamil ? 'நேரம்' : 'Time'}:</span> {billTimeStr}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -525,7 +551,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               </table>
             </div>
 
-            {/* TOTAL WEIGHT & BILL AMOUNT SUMMARY (Compact, no extra space between rows) */}
+            {/* TOTAL WEIGHT & BILL AMOUNT SUMMARY (Compact, with Previous Balance added if present) */}
             <div className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-0.5 mt-1 divide-y divide-slate-200 text-xs">
               <div className="flex items-center justify-between py-1">
                 <span className="font-bold text-slate-800 uppercase tracking-wide text-[11px] sm:text-xs">
@@ -543,15 +569,27 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   {currPrefix} {billAmountInt.toLocaleString('en-IN')}
                 </span>
               </div>
+              {hasPrevBalance && (
+                <div className="flex items-center justify-between py-1 text-rose-800">
+                  <span className="font-bold tracking-wide text-[11px] sm:text-xs">
+                    {isTamil ? 'பழைய பாக்கி:' : 'Previous Balance:'}
+                  </span>
+                  <span className="font-black font-mono text-xs sm:text-sm text-rose-700">
+                    {currPrefix} {prevBalanceInt.toLocaleString('en-IN')}
+                  </span>
+                </div>
+              )}
             </div>
 
-            {/* GRAND TOTAL BANNER: STRICTLY ONLY BILL AMOUNT (Compact, no extra gap) */}
+            {/* GRAND TOTAL BANNER: BILL AMOUNT + PREVIOUS BALANCE (Compact, no extra gap) */}
             <div className="bg-[#0f172a] text-white rounded-lg py-1.5 px-2 text-center mt-1 shadow-xs">
               <span className="text-[9.5px] font-black tracking-widest uppercase text-slate-300 block leading-tight">
-                {isTamil ? 'மொத்தத் தொகை' : 'GRAND TOTAL'}
+                {hasPrevBalance
+                  ? (isTamil ? 'மொத்தம் செலுத்த வேண்டிய தொகை' : 'TOTAL PAYABLE DUE')
+                  : (isTamil ? 'மொத்தத் தொகை' : 'GRAND TOTAL')}
               </span>
               <div className="text-xl sm:text-2xl font-black text-white font-mono mt-0.5 tracking-tight leading-tight">
-                {currPrefix} {billAmountInt.toLocaleString('en-IN')}/-
+                {currPrefix} {netTotalInt.toLocaleString('en-IN')}/-
               </div>
             </div>
           </div>

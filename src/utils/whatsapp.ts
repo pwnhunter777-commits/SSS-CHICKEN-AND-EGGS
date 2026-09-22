@@ -85,6 +85,7 @@ export async function generateBillPdfBlob(
   // 2. Vector PDF Generator strictly adhering to standard A5 Wholesale Bill dimensions and screenshot styling
   try {
     const isTamil = lang === 'ta';
+    const curr = isTamil ? 'ரூ. ' : 'Rs. ';
     const pageWidth = 148; // Standard A5 width in mm
     const margin = 6;
     const contentWidth = pageWidth - margin * 2;
@@ -99,10 +100,16 @@ export async function generateBillPdfBlob(
     const finalPhone = (recipientPhone || bill.hotelPhone || getHotelPhone(bill.hotelName, hotels) || '').trim();
     const hotelName = resolveHotelDisplayName(bill.hotelName, bill.hotelId, hotels, lang);
 
+    const prevBalance = Math.round(bill.previousBalance || 0);
+    const hasPrevBal = prevBalance !== 0;
+    const netTotal = bill.netTotalWithBalance !== undefined
+      ? Math.round(bill.netTotalWithBalance)
+      : Math.round(billAmount + prevBalance);
+
     const itemCount = Math.max(1, bill.items.length);
     const tableHeight = 10 + itemCount * 7.5;
-    const metaBoxH = finalPhone ? 15 : 13;
-    const calcBoxH = 8; // Only bill amount box
+    const metaBoxH = hasPrevBal ? (finalPhone ? 19 : 17) : (finalPhone ? 15 : 13);
+    const calcBoxH = hasPrevBal ? 14 : 8; // Row for bill amount + old balance if present
     const estimatedContentH =
       22 +
       metaBoxH + 4 +
@@ -173,6 +180,13 @@ export async function generateBillPdfBlob(
       pdf.setTextColor(5, 150, 105);
       pdf.text(`Ph: ${finalPhone}`, margin + 5, metaBoxY + 12.5);
     }
+    if (hasPrevBal) {
+      const prevBalY = finalPhone ? metaBoxY + 16.5 : metaBoxY + 13;
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(8);
+      pdf.setTextColor(225, 29, 72);
+      pdf.text(`${isTamil ? 'பழைய பாக்கி:' : 'Old Bal:'} ${curr}${prevBalance.toLocaleString('en-IN')}`, margin + 5, prevBalY);
+    }
 
     pdf.setDrawColor(203, 213, 225);
     pdf.line(82, metaBoxY, 82, metaBoxY + metaBoxH);
@@ -193,7 +207,6 @@ export async function generateBillPdfBlob(
     curY = metaBoxY + metaBoxH + 2.5;
 
     // Items Table
-    const curr = isTamil ? 'ரூ. ' : 'Rs. ';
     const tableBody = bill.items.map((item, idx) => {
       const itemName = resolveItemDisplayName(item, products, lang);
       const unit = isTamil ? 'கிலோ' : 'KG';
@@ -258,33 +271,49 @@ export async function generateBillPdfBlob(
     pdf.text(`${bill.totalKg.toFixed(2)}`, contentWidth + margin - 5, curY + 4.2, { align: 'right' });
     curY += 8;
 
-    // Bill Amount Only Row (Explicitly ONLY current bill amount, no old balance)
+    // Bill Amount and Previous Balance Summary Box
     pdf.setFillColor(248, 250, 252);
     pdf.setDrawColor(203, 213, 225);
     pdf.roundedRect(margin + 2, curY, contentWidth - 4, calcBoxH, 1, 1, 'FD');
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(9);
+    pdf.setFontSize(8.5);
     pdf.setTextColor(71, 85, 105);
     pdf.text(isTamil ? 'பில் தொகை:' : 'Current Bill Amount:', margin + 5, curY + 5.2);
-    pdf.setFontSize(10);
+    pdf.setFontSize(9.5);
     pdf.setTextColor(15, 23, 42);
     pdf.text(`${curr}${billAmount.toLocaleString('en-IN')}`, contentWidth + margin - 5, curY + 5.2, {
       align: 'right',
     });
+
+    if (hasPrevBal) {
+      pdf.setDrawColor(226, 232, 240);
+      pdf.line(margin + 4, curY + 7.5, contentWidth + margin - 4, curY + 7.5);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(8.5);
+      pdf.setTextColor(225, 29, 72);
+      pdf.text(isTamil ? 'பழைய பாக்கி:' : 'Previous Balance:', margin + 5, curY + 11.5);
+      pdf.setFontSize(9.5);
+      pdf.setTextColor(225, 29, 72);
+      pdf.text(`${curr}${prevBalance.toLocaleString('en-IN')}`, contentWidth + margin - 5, curY + 11.5, {
+        align: 'right',
+      });
+    }
     curY += calcBoxH + 2.5;
 
-    // Grand Total Banner: strictly ONLY the bill amount
+    // Grand Total Banner: strictly bill amount + previous balance
     pdf.setFillColor(15, 23, 42);
     pdf.roundedRect(margin + 2, curY, contentWidth - 4, 15, 1.5, 1.5, 'F');
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(8);
     pdf.setTextColor(203, 213, 225);
-    const totalLabel = isTamil ? 'மொத்தத் தொகை' : 'GRAND TOTAL';
+    const totalLabel = hasPrevBal
+      ? (isTamil ? 'மொத்தம் செலுத்த வேண்டிய தொகை' : 'TOTAL PAYABLE DUE')
+      : (isTamil ? 'மொத்தத் தொகை' : 'GRAND TOTAL');
     pdf.text(totalLabel, pageWidth / 2, curY + 4.5, { align: 'center' });
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(16);
     pdf.setTextColor(255, 255, 255);
-    pdf.text(`${curr}${billAmount.toLocaleString('en-IN')}/-`, pageWidth / 2, curY + 11.8, {
+    pdf.text(`${curr}${netTotal.toLocaleString('en-IN')}/-`, pageWidth / 2, curY + 11.8, {
       align: 'center',
     });
 
