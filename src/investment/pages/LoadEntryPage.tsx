@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Save, CheckCircle2 } from 'lucide-react';
 import { InvestmentItemType, InvestmentDayData } from '../types';
 import { saveInvestmentData, PreviousDayStock } from '../utils/storage';
-import { OpeningStockBanner } from '../components/OpeningStockBanner';
 
 interface LoadEntryPageProps {
   data: InvestmentDayData;
@@ -184,30 +183,21 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
   };
 
   return (
-    <div className="flex flex-col flex-1 w-full max-w-md mx-auto px-4 py-3 select-none">
+    <div className="flex flex-col flex-1 w-full max-w-md mx-auto px-3 sm:px-4 py-2 select-none">
       {/* Toast Notification */}
       {saveToastMsg && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-emerald-950 text-white text-xs sm:text-sm font-black px-4 py-2.5 rounded-full shadow-xl border-2 border-emerald-400 flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-emerald-950 text-white text-xs sm:text-sm font-black px-4 py-2 rounded-full shadow-xl border-2 border-emerald-400 flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
           <span>{saveToastMsg}</span>
         </div>
       )}
 
-      {/* Opening Stock from Previous Day Banner - Chicken & Egg Top Inward */}
-      <OpeningStockBanner
-        previousStock={previousStock}
-        currentData={data}
-        onChangeData={onChangeData}
-        language={language}
-        variant="card"
-      />
-
       {/* Top Switcher - Chicken / Egg */}
-      <div className="grid grid-cols-2 rounded-2xl bg-slate-200/80 p-1 mb-4 border border-slate-300 shadow-2xs">
+      <div className="grid grid-cols-2 rounded-xl bg-slate-200/80 p-0.5 mb-3 border border-slate-300 shadow-2xs">
         <button
           type="button"
           onClick={() => handleSelectType('chicken')}
-          className={`py-2.5 px-4 rounded-xl font-black text-xs sm:text-sm transition-all flex items-center justify-center cursor-pointer ${
+          className={`py-1.5 px-3 rounded-lg font-black text-xs sm:text-[13px] transition-all flex items-center justify-center cursor-pointer ${
             isChicken
               ? 'bg-emerald-700 text-white shadow-xs'
               : 'text-slate-600 hover:text-slate-900 font-bold'
@@ -219,7 +209,7 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
         <button
           type="button"
           onClick={() => handleSelectType('egg')}
-          className={`py-2.5 px-4 rounded-xl font-black text-xs sm:text-sm transition-all flex items-center justify-center cursor-pointer ${
+          className={`py-1.5 px-3 rounded-lg font-black text-xs sm:text-[13px] transition-all flex items-center justify-center cursor-pointer ${
             !isChicken
               ? 'bg-emerald-700 text-white shadow-xs'
               : 'text-slate-600 hover:text-slate-900 font-bold'

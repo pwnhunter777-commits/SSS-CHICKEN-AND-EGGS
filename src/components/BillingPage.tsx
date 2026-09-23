@@ -5,8 +5,6 @@ import {
   RefreshCw,
   X,
   ChevronDown,
-  IndianRupee,
-  ArrowRight,
   Trash2,
   Send,
   FileText,
@@ -211,7 +209,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({
       if (kg > 0 && amount > 0) {
         items.push({
           productId: product.id,
-          productName: getProductName(product, language),
+          productName: product.nameTa || getProductName(product, 'ta'),
           pricePerKg: effectiveRate,
           kg,
           amount,
@@ -236,6 +234,24 @@ export const BillingPage: React.FC<BillingPageProps> = ({
     : currentSelectedHotelItem
     ? getHotelName(currentSelectedHotelItem, language)
     : 'Hotel';
+
+  // Compute map of balances for all hotels
+  const hotelBalancesMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    if (!bills || !payments || !hotels) return map;
+    hotels.forEach((h) => {
+      const targetId = h.id;
+      const targetEn = (h.nameEn || '').trim().toLowerCase();
+      const targetTa = (h.nameTa || '').trim().toLowerCase();
+      const bList = bills.filter((b) => (b.hotelId && b.hotelId === targetId) || (b.hotelName && (b.hotelName.trim().toLowerCase() === targetEn || b.hotelName.trim().toLowerCase() === targetTa)));
+      const pList = payments.filter((p) => (p.hotelId && p.hotelId === targetId) || (p.hotelName && (p.hotelName.trim().toLowerCase() === targetEn || p.hotelName.trim().toLowerCase() === targetTa)));
+      const billed = bList.reduce((sum, b) => sum + b.totalAmount, 0);
+      const paid = pList.filter((p) => p.type !== 'balance_add').reduce((sum, p) => sum + p.amount, 0);
+      const balAdded = pList.filter((p) => p.type === 'balance_add').reduce((sum, p) => sum + p.amount, 0);
+      map[h.id] = billed + balAdded - paid;
+    });
+    return map;
+  }, [hotels, bills, payments]);
 
   // Compute selected hotel outstanding balance
   const hotelBalance = useMemo(() => {
@@ -296,15 +312,9 @@ export const BillingPage: React.FC<BillingPageProps> = ({
       netTotalWithBalance: prevBal !== 0 ? netTotalWithBal : totalAmount,
     };
 
-    if (_triggerBluetooth) {
-      onSaveBill(newBill);
-      setBillingInputs({});
-      onOpenReceipt(newBill, false, undefined, true);
-    } else {
-      onOpenReceipt(newBill, true, () => {
-        setBillingInputs({});
-      }, false);
-    }
+    onSaveBill(newBill);
+    setBillingInputs({});
+    onOpenReceipt(newBill, false, undefined, _triggerBluetooth);
   };
 
   const handleClearAll = () => {
@@ -363,15 +373,22 @@ export const BillingPage: React.FC<BillingPageProps> = ({
     <div id="page-billing" className="pb-8 pt-1.5 px-2.5 sm:px-3.5 max-w-md mx-auto animate-in fade-in">
       {/* Missing Daily Prices Banner */}
       {!dailyPrices && (
-        <div className="mb-2 bg-amber-50 border border-amber-300 rounded-xl p-2 flex items-center justify-between gap-2 shadow-2xs">
-          <div className="text-xs text-amber-900 leading-tight break-words flex-1">
+        <div
+          id="billing-missing-prices-banner"
+          className="mb-1.5 bg-amber-50/90 border border-amber-300/80 rounded-lg py-1 px-2 flex items-center justify-between gap-1.5 shadow-2xs"
+        >
+          <div
+            id="billing-missing-prices-text"
+            className="text-[10px] leading-tight text-amber-900 break-words flex-1"
+          >
             <span className="font-bold">{t.pricesRequiredNotice}:</span>{' '}
-            {language === 'ta' ? 'இன்றைய விலை நிர்ணயிக்கப்படவில்லை.' : 'Daily rates not set for today.'}
+            <span>{language === 'ta' ? 'இன்றைய விலை நிர்ணயிக்கப்படவில்லை.' : 'Daily rates not set for today.'}</span>
           </div>
           <button
+            id="btn-billing-navigate-daily-price"
             type="button"
             onClick={onNavigateToDailyPrice}
-            className="min-h-[2.4rem] text-xs font-black text-white bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 px-3 py-1 rounded-lg shadow-2xs transition-all active:scale-95 cursor-pointer touch-manipulation flex-shrink-0"
+            className="min-h-[1.85rem] text-[10px] font-bold text-white bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 px-2 py-0.5 rounded-md shadow-2xs transition-all active:scale-95 cursor-pointer touch-manipulation flex-shrink-0"
           >
             <span className="leading-normal">{t.dailyPrice}</span>
           </button>
@@ -421,6 +438,50 @@ export const BillingPage: React.FC<BillingPageProps> = ({
             <span className="leading-normal">{t.addHotel}</span>
           </button>
         </div>
+
+        {/* Selected Hotel Balance Display at the Top - Big in size */}
+        {(!isCustomHotel || customHotelInput.trim() !== '') && (
+          <div
+            id="billing-top-hotel-balance"
+            className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl border-2 transition-all shadow-xs ${
+              hotelBalance > 0
+                ? 'bg-rose-50 border-rose-300 text-rose-950'
+                : hotelBalance === 0
+                ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
+                : 'bg-sky-50 border-sky-300 text-sky-950'
+            }`}
+          >
+            <div className="flex flex-col min-w-0 pr-2">
+              <span className="text-xs sm:text-sm font-black text-slate-900 truncate">
+                {currentHotelDisplayName}
+              </span>
+              <span className={`text-[10px] sm:text-[11px] uppercase font-black tracking-wider mt-0.5 ${
+                hotelBalance > 0
+                  ? 'text-rose-700'
+                  : hotelBalance === 0
+                  ? 'text-emerald-700'
+                  : 'text-sky-700'
+              }`}>
+                {hotelBalance > 0
+                  ? (language === 'ta' ? 'முந்தைய மீதி பாக்கி' : 'Old Balance Due')
+                  : hotelBalance === 0
+                  ? (language === 'ta' ? 'பாக்கி தொகை இல்லை' : 'All Settled (No Dues)')
+                  : (language === 'ta' ? 'முன்பணம்' : 'Advance Credit')}
+              </span>
+            </div>
+            <div className="flex items-baseline gap-1 shrink-0">
+              <span className={`text-2xl sm:text-3xl font-black font-mono tracking-tight ${
+                hotelBalance > 0
+                  ? 'text-rose-700'
+                  : hotelBalance === 0
+                  ? 'text-emerald-700'
+                  : 'text-sky-700'
+              }`}>
+                ₹{Math.abs(Math.round(hotelBalance)).toLocaleString('en-IN')}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Notification when hotel added */}
         {addNotification && (
@@ -500,81 +561,6 @@ export const BillingPage: React.FC<BillingPageProps> = ({
             />
           </div>
         )}
-      </div>
-
-      {/* Hotel Balance Display Container */}
-      <div
-        id="billing-hotel-balance-container"
-        className={`mb-2 rounded-xl p-2 sm:p-2.5 border shadow-2xs transition-all ${
-          hotelBalance > 0
-            ? 'bg-gradient-to-r from-amber-50/95 via-amber-50/70 to-emerald-50/60 border-amber-300'
-            : hotelBalance === 0
-            ? 'bg-emerald-50/70 border-emerald-200'
-            : 'bg-sky-50/70 border-sky-200'
-        }`}
-      >
-        <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
-          {/* Left: Balance Amount & Label */}
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <div
-              className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 shadow-2xs ${
-                hotelBalance > 0
-                  ? 'bg-amber-600 text-white'
-                  : hotelBalance === 0
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-sky-600 text-white'
-              }`}
-            >
-              <IndianRupee className="w-3.5 h-3.5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-baseline gap-1.5 flex-wrap">
-                <span className="text-[10px] sm:text-[11px] font-bold text-gray-600 uppercase leading-none">
-                  {language === 'ta' ? 'ஹோட்டல் பாக்கி' : 'Hotel Balance'}:
-                </span>
-                <span
-                  className={`text-xs sm:text-sm font-black tracking-tight leading-none ${
-                    hotelBalance > 0
-                      ? 'text-amber-900'
-                      : hotelBalance === 0
-                      ? 'text-emerald-900'
-                      : 'text-sky-900'
-                  }`}
-                >
-                  ₹{Math.abs(Math.round(hotelBalance)).toLocaleString('en-IN')}
-                </span>
-                <span className="text-[10px] text-gray-500 font-semibold break-words leading-none">
-                  ({currentHotelDisplayName})
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Right: Net Total With Balance preview or Link to Hotel Page */}
-          <div className="text-right flex items-center gap-1.5 flex-shrink-0">
-            {totalAmount > 0 ? (
-              <div className="bg-white/95 border border-emerald-300 rounded-lg px-2.5 py-1 text-right shadow-2xs min-h-[2.4rem] flex flex-col justify-center">
-                <span className="text-[9px] font-bold text-gray-500 block uppercase leading-none">
-                  {language === 'ta' ? 'மொத்த பாக்கி' : 'Total Due'}
-                </span>
-                <span className="text-xs sm:text-sm font-black text-emerald-950 leading-none mt-0.5">
-                  ₹{Math.round(totalAmount + (hotelBalance > 0 ? hotelBalance : 0)).toLocaleString('en-IN')}
-                </span>
-              </div>
-            ) : onNavigateToHotel ? (
-              <button
-                id="btn-billing-goto-hotel-ledger"
-                type="button"
-                onClick={onNavigateToHotel}
-                className="min-h-[2.4rem] text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 px-3 py-1 rounded-lg shadow-2xs flex items-center gap-1 transition-all active:scale-95 cursor-pointer touch-manipulation"
-                title={language === 'ta' ? 'ஹோட்டல் கணக்கு பார்க்க' : 'View Hotel Ledger'}
-              >
-                <span className="leading-normal">{language === 'ta' ? 'கணக்கு' : 'Ledger'}</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            ) : null}
-          </div>
-        </div>
       </div>
 
       {/* Products Section Header Actions */}
@@ -686,7 +672,7 @@ export const BillingPage: React.FC<BillingPageProps> = ({
       <div className="space-y-1.5">
         {products.map((product) => {
           const defaultRate = getProductRate(product);
-          const prodDisplayName = getProductName(product, language);
+          const prodDisplayName = product.nameTa || getProductName(product, 'ta');
           const currentKg = billingInputs[product.id]?.kgInput || '';
           const currentPrice = billingInputs[product.id]?.priceInput || '';
           const customRateStr = billingInputs[product.id]?.rateInput;

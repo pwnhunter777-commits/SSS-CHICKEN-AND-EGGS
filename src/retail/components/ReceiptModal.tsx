@@ -228,7 +228,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                     <div key={idx} className="flex items-start justify-between">
                       <div className="text-left pr-2 flex-1">
                         <div className="text-xs font-black text-black leading-tight">
-                          {idx + 1}. {item.productName}
+                          {idx + 1}. {item.productNameTa || item.productName}
                         </div>
                         <div className="text-[10.5px] font-semibold text-slate-800">
                           {item.variant === 'egg' || item.productName.toLowerCase().includes('egg') || item.productName.includes('முட்டை')
@@ -290,7 +290,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                     <div key={idx} className="flex items-center justify-between">
                       <div className="text-left">
                         <span className="text-xs font-black text-black">
-                          {idx + 1}. {item.productName}
+                          {idx + 1}. {item.productNameTa || item.productName}
                         </span>
                         <span className="text-[10px] font-semibold text-slate-800 ml-2">
                           ({item.variant === 'egg' || item.productName.toLowerCase().includes('egg') || item.productName.includes('முட்டை')

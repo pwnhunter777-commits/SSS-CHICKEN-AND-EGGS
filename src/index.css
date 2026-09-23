@@ -76,10 +76,172 @@ body.app-bold-mode .font-bold {
   font-weight: 800;
 }
 
-/* Compact layout mode: tightens spacing, margins, and card padding */
-.compact-div {
-  padding: 0.5rem 0.75rem !important;
-  margin-bottom: 0.5rem !important;
+/* =========================================================
+   TAMIL TEXT: BOLD AND BIG IN SIZE
+   ========================================================= */
+:lang(ta),
+.lang-ta,
+[lang="ta"],
+body.lang-ta {
+  font-family: 'Mukta Malar', 'Noto Sans Tamil', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  font-weight: 750;
+  -webkit-font-smoothing: antialiased;
+}
+
+body.lang-ta {
+  font-size: 1.05rem;
+}
+
+body.lang-ta h1,
+body.lang-ta h2,
+body.lang-ta h3,
+body.lang-ta h4,
+body.lang-ta h5,
+body.lang-ta h6,
+body.lang-ta button,
+body.lang-ta input,
+body.lang-ta select,
+body.lang-ta textarea,
+body.lang-ta label,
+body.lang-ta span,
+body.lang-ta p,
+body.lang-ta th,
+body.lang-ta td,
+body.lang-ta b,
+body.lang-ta strong,
+body.lang-ta div {
+  font-family: 'Mukta Malar', 'Noto Sans Tamil', 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-weight: 800 !important;
+}
+
+/* Enlarge font sizes specifically for Tamil so text is clearly big and legible */
+/* Missing daily prices banner override: very small text */
+#billing-missing-prices-text,
+#billing-missing-prices-text *,
+body.lang-ta #billing-missing-prices-text,
+body.lang-ta #billing-missing-prices-text * {
+  font-size: 0.675rem !important;
+  line-height: 1.25 !important;
+  font-weight: 700 !important;
+}
+
+body.lang-ta .text-\[9px\],
+body.lang-ta .text-\[9\.5px\],
+body.lang-ta .text-\[10px\],
+body.lang-ta .text-\[10\.5px\] {
+  font-size: 0.8rem !important;
+  font-weight: 800 !important;
+  line-height: 1.3 !important;
+}
+
+body.lang-ta .text-xs,
+body.lang-ta .text-\[11px\],
+body.lang-ta .text-\[11\.5px\] {
+  font-size: 0.88rem !important;
+  font-weight: 800 !important;
+  line-height: 1.35 !important;
+}
+
+body.lang-ta .text-sm,
+body.lang-ta .text-\[13px\] {
+  font-size: 1.02rem !important;
+  font-weight: 800 !important;
+  line-height: 1.4 !important;
+}
+
+body.lang-ta .text-base {
+  font-size: 1.15rem !important;
+  font-weight: 850 !important;
+}
+
+body.lang-ta .text-lg {
+  font-size: 1.3rem !important;
+  font-weight: 900 !important;
+}
+
+body.lang-ta .text-xl {
+  font-size: 1.45rem !important;
+  font-weight: 900 !important;
+}
+
+body.lang-ta .text-2xl {
+  font-size: 1.75rem !important;
+  font-weight: 900 !important;
+}
+
+body.lang-ta .text-3xl {
+  font-size: 2.1rem !important;
+  font-weight: 900 !important;
+}
+
+/* =========================================================
+   COMPACT DIV SIZES ACROSS FULL APP
+   ========================================================= */
+/* Tighten wholesale & general page containers */
+#page-billing,
+#page-daily-price,
+#page-register,
+#page-total,
+#page-hotel {
+  padding-left: 0.5rem !important;
+  padding-right: 0.5rem !important;
+  padding-top: 0.25rem !important;
+  padding-bottom: 2.5rem !important;
+}
+
+/* Make card containers and panels small and compact */
+#mobile-app-container div.bg-white:not(#printable-thermal-receipt):not(#printable-thermal-receipt *),
+#mobile-app-container div.rounded-xl:not(#printable-thermal-receipt):not(#printable-thermal-receipt *) {
+  padding: 0.45rem 0.6rem !important;
+  margin-bottom: 0.35rem !important;
+}
+
+/* Compact billing item cards */
+[id^="billing-card-"] {
+  padding: 0.35rem 0.5rem !important;
+  gap: 0.25rem !important;
+  margin-bottom: 0.35rem !important;
+}
+
+/* Compact inputs inside cards */
+[id^="billing-card-"] input {
+  min-height: 2.15rem !important;
+  height: 2.15rem !important;
+  padding: 0.2rem 0.35rem !important;
+}
+
+[id^="billing-card-"] button {
+  min-height: 2rem !important;
+  height: 2rem !important;
+  padding: 0.15rem 0.4rem !important;
+}
+
+/* Compact product rows in Daily Price */
+[id^="product-card-"] {
+  min-height: 2.4rem !important;
+  padding: 0.35rem 0.55rem !important;
+  margin-bottom: 0.35rem !important;
+}
+
+/* Compact header padding */
+#app-main-header {
+  padding-top: 0.35rem !important;
+  padding-bottom: 0.35rem !important;
+}
+
+/* Compact bottom navigation bar */
+#bottom-navigation-bar {
+  padding-top: 0.25rem !important;
+  padding-bottom: 0.25rem !important;
+}
+
+/* Compact list spacing */
+.space-y-2 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 0.35rem !important;
+}
+
+.space-y-3 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 0.5rem !important;
 }
 
 @layer utilities {

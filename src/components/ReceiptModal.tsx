@@ -329,15 +329,15 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const englishPhone = settings.phoneNumber || '8680000003';
   const englishGst = settings.gstNumber || '34AQPN8846J2ZF';
 
-  // Customer / Hotel Name and Bill Meta
-  const displayHotelName = resolveHotelDisplayName(bill.hotelName, bill.hotelId, hotels, billLang);
-  const billDateStr = formatDisplayDate(bill.date, billLang);
-  const billTimeStr = formatDisplayTime(bill.createdAt, billLang);
+  // Customer / Hotel Name and Bill Meta (in English as requested)
+  const displayHotelName = resolveHotelDisplayName(bill.hotelName, bill.hotelId, hotels, 'en');
+  const billDateStr = formatDisplayDate(bill.date, 'en');
+  const billTimeStr = formatDisplayTime(bill.createdAt, 'en');
   const billAmountInt = Math.round(bill.totalAmount);
   const prevBalanceInt = Math.round(hotelBal);
   const hasPrevBalance = prevBalanceInt !== 0;
   const netTotalInt = billAmountInt + prevBalanceInt;
-  const currPrefix = isTamil ? 'ரூ.' : 'Rs.';
+  const currPrefix = 'Rs.';
 
   return (
     <div
@@ -413,135 +413,114 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
         <div className="p-2.5 sm:p-4 overflow-y-auto overflow-x-auto flex-1 bg-slate-100 flex justify-center items-start">
           <div
             id="printable-thermal-receipt"
-            className="bg-white p-2.5 sm:p-3.5 rounded-xl border-2 border-slate-900 text-slate-900 font-sans w-full max-w-[420px] min-w-[335px] mx-auto shadow-sm"
+            className="bg-white p-2.5 sm:p-3.5 text-slate-900 font-sans w-full max-w-[420px] min-w-[335px] mx-auto"
           >
             {/* STORE IDENTITY: Always in English itself */}
             <div className="text-center">
               <h2 className="text-base sm:text-lg font-black uppercase text-slate-950 tracking-wide font-sans leading-tight">
                 {englishShopName}
               </h2>
-              <div className="text-[10px] sm:text-[10.5px] font-bold text-slate-700 uppercase tracking-tight mt-0.5 leading-snug">
+              <div className="text-xs sm:text-[11px] font-black text-slate-900 uppercase tracking-tight mt-0.5 leading-snug">
                 {englishAddress}
               </div>
-              <div className="text-[10px] sm:text-[11px] font-black text-slate-900 mt-0.5 tracking-tight">
+              <div className="text-xs font-black text-slate-950 mt-0.5 tracking-tight">
                 Phone: {englishPhone} &nbsp;|&nbsp; GSTIN: {englishGst}
               </div>
             </div>
 
             {/* Thin Divider Line */}
-            <hr className="border-t border-slate-300 my-1.5" />
+            <hr className="border-t-2 border-slate-950 my-1.5" />
 
-            {/* HOTEL / CUSTOMER META BOX */}
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-2 grid grid-cols-2 gap-1.5 text-left">
-              {/* Left: Customer Info */}
-              <div className="min-w-0 pr-1">
-                <span className="text-[9px] sm:text-[9.5px] font-extrabold uppercase tracking-wider text-slate-500 block">
-                  {isTamil ? 'ஹோட்டல் / வாடிக்கையாளர்:' : 'HOTEL / CUSTOMER:'}
-                </span>
-                <h3 className="text-xs sm:text-sm font-black text-slate-950 break-words mt-0.5 leading-tight">
-                  {displayHotelName}
-                </h3>
-                {hotelPhone ? (
-                  <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
-                    <span className="inline-flex items-center gap-1 text-[10.5px] sm:text-xs font-black text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200">
-                      <Phone className="w-3 h-3 text-emerald-600 shrink-0" />
-                      <span>Ph: {hotelPhone}</span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPhoneInput(hotelPhone);
-                        setPhoneError(null);
-                        setShowPhonePrompt(true);
-                      }}
-                      className="text-[10px] text-emerald-700 underline font-bold hover:text-emerald-900 cursor-pointer"
-                    >
-                      {isTamil ? 'மாற்ற' : 'Change'}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="mt-0.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPhoneInput('');
-                        setPhoneError(null);
-                        setShowPhonePrompt(true);
-                      }}
-                      className="inline-flex items-center gap-1 text-[9.5px] sm:text-[10.5px] font-black text-amber-900 bg-amber-50 hover:bg-amber-100 active:bg-amber-200 px-1.5 py-0.5 rounded-md border border-amber-300 transition-colors cursor-pointer"
-                    >
-                      <Phone className="w-3 h-3 text-amber-700 shrink-0" />
-                      <span>{isTamil ? '+ போன் எண் சேர்க்க' : '+ Add Hotel Phone'}</span>
-                    </button>
-                  </div>
-                )}
-                {/* Previous Balance indicator in the front */}
-                {hasPrevBalance && (
-                  <div className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-50 border border-rose-200 text-rose-800 font-bold text-[10px] sm:text-[10.5px]">
-                    <span className="text-slate-600">{isTamil ? 'பழைய பாக்கி:' : 'Old Bal:'}</span>
-                    <span className="font-black font-mono text-rose-700">{currPrefix} {prevBalanceInt.toLocaleString('en-IN')}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Right: Bill No, Date, Time */}
-              <div className="text-right flex flex-col justify-between pl-1">
-                <div>
-                  <div className="text-xs sm:text-sm font-black text-slate-950 whitespace-nowrap">
-                    <span className="font-extrabold">{isTamil ? 'பில் எண்' : 'Bill No'}:</span> #{bill.billNumber}
-                  </div>
-                  <div className="text-[10px] sm:text-[10.5px] font-bold text-slate-600 mt-0.5 whitespace-nowrap">
-                    <span className="text-slate-500">{isTamil ? 'தேதி' : 'Date'}:</span> {billDateStr}
-                  </div>
-                  {billTimeStr && (
-                    <div className="text-[9.5px] sm:text-[10px] font-bold text-slate-500 mt-0.5 whitespace-nowrap">
-                      <span className="text-slate-400">{isTamil ? 'நேரம்' : 'Time'}:</span> {billTimeStr}
+            {/* HOTEL / CUSTOMER META (Crisp bold text, dark borders) */}
+            <div className="bg-white py-1.5 px-0.5 border-t-2 border-b-2 border-slate-950 text-left">
+              <div className="grid grid-cols-2 gap-1.5">
+                {/* Left: Customer Info */}
+                <div className="min-w-0 pr-1">
+                  <span className="text-[10px] sm:text-[10.5px] font-black uppercase tracking-wider text-slate-900 block">
+                    HOTEL / CUSTOMER:
+                  </span>
+                  <h3 className="text-sm sm:text-base font-black text-slate-950 break-words mt-0.5 leading-tight">
+                    {displayHotelName}
+                  </h3>
+                  {hotelPhone && (
+                    <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
+                      <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-black text-emerald-950 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-300">
+                        <Phone className="w-3 h-3 text-emerald-700 shrink-0 stroke-[2.5]" />
+                        <span>Ph: {hotelPhone}</span>
+                      </span>
                     </div>
                   )}
                 </div>
+
+                {/* Right: Bill No, Date, Time */}
+                <div className="text-right flex flex-col justify-start pl-1">
+                  <div>
+                    <div className="text-xs sm:text-sm font-black text-slate-950 whitespace-nowrap">
+                      <span className="font-black">Bill No:</span> #{bill.billNumber}
+                    </div>
+                    <div className="text-[10.5px] sm:text-[11px] font-black text-slate-900 mt-0.5 whitespace-nowrap">
+                      <span className="text-slate-800">Date:</span> {billDateStr}
+                    </div>
+                    {billTimeStr && (
+                      <div className="text-[10px] sm:text-[10.5px] font-black text-slate-800 mt-0.5 whitespace-nowrap">
+                        <span className="text-slate-700">Time:</span> {billTimeStr}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
+
+              {/* TOP OLD BALANCE: Big & Prominent */}
+              {hasPrevBalance && (
+                <div className="mt-2 pt-1.5 pb-1 px-2.5 rounded-lg bg-rose-50 border-2 border-rose-600 flex items-center justify-between">
+                  <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-rose-950">
+                    OLD BALANCE:
+                  </span>
+                  <span className="text-2xl sm:text-3xl font-black font-mono text-rose-700 tracking-tight">
+                    Rs. {prevBalanceInt.toLocaleString('en-IN')}
+                  </span>
+                </div>
+              )}
             </div>
 
-            {/* ITEMS TABLE */}
-            <div className="border border-slate-200 rounded-lg overflow-hidden mt-1.5">
-              <table className="w-full text-left border-collapse table-fixed">
+            {/* ITEMS TABLE - Clear Visible Table with Dark Black Borders and Bold Text */}
+            <div className="mt-1.5">
+              <table className="w-full text-left border-collapse table-fixed border-2 border-slate-950">
                 <thead>
-                  <tr className="bg-[#0f172a] text-white text-[9px] sm:text-[9.5px] font-black uppercase tracking-wider">
-                    <th className="py-1 px-1 text-center w-[8%] border-r border-slate-700">#</th>
-                    <th className="py-1 px-1.5 text-left w-[38%] border-r border-slate-700">
-                      {isTamil ? 'பொருள் பெயர்' : 'ITEM NAME'}
+                  <tr className="bg-slate-100 text-slate-950 text-[10px] sm:text-[10.5px] font-black uppercase tracking-wider border-b-2 border-slate-950">
+                    <th className="py-1 px-1 text-center w-[7%] border border-slate-950 font-black">#</th>
+                    <th className="py-1 px-1.5 text-left w-[33%] border border-slate-950 font-black">
+                      ITEM NAME
                     </th>
-                    <th className="py-1 px-1 text-center w-[20%] border-r border-slate-700">
-                      {isTamil ? 'எடை (கிலோ)' : 'WEIGHT (KG)'}
+                    <th className="py-1 px-1 text-center w-[18%] border border-slate-950 font-black">
+                      WEIGHT (KG)
                     </th>
-                    <th className="py-1 px-1 text-right w-[17%] border-r border-slate-700">
-                      <span className="block leading-tight">{isTamil ? 'விலை (ரூ)' : 'RATE (RS)'}</span>
+                    <th className="py-1 px-1 text-right w-[18%] border border-slate-950 font-black">
+                      <span className="block leading-tight">RATE (RS)</span>
                     </th>
-                    <th className="py-1 px-1.5 text-right w-[17%]">
-                      <span className="block leading-tight">{isTamil ? 'தொகை (ரூ)' : 'AMOUNT (RS)'}</span>
+                    <th className="py-1 px-1.5 text-right w-[24%] border border-slate-950 font-black">
+                      <span className="block leading-tight">AMOUNT (RS)</span>
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 text-xs">
+                <tbody className="text-xs">
                   {bill.items.map((item, idx) => {
-                    const prodName = resolveItemDisplayName(item, products, billLang);
+                    const prodName = resolveItemDisplayName(item, products, 'ta');
                     return (
-                      <tr key={idx} className={idx % 2 === 1 ? 'bg-slate-50/70' : 'bg-white'}>
-                        <td className="py-0.5 px-1 text-center font-bold text-slate-700 border-r border-slate-200">
+                      <tr key={idx} className="bg-white">
+                        <td className="py-1 px-1 text-center font-black text-slate-950 border border-slate-950 text-xs sm:text-sm">
                           {idx + 1}
                         </td>
-                        <td className="py-0.5 px-1.5 font-black text-slate-900 border-r border-slate-200 break-words leading-tight">
+                        <td className="py-1 px-1.5 font-black text-slate-950 border border-slate-950 break-words leading-tight text-xs sm:text-sm">
                           {prodName}
                         </td>
-                        <td className="py-0.5 px-1 text-center font-bold text-slate-800 border-r border-slate-200 font-mono whitespace-nowrap text-[11px] sm:text-xs">
+                        <td className="py-1 px-1 text-center font-black text-slate-950 border border-slate-950 font-mono whitespace-nowrap text-sm sm:text-base">
                           {item.kg.toFixed(2)}
                         </td>
-                        <td className="py-0.5 px-1 text-right font-bold text-slate-700 border-r border-slate-200 font-mono text-[10.5px] sm:text-[11px]">
-                          <span className="text-[9px] text-slate-500 mr-0.5">{currPrefix}</span>
+                        <td className="py-1 px-1 text-right font-black text-slate-950 border border-slate-950 font-mono text-sm sm:text-base">
                           {Math.round(item.pricePerKg)}
                         </td>
-                        <td className="py-0.5 px-1.5 text-right font-black text-slate-950 font-mono text-xs sm:text-sm whitespace-nowrap">
-                          <span className="text-[9px] text-slate-500 mr-0.5">{currPrefix}</span>
+                        <td className="py-1 px-1.5 text-right font-black text-slate-950 border border-slate-950 font-mono text-base sm:text-lg whitespace-nowrap">
                           {Math.round(item.amount).toLocaleString('en-IN')}
                         </td>
                       </tr>
@@ -551,45 +530,35 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               </table>
             </div>
 
-            {/* TOTAL WEIGHT & BILL AMOUNT SUMMARY (Compact, with Previous Balance added if present) */}
-            <div className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-0.5 mt-1 divide-y divide-slate-200 text-xs">
-              <div className="flex items-center justify-between py-1">
-                <span className="font-bold text-slate-800 uppercase tracking-wide text-[11px] sm:text-xs">
-                  {isTamil ? 'மொத்த எடை:' : 'TOTAL WEIGHT:'}
+            {/* BILL AMOUNT & PREVIOUS BALANCE SUMMARY (White Background, No Box, Big Amounts & Bold) */}
+            <div className="bg-white px-1 py-1 mt-1 divide-y divide-slate-300 text-xs">
+              <div className="flex items-center justify-between py-1.5">
+                <span className="font-black text-slate-950 tracking-wide text-xs sm:text-sm">
+                  Current Bill Amount:
                 </span>
-                <span className="font-black text-slate-950 font-mono text-xs sm:text-sm">
-                  {bill.totalKg.toFixed(2)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between py-1">
-                <span className="font-bold text-slate-800 tracking-wide text-[11px] sm:text-xs">
-                  {isTamil ? 'பில் தொகை:' : 'Current Bill Amount:'}
-                </span>
-                <span className="font-black text-slate-950 font-mono text-xs sm:text-sm">
-                  {currPrefix} {billAmountInt.toLocaleString('en-IN')}
+                <span className="font-black text-slate-950 font-mono text-base sm:text-lg">
+                  Rs. {billAmountInt.toLocaleString('en-IN')}
                 </span>
               </div>
               {hasPrevBalance && (
-                <div className="flex items-center justify-between py-1 text-rose-800">
-                  <span className="font-bold tracking-wide text-[11px] sm:text-xs">
-                    {isTamil ? 'பழைய பாக்கி:' : 'Previous Balance:'}
+                <div className="flex items-center justify-between py-1.5 text-rose-900">
+                  <span className="font-black tracking-wide text-xs sm:text-sm">
+                    Previous Balance:
                   </span>
-                  <span className="font-black font-mono text-xs sm:text-sm text-rose-700">
-                    {currPrefix} {prevBalanceInt.toLocaleString('en-IN')}
+                  <span className="font-black font-mono text-base sm:text-lg text-rose-800">
+                    Rs. {prevBalanceInt.toLocaleString('en-IN')}
                   </span>
                 </div>
               )}
             </div>
 
-            {/* GRAND TOTAL BANNER: BILL AMOUNT + PREVIOUS BALANCE (Compact, no extra gap) */}
-            <div className="bg-[#0f172a] text-white rounded-lg py-1.5 px-2 text-center mt-1 shadow-xs">
-              <span className="text-[9.5px] font-black tracking-widest uppercase text-slate-300 block leading-tight">
-                {hasPrevBalance
-                  ? (isTamil ? 'மொத்தம் செலுத்த வேண்டிய தொகை' : 'TOTAL PAYABLE DUE')
-                  : (isTamil ? 'மொத்தத் தொகை' : 'GRAND TOTAL')}
+            {/* GRAND TOTAL: Clean White Background with Crisp Double Dark Border, Extra Big Amount */}
+            <div className="bg-white py-2 px-2 text-center mt-1 border-t-2 border-b-2 border-slate-950">
+              <span className="text-xs font-black tracking-widest uppercase text-slate-900 block leading-tight">
+                {hasPrevBalance ? 'TOTAL PAYABLE DUE' : 'GRAND TOTAL'}
               </span>
-              <div className="text-xl sm:text-2xl font-black text-white font-mono mt-0.5 tracking-tight leading-tight">
-                {currPrefix} {netTotalInt.toLocaleString('en-IN')}/-
+              <div className="text-2xl sm:text-3xl font-black text-slate-950 font-mono mt-0.5 tracking-tight leading-tight">
+                Rs. {netTotalInt.toLocaleString('en-IN')}/-
               </div>
             </div>
           </div>
@@ -608,23 +577,23 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             >
               <Printer className="w-3.5 h-3.5 text-white shrink-0" />
               <span className="leading-normal break-words">
-                {language === 'ta' ? 'புளூடூத் பிரிண்ட்' : 'Bluetooth Print'}
+                Bluetooth Print
               </span>
             </button>
           </div>
 
           {/* Row 2: Digital Share Actions */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+          <div>
             <button
               id="btn-modal-whatsapp-share"
               type="button"
               onClick={handleWhatsAppShareClick}
               disabled={isProcessing}
-              className="min-h-[2.4rem] py-1.5 px-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:opacity-50 text-white rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-98 cursor-pointer touch-manipulation"
+              className="w-full min-h-[2.4rem] py-1.5 px-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:opacity-50 text-white rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-98 cursor-pointer touch-manipulation"
               title={
                 hotelPhone
-                  ? (language === 'ta' ? `வாட்ஸ்அப்பில் அனுப்பு (${hotelPhone})` : `Share WhatsApp PDF to ${hotelPhone}`)
-                  : (language === 'ta' ? 'வாட்ஸ்அப் எண் கேட்கப்பட்டு சேமிக்கப்படும்' : 'Ask hotel phone & send WhatsApp PDF')
+                  ? `Share WhatsApp PDF to ${hotelPhone}`
+                  : 'Ask hotel phone & send WhatsApp PDF'
               }
             >
               <MessageCircle className="w-3.5 h-3.5 fill-white shrink-0" />
@@ -632,38 +601,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 {hotelPhone ? `WhatsApp PDF (${hotelPhone})` : 'WhatsApp PDF'}
               </span>
             </button>
-
-            <button
-              id="btn-modal-download-pdf"
-              type="button"
-              onClick={handleDownloadPdf}
-              disabled={isProcessing}
-              className="min-h-[2.4rem] py-1.5 px-2.5 bg-slate-800 hover:bg-slate-900 active:bg-slate-950 disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-98 cursor-pointer touch-manipulation"
-            >
-              <Download className="w-3.5 h-3.5 shrink-0" />
-              <span className="leading-normal">Download PDF</span>
-            </button>
           </div>
-
-          {/* Confirm Save for Draft */}
-          {isDraft && onConfirmSave && (
-            <button
-              id="btn-confirm-save-draft-bill"
-              type="button"
-              onClick={() => {
-                onConfirmSave();
-                onClose();
-              }}
-              className="w-full min-h-[2.4rem] py-1.5 px-2.5 bg-emerald-800 hover:bg-emerald-900 active:bg-emerald-950 text-white rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-2xs transition-all cursor-pointer touch-manipulation"
-            >
-              <Check className="w-3.5 h-3.5 shrink-0" />
-              <span className="leading-normal break-words">
-                {language === 'ta'
-                  ? 'பில் உறுதிப்படுத்தி சேமிக்க'
-                  : 'Confirm & Save to Register'}
-              </span>
-            </button>
-          )}
         </div>
       </div>
 
@@ -676,7 +614,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-emerald-200" />
                 <span className="text-xs sm:text-sm font-black">
-                  {billLang === 'ta' ? 'ஹோட்டல் வாட்ஸ்அப் எண்' : 'Hotel WhatsApp Number'}
+                  Hotel WhatsApp Number
                 </span>
               </div>
               <button
@@ -695,22 +633,20 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             <div className="p-3.5 space-y-3 text-left">
               <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-2.5">
                 <span className="text-[10px] font-bold text-slate-500 uppercase block tracking-wider">
-                  {billLang === 'ta' ? 'வாடிக்கையாளர் / ஹோட்டல்:' : 'Customer / Hotel:'}
+                  Customer / Hotel:
                 </span>
                 <span className="text-sm font-black text-slate-900 block mt-0.5">
                   {displayHotelName}
                 </span>
                 <span className="text-[11px] text-emerald-900 font-semibold block mt-1 leading-snug">
-                  {billLang === 'ta'
-                    ? 'இந்த எண் முதலீட்டு அமைப்புகளில் (Settings) சேமிக்கப்பட்டு எதிர்கால பில்களுக்குப் பயன்படுத்தப்படும்.'
-                    : 'This number will be saved in Investment Settings and used for all future bills & statements.'}
+                  This number will be saved in Investment Settings and used for all future bills & statements.
                 </span>
               </div>
 
               {/* Phone Input with +91 Prefix */}
               <div className="space-y-1">
                 <label className="text-[11px] font-black text-slate-700 block">
-                  {billLang === 'ta' ? 'மொபைல் / வாட்ஸ்அப் எண் (10 இலக்கங்கள்):' : 'Mobile / WhatsApp Number (10 digits):'}
+                  Mobile / WhatsApp Number (10 digits):
                 </label>
                 <div className="flex items-center border-2 border-slate-300 focus-within:border-emerald-600 rounded-xl overflow-hidden shadow-2xs">
                   <span className="bg-slate-100 text-slate-700 text-xs font-black px-2.5 py-2 border-r border-slate-300 select-none font-mono">
@@ -752,9 +688,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 >
                   <MessageCircle className="w-4 h-4 fill-white shrink-0" />
                   <span>
-                    {billLang === 'ta'
-                      ? 'சேமித்து வாட்ஸ்அப்பில் அனுப்பு'
-                      : 'Save & Send WhatsApp Bill'}
+                    Save & Send WhatsApp Bill
                   </span>
                 </button>
 
@@ -764,7 +698,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                     onClick={() => handleSavePhoneAndShare(true)}
                     className="flex-1 py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[11px] font-bold transition-all cursor-pointer text-center"
                   >
-                    {billLang === 'ta' ? 'எண் இல்லாமல் திற' : 'Open Without Saving'}
+                    Open Without Saving
                   </button>
                   <button
                     type="button"
@@ -774,7 +708,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                     }}
                     className="py-1.5 px-3 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl text-[11px] font-bold transition-all cursor-pointer"
                   >
-                    {billLang === 'ta' ? 'ரத்து' : 'Cancel'}
+                    Cancel
                   </button>
                 </div>
               </div>

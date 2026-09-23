@@ -173,24 +173,62 @@ export function getShopDisplayAddress(settings: ShopSettings, lang: LanguageCode
   return settings.address || 'NO 6, PONDY MAIN ROAD, SULTHANPET, VILLIANUR, PUDUCHERRY - 605 110';
 }
 
-// Helper function to resolve item name to the current active bill language
+// Helper function to resolve item name: ALWAYS returns Tamil name as mandated
 export function resolveItemDisplayName(
   item: { productId?: string; productName: string },
   products: ProductItem[] = [],
-  lang: LanguageCode
+  _lang?: LanguageCode
 ): string {
   // 1. Try finding by productId in loaded products
   if (item.productId) {
     const p = products.find((x) => x.id === item.productId);
-    if (p) return getProductName(p, lang);
+    if (p && p.nameTa) return p.nameTa;
+    if (p) return getProductName(p, 'ta');
     const def = DEFAULT_PRODUCTS.find((x) => x.id === item.productId);
-    if (def) return getProductName(def, lang);
+    if (def && def.nameTa) return def.nameTa;
+    if (def) return getProductName(def, 'ta');
   }
 
-  // 2. Try special cases like gravy piece
+  // 2. Try special cases like gravy piece, egg, etc.
   const cleanName = item.productName?.trim().toLowerCase() || '';
   if (cleanName === 'gravy piece' || cleanName === 'கிரேவி பீஸ்') {
-    return lang === 'ta' ? 'கிரேவி பீஸ்' : 'Gravy piece';
+    return 'கிரேவி பீஸ்';
+  }
+  if (cleanName === 'biriyani piece' || cleanName === 'biryani piece' || cleanName === 'பிரியாணி பீஸ்') {
+    return 'பிரியாணி பீஸ்';
+  }
+  if (cleanName === '65 piece' || cleanName === '65 பீஸ்' || cleanName === 'chicken 65') {
+    return '65 பீஸ்';
+  }
+  if (cleanName === 'boneless' || cleanName === 'போன்லெஸ்' || (cleanName.includes('boneless') && !cleanName.includes('leg'))) {
+    return 'போன்லெஸ் (எலும்பில்லா)';
+  }
+  if (cleanName === 'leg boneless' || cleanName === 'லெக் போன்லெஸ்') {
+    return 'லெக் போன்லெஸ்';
+  }
+  if (cleanName === 'leg skinless chicken' || cleanName === 'லெக் தோலில்லா சிக்கன்') {
+    return 'லெக் தோலில்லா சிக்கன்';
+  }
+  if (cleanName === 'wings' || cleanName === 'விங்ஸ்' || cleanName.includes('wings')) {
+    return 'விங்ஸ் (இறக்கை)';
+  }
+  if (cleanName === 'liver' || cleanName === 'ஈரல்') {
+    return 'ஈரல்';
+  }
+  if (cleanName === 'skin chicken' || cleanName === 'chicken (with skin)' || cleanName === 'with skin' || cleanName.includes('skin chicken')) {
+    return 'தோலுடன் சிக்கன்';
+  }
+  if (cleanName === 'skinless chicken' || cleanName === 'chicken skinless' || cleanName.includes('skinless')) {
+    return 'தோல் நீக்கிய சிக்கன்';
+  }
+  if (cleanName === 'bone' || cleanName === 'எலும்பு' || cleanName.includes('soup bone')) {
+    return 'எலும்பு (சூப் போன்)';
+  }
+  if (cleanName === 'fry piece' || cleanName === 'ஃப்ரை பீஸ்') {
+    return 'ஃப்ரை பீஸ்';
+  }
+  if (cleanName === 'egg' || cleanName === 'முட்டை' || cleanName === 'muttai') {
+    return 'முட்டை';
   }
 
   // 3. Try matching productName across defaults
@@ -200,8 +238,8 @@ export function resolveItemDisplayName(
       x.nameEn?.trim().toLowerCase() === cleanName ||
       x.nameTa?.trim().toLowerCase() === cleanName
   );
-  if (matched) {
-    return getProductName(matched, lang);
+  if (matched && matched.nameTa) {
+    return matched.nameTa;
   }
 
   return item.productName;

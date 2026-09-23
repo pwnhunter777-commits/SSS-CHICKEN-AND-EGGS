@@ -3,11 +3,10 @@ import { InvestmentDayData, SummarySubTab } from '../types';
 import { TotalPage as WholesaleTotalView } from '../../components/TotalPage';
 import { TotalPage as RetailTotalView } from '../../retail/pages/TotalPage';
 import { HotelGiveDuesView } from '../components/HotelGiveDuesView';
-import { DailyHistoryLedgerView } from '../components/DailyHistoryLedgerView';
 import { loadBills as loadWholesaleBills, loadProducts as loadWholesaleProducts } from '../../utils/storage';
 import { fetchDailyBillsSummary, PreviousDayStock } from '../utils/storage';
 import { Bill, ProductItem, LanguageCode } from '../../types';
-import { PackageOpen, ArrowRight, Receipt } from 'lucide-react';
+import { PackageOpen, ArrowRight } from 'lucide-react';
 
 interface StockRemainingPageProps {
   data: InvestmentDayData;
@@ -85,27 +84,9 @@ export const StockRemainingPage: React.FC<StockRemainingPageProps> = ({
   // Total shop sale kg (wholesale kg + retail kg)
   const totalShopSaleKg = Math.round((wholesaleKg + retailKg) * 1000) / 1000;
 
-  // Current Expenses entered
-  const currentExpenses = Number(data.sales?.expenses || 0);
-
-  // Total shop profit: ((wholesale amount + retail amount + egg amount) - load spend - expenses)
+  // Total shop profit: ((wholesale amount + retail amount + egg amount) - load spend)
   const totalCollectedAmount = wholesaleAmount + retailAmount + eggAmount;
-  const grossProfit = Math.round((totalCollectedAmount - loadCostSpend) * 100) / 100;
-  const totalShopProfit = Math.round((grossProfit - currentExpenses) * 100) / 100;
-
-  // Update expenses handler
-  const handleUpdateExpenses = (amt: number, note?: string) => {
-    if (!onChangeData) return;
-    const valid = typeof amt === 'number' && !isNaN(amt) ? Math.max(0, amt) : 0;
-    onChangeData({
-      ...data,
-      sales: {
-        ...data.sales,
-        expenses: valid,
-        expenseNotes: note !== undefined ? note : data.sales.expenseNotes,
-      },
-    });
-  };
+  const totalShopProfit = Math.round((totalCollectedAmount - loadCostSpend) * 100) / 100;
 
   // Chicken Stock remaining (Total Available KG minus Sold KG)
   const chickenStockRemaining = Math.round((totalAvailableChickenKg - totalShopSaleKg) * 1000) / 1000;
@@ -117,8 +98,8 @@ export const StockRemainingPage: React.FC<StockRemainingPageProps> = ({
 
   return (
     <div className="flex flex-col flex-1 w-full max-w-md mx-auto px-4 py-3 select-none">
-      {/* Top 5 Sub-Tabs */}
-      <div className="grid grid-cols-5 gap-1 rounded-2xl bg-emerald-100/70 p-1 mb-5 border border-emerald-200/80 shadow-xs">
+      {/* Top 4 Sub-Tabs */}
+      <div className="grid grid-cols-4 gap-1 rounded-2xl bg-emerald-100/70 p-1 mb-5 border border-emerald-200/80 shadow-xs">
         {/* Main Stock remaining / Summary */}
         <button
           type="button"
@@ -173,20 +154,6 @@ export const StockRemainingPage: React.FC<StockRemainingPageProps> = ({
           }`}
         >
           <span className="truncate">{language === 'ta' ? 'Give' : 'Give'}</span>
-        </button>
-
-        {/* Daily Ledger / Day by Day (After Give) */}
-        <button
-          type="button"
-          id="btn-subtab-daily-history"
-          onClick={() => setSubTab('daily-history')}
-          className={`py-2 px-0.5 rounded-xl font-bold text-[11px] sm:text-xs transition-all flex items-center justify-center cursor-pointer ${
-            subTab === 'daily-history'
-              ? 'bg-emerald-700 text-white shadow-sm shadow-emerald-700/30 ring-2 ring-emerald-500/20'
-              : 'text-emerald-950 hover:bg-emerald-200/60'
-          }`}
-        >
-          <span className="truncate">{language === 'ta' ? 'தினசரி' : 'Daily'}</span>
         </button>
       </div>
 
@@ -302,100 +269,12 @@ export const StockRemainingPage: React.FC<StockRemainingPageProps> = ({
             </div>
           </div>
 
-          {/* Row 3: Daily Expenses Section (செலவுகள்) */}
-          <div className="p-3.5 rounded-3xl bg-rose-50/60 border-2 border-rose-200/90 shadow-2xs space-y-2.5">
-            <div className="flex items-center justify-between px-1">
-              <div className="flex items-center gap-1.5">
-                <Receipt size={16} className="text-rose-600" />
-                <span className="text-xs font-black text-rose-950">
-                  {language === 'ta' ? 'தினசரி கடை செலவுகள் (Expenses)' : 'Daily Expenses'}
-                </span>
-              </div>
-              {currentExpenses > 0 && (
-                <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300">
-                  - ₹{currentExpenses.toLocaleString('en-IN')}
-                </span>
-              )}
-            </div>
-
-            {onChangeData ? (
-              <div className="bg-white rounded-2xl p-3 border border-rose-200 shadow-2xs space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-black text-neutral-400">₹</span>
-                    <input
-                      id="stock-expenses-input"
-                      type="number"
-                      inputMode="numeric"
-                      value={currentExpenses === 0 ? '' : currentExpenses}
-                      onChange={(e) => handleUpdateExpenses(parseFloat(e.target.value) || 0)}
-                      placeholder="0"
-                      className="w-full pl-7 pr-3 py-1.5 bg-neutral-50 rounded-xl border border-neutral-300 focus:border-rose-500 focus:bg-white text-base font-black text-neutral-900 focus:outline-none transition-all"
-                    />
-                  </div>
-                  {currentExpenses > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => handleUpdateExpenses(0, '')}
-                      className="px-2.5 py-1.5 text-xs font-bold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 rounded-xl border border-rose-200 transition-all cursor-pointer"
-                    >
-                      {language === 'ta' ? 'அழி' : 'Clear'}
-                    </button>
-                  )}
-                </div>
-
-                {/* Quick Presets */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
-                  {[50, 100, 200, 500, 1000].map((amt) => (
-                    <button
-                      key={amt}
-                      type="button"
-                      onClick={() => handleUpdateExpenses(currentExpenses + amt)}
-                      className="px-2 py-1 bg-neutral-100 hover:bg-rose-100 active:bg-rose-200 text-neutral-700 hover:text-rose-900 rounded-lg text-[11px] font-bold transition-all border border-neutral-200 shrink-0 cursor-pointer"
-                    >
-                      +₹{amt}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Optional note */}
-                <input
-                  type="text"
-                  value={data.sales?.expenseNotes || ''}
-                  onChange={(e) => handleUpdateExpenses(currentExpenses, e.target.value)}
-                  placeholder={language === 'ta' ? 'செலவு குறிப்பு (டீசல், வாடகை, டீ...)' : 'Expense note (diesel, tea, rent...)'}
-                  className="w-full px-2.5 py-1 text-xs bg-neutral-50 rounded-lg border border-neutral-200 focus:border-rose-400 focus:bg-white text-neutral-800 focus:outline-none placeholder:text-neutral-400"
-                />
-
-                <p className="text-[10px] text-neutral-500 font-medium">
-                  {language === 'ta'
-                    ? 'ℹ️ இந்த செலவு தொகை லாபத்திலிருந்து கழிக்கப்படும்.'
-                    : 'ℹ️ Deducted automatically from total profit.'}
-                </p>
-              </div>
-            ) : (
-              <div className="bg-white rounded-2xl p-3 border border-rose-200 flex items-center justify-between">
-                <span className="text-xs text-neutral-600 font-bold">
-                  {language === 'ta' ? 'மொத்த செலவு:' : 'Total Expense:'}
-                </span>
-                <span className="text-lg font-black text-rose-700">
-                  ₹{currentExpenses.toLocaleString('en-IN')}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Row 4: Total Profit BIG (with expenses subtracted) */}
+          {/* Row 3: Total Profit BIG */}
           <div className="bg-white rounded-3xl p-5 sm:p-6 border-2 border-emerald-600 shadow-sm bg-emerald-50/40 relative overflow-hidden">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-black text-emerald-950 uppercase tracking-wide">
                 {language === 'ta' ? 'நிகர லாபம் (மொத்த லாபம்)' : 'Net Profit (Total Profit)'}
               </span>
-              {currentExpenses > 0 && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200">
-                  {language === 'ta' ? `செலவு: -₹${currentExpenses.toLocaleString('en-IN')}` : `Exp: -₹${currentExpenses.toLocaleString('en-IN')}`}
-                </span>
-              )}
             </div>
 
             <div className="my-2">
@@ -413,14 +292,6 @@ export const StockRemainingPage: React.FC<StockRemainingPageProps> = ({
               <span className="text-neutral-700 font-bold">
                 {language === 'ta' ? 'லோடு:' : 'Load:'} ₹{loadCostSpend.toLocaleString('en-IN')}
               </span>
-              {currentExpenses > 0 && (
-                <>
-                  <span>-</span>
-                  <span className="text-rose-700 font-bold">
-                    {language === 'ta' ? 'செலவு:' : 'Expenses:'} ₹{currentExpenses.toLocaleString('en-IN')}
-                  </span>
-                </>
-              )}
               <span>=</span>
               <span className={`font-black ${totalShopProfit >= 0 ? 'text-emerald-800' : 'text-rose-700'}`}>
                 ₹{totalShopProfit.toLocaleString('en-IN')}
@@ -464,17 +335,6 @@ export const StockRemainingPage: React.FC<StockRemainingPageProps> = ({
       {subTab === 'hotel-dues' && (
         <HotelGiveDuesView
           language={language}
-        />
-      )}
-
-      {/* VIEW E: Daily Ledger / Day by Day (Everyday Profit, Sales & Opening Stock) */}
-      {subTab === 'daily-history' && (
-        <DailyHistoryLedgerView
-          currentData={data}
-          onChangeData={onChangeData}
-          language={language}
-          previousStock={previousStock}
-          onNavigateToLoadInward={onNavigateToLoadInward}
         />
       )}
     </div>

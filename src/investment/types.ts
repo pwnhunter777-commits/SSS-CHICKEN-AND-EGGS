@@ -97,5 +97,5 @@ export interface DailyHistoryRecord {
   hasActivity: boolean;
 }
 
-export type InvestmentBottomTab = 'load' | 'sales' | 'summary' | 'settings';
+export type InvestmentBottomTab = 'load' | 'sales' | 'summary';
 export type SummarySubTab = 'summary' | 'wholesale-total' | 'retail-total' | 'hotel-dues' | 'daily-history'; // 17, 21, 22, 26, 27

@@ -189,6 +189,16 @@ export default function App() {
     }
   }, [isBold]);
 
+  // Sync language attribute and class on document
+  useEffect(() => {
+    document.documentElement.lang = language;
+    if (language === 'ta') {
+      document.body.classList.add('lang-ta');
+    } else {
+      document.body.classList.remove('lang-ta');
+    }
+  }, [language]);
+
   // Sync font size scaling
   useEffect(() => {
     if (settings.fontSizeScale) {

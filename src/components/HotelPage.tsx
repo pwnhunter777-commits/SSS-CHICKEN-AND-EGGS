@@ -5,7 +5,6 @@ import {
   PlusCircle,
   IndianRupee,
   Calendar,
-  CreditCard,
   CheckCircle2,
   Trash2,
   Download,
@@ -197,11 +196,14 @@ export const HotelPage: React.FC<HotelPageProps> = ({
           amount: b.totalAmount,
           kg: b.totalKg,
         })),
-        recentPayments: hotelStats.hotelPayments.slice(0, 3).map((p) => ({
-          date: p.date,
-          amount: p.amount,
-          mode: p.paymentMode,
-        })),
+        recentPayments: hotelStats.hotelPayments
+          .filter((p) => p.type !== 'balance_add')
+          .slice(0, 3)
+          .map((p) => ({
+            date: p.date,
+            amount: p.amount,
+            mode: p.paymentMode || 'cash',
+          })),
       };
       const res = await shareHotelStatementAsPdfToWhatsApp(
         data,
@@ -324,16 +326,13 @@ export const HotelPage: React.FC<HotelPageProps> = ({
             className="w-full pl-3 pr-8 min-h-[2.4rem] py-1.5 bg-emerald-50/50 hover:bg-emerald-50/80 border border-emerald-300 focus:border-emerald-600 focus:bg-white rounded-xl text-xs sm:text-sm font-black text-emerald-950 outline-none appearance-none transition-all cursor-pointer shadow-2xs leading-normal"
           >
             <option value="all">
-              {language === 'ta' ? 'அனைத்து ஹோட்டல் சுருக்கம் (Overview)' : 'All Hotels Overview Summary'}
+              {language === 'ta' ? 'அனைத்து ஹோட்டல் சுருக்கம்' : 'All Hotels Overview'}
             </option>
             {allHotelOptions.map((hotel) => {
-              const displayName = language === 'ta' ? hotel.nameTa : hotel.nameEn;
-              const secondaryName = language === 'ta' ? hotel.nameEn : hotel.nameTa;
-              const stat = allHotelsBalances.find((s) => s.hotel.key === hotel.key);
-              const balText = stat && stat.balance > 0 ? ` (Due: ₹${Math.round(stat.balance)})` : '';
+              const displayName = language === 'ta' ? (hotel.nameTa || hotel.nameEn) : (hotel.nameEn || hotel.nameTa);
               return (
                 <option key={hotel.key} value={hotel.key}>
-                  {displayName} {secondaryName !== displayName ? `(${secondaryName})` : ''} {balText}
+                  {displayName}
                 </option>
               );
             })}
@@ -372,39 +371,6 @@ export const HotelPage: React.FC<HotelPageProps> = ({
                 <h3 className="font-black text-xs sm:text-sm text-white tracking-wide break-words leading-tight">
                   {language === 'ta' ? currentSelectedHotel.nameTa : currentSelectedHotel.nameEn}
                 </h3>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  id="btn-quick-download-csv"
-                  type="button"
-                  onClick={() => {
-                    if (currentSelectedHotel) {
-                      exportHotelStatementToCSV(
-                        currentSelectedHotel.nameEn,
-                        hotelStats.hotelBills,
-                        hotelStats.hotelPayments,
-                        hotelStats.totalBilled,
-                        hotelStats.totalPaid,
-                        hotelStats.balance,
-                        hotelStats.totalBalAdded
-                      );
-                    }
-                  }}
-                  className="min-h-[2.2rem] min-w-[2.2rem] p-1.5 bg-white/20 hover:bg-white/30 active:bg-white/40 text-white rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-2xs border border-white/25 flex items-center justify-center touch-manipulation"
-                  title={language === 'ta' ? 'CSV அறிக்கை பதிவிறக்கு' : 'Download CSV Statement'}
-                >
-                  <Download className="w-3.5 h-3.5 text-white" />
-                </button>
-                <button
-                  id="btn-quick-share-hotel-balance"
-                  type="button"
-                  onClick={handleDirectWhatsAppShare}
-                  disabled={isSharingBalance}
-                  className="min-h-[2.2rem] min-w-[2.2rem] p-1.5 bg-white/20 hover:bg-white/30 active:bg-white/40 text-white rounded-lg text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-2xs border border-white/25 flex items-center justify-center touch-manipulation"
-                  title={language === 'ta' ? 'வாட்ஸ்அப் வழி பகிர்' : 'Quick WhatsApp Share'}
-                >
-                  <MessageCircle className="w-3.5 h-3.5 fill-white text-white" />
-                </button>
               </div>
             </div>
 
@@ -607,61 +573,22 @@ export const HotelPage: React.FC<HotelPageProps> = ({
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {entryMode === 'balance_add' && (
                     <div>
                       <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1 leading-none">
-                        <Calendar className={`w-3.5 h-3.5 ${entryMode === 'payment' ? 'text-emerald-700' : 'text-amber-600'}`} />
-                        <span>{entryMode === 'payment' ? t.paymentDate : language === 'ta' ? 'தேதி' : 'Date'}</span>
+                        <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                        <span>{language === 'ta' ? 'காரணம் / குறிப்பு' : 'Reason / Note'}</span>
                       </label>
                       <input
-                        id="input-pay-date"
-                        type="date"
-                        value={payDate}
-                        onChange={(e) => setPayDate(e.target.value)}
-                        className={`w-full min-h-[2.4rem] px-2.5 py-1.5 border rounded-xl text-xs font-bold text-gray-900 outline-none leading-normal ${
-                          entryMode === 'payment'
-                            ? 'bg-emerald-50/40 border-emerald-300 focus:border-emerald-600'
-                            : 'bg-amber-50/40 border-amber-300 focus:border-amber-600'
-                        }`}
+                        id="input-pay-notes"
+                        type="text"
+                        value={payNotes}
+                        onChange={(e) => setPayNotes(e.target.value)}
+                        placeholder={language === 'ta' ? 'முந்தைய பாக்கி, சரிக்கட்டல்' : 'e.g. Previous balance, adjustment'}
+                        className="w-full min-h-[2.4rem] px-2.5 py-1.5 bg-amber-50/40 border border-amber-300 focus:border-amber-600 rounded-xl text-xs font-bold text-gray-900 outline-none leading-normal"
                       />
                     </div>
-
-                    {entryMode === 'payment' ? (
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1 leading-none">
-                          <CreditCard className="w-3.5 h-3.5 text-emerald-700" />
-                          <span>{t.paymentMode}</span>
-                        </label>
-                        <select
-                          id="select-pay-mode"
-                          value={payMode}
-                          onChange={(e) => setPayMode(e.target.value as any)}
-                          className="w-full min-h-[2.4rem] px-2.5 py-1.5 bg-emerald-50/40 border border-emerald-300 focus:border-emerald-600 rounded-xl text-xs font-bold text-gray-900 outline-none cursor-pointer leading-normal"
-                        >
-                          <option value="cash">{t.cash}</option>
-                          <option value="upi">{t.upi}</option>
-                          <option value="bank">{t.bankTransfer}</option>
-                          <option value="cheque">{t.cheque}</option>
-                          <option value="other">{t.other}</option>
-                        </select>
-                      </div>
-                    ) : (
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center gap-1 leading-none">
-                          <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                          <span>{language === 'ta' ? 'காரணம் / குறிப்பு' : 'Reason / Note'}</span>
-                        </label>
-                        <input
-                          id="input-pay-notes"
-                          type="text"
-                          value={payNotes}
-                          onChange={(e) => setPayNotes(e.target.value)}
-                          placeholder={language === 'ta' ? 'முந்தைய பாக்கி, சரிக்கட்டல்' : 'e.g. Previous balance, adjustment'}
-                          className="w-full min-h-[2.4rem] px-2.5 py-1.5 bg-amber-50/40 border border-amber-300 focus:border-amber-600 rounded-xl text-xs font-bold text-gray-900 outline-none leading-normal"
-                        />
-                      </div>
-                    )}
-                  </div>
+                  )}
 
                   {entryMode === 'balance_add' && (
                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-2 text-xs text-amber-900 flex items-start gap-1.5 leading-normal break-words">

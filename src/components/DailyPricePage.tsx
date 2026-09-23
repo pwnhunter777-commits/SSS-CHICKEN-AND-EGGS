@@ -169,7 +169,7 @@ export const DailyPricePage: React.FC<DailyPricePageProps> = ({
       <div className="space-y-1.5">
         {products.map((product, index) => {
           const currentPrice = priceMap[product.id] ?? '';
-          const displayName = getProductName(product, language);
+          const displayName = product.nameTa || getProductName(product, 'ta');
           return (
             <div
               key={product.id}

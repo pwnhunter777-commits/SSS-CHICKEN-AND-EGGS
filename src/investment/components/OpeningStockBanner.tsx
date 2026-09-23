@@ -179,19 +179,19 @@ export const OpeningStockBanner: React.FC<OpeningStockBannerProps> = ({
   }
 
   return (
-    <div className="bg-gradient-to-r from-amber-50/90 via-emerald-50/80 to-amber-50/90 rounded-2xl p-2.5 sm:p-3 border border-amber-300/80 shadow-2xs mb-2.5 relative overflow-hidden animate-in fade-in slide-in-from-top-1">
+    <div className="bg-gradient-to-r from-amber-50/90 via-emerald-50/80 to-amber-50/90 rounded-xl p-2 sm:p-2.5 border border-amber-300/80 shadow-2xs mb-2 relative overflow-hidden animate-in fade-in slide-in-from-top-1 text-xs">
       {/* Top Header Row */}
-      <div className="flex items-center justify-between gap-1.5 mb-1.5 pb-1.5 border-b border-amber-200/70">
+      <div className="flex items-center justify-between gap-1 mb-1 pb-1 border-b border-amber-200/70">
         <div className="flex items-center gap-1.5 min-w-0">
-          <div className="w-5 h-5 rounded-lg bg-amber-600 text-white flex items-center justify-center shadow-2xs shrink-0">
-            <PackageOpen className="w-3 h-3" />
+          <div className="w-4 h-4 rounded-md bg-amber-600 text-white flex items-center justify-center shadow-2xs shrink-0">
+            <PackageOpen className="w-2.5 h-2.5" />
           </div>
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <h3 className="text-xs font-black text-emerald-950 truncate">
-              {language === 'ta' ? 'அடுத்த நாள் தொடக்க இருப்பு (Remind Me Stock)' : 'Opening Stock (Remind Me Stock)'}
+          <div className="flex items-center gap-1 flex-wrap min-w-0">
+            <h3 className="text-[11px] font-black text-emerald-950 truncate">
+              {language === 'ta' ? 'அடுத்த நாள் தொடக்க இருப்பு' : 'Opening Stock'}
             </h3>
-            <span className="text-[9px] font-extrabold bg-amber-200/90 text-amber-950 px-1.5 py-0.2 rounded-md border border-amber-300/60">
-              {language === 'ta' ? 'நேற்றைய மீதி இருப்பு' : 'Previous Day'} ({formatDateLabel(effectiveStock.date)})
+            <span className="text-[8.5px] font-extrabold bg-amber-200/90 text-amber-950 px-1 py-0.2 rounded border border-amber-300/60">
+              {language === 'ta' ? 'நேற்று' : 'Yesterday'} ({formatDateLabel(effectiveStock.date)})
             </span>
           </div>
         </div>
@@ -206,19 +206,19 @@ export const OpeningStockBanner: React.FC<OpeningStockBannerProps> = ({
               setEditEggUnits(String(eggUnitRem));
               setIsEditing(!isEditing);
             }}
-            className="text-[10px] font-bold text-amber-900 hover:text-amber-950 bg-amber-200/80 hover:bg-amber-200 px-1.5 py-0.5 rounded-md border border-amber-300 transition-all flex items-center gap-0.5 cursor-pointer"
+            className="text-[9.5px] font-bold text-amber-900 hover:text-amber-950 bg-amber-200/80 hover:bg-amber-200 px-1.5 py-0.5 rounded-md border border-amber-300 transition-all flex items-center gap-0.5 cursor-pointer"
             title="Edit Opening Stock"
           >
-            <Edit3 className="w-3 h-3" />
+            <Edit3 className="w-2.5 h-2.5" />
             <span>{language === 'ta' ? 'திருத்து' : 'Edit'}</span>
           </button>
           <button
             type="button"
             onClick={() => setIsMinimized(true)}
-            className="text-[10px] font-bold text-slate-500 hover:text-slate-800 bg-white/80 hover:bg-white px-1.5 py-0.5 rounded-md border border-slate-200/80 transition-all cursor-pointer"
+            className="text-[9.5px] font-bold text-slate-500 hover:text-slate-800 bg-white/80 hover:bg-white px-1.5 py-0.5 rounded-md border border-slate-200/80 transition-all cursor-pointer"
             title="Minimize"
           >
-            {language === 'ta' ? 'சுருக்கு' : 'Minimize'}
+            {language === 'ta' ? 'சுருக்கு' : 'Min'}
           </button>
           {onDismiss && (
             <button
@@ -227,7 +227,7 @@ export const OpeningStockBanner: React.FC<OpeningStockBannerProps> = ({
               className="p-0.5 text-slate-400 hover:text-rose-600 rounded-md hover:bg-black/5 cursor-pointer"
               title="Close"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-3 h-3" />
             </button>
           )}
         </div>
@@ -303,24 +303,24 @@ export const OpeningStockBanner: React.FC<OpeningStockBannerProps> = ({
         </div>
       ) : (
         /* 2 Highlight Cards: Remaining Chicken & Egg */
-        <div className="grid grid-cols-2 gap-1.5 my-1.5">
+        <div className="grid grid-cols-2 gap-1.5 my-1">
           {/* Left Card: Remaining Chicken Stock */}
-          <div className="bg-white/95 rounded-xl p-2 border border-amber-200/80 shadow-2xs">
+          <div className="bg-white/95 rounded-lg p-1.5 border border-amber-200/80 shadow-2xs">
             <div className="flex items-center justify-between">
-              <span className="text-[9px] font-black uppercase tracking-wider text-amber-900 flex items-center gap-0.5">
-                🐔 {language === 'ta' ? 'மீதி கோழி (Remind Me Chicken)' : 'Remind Me Chicken'}
+              <span className="text-[8.5px] font-black uppercase tracking-wide text-amber-900 flex items-center gap-0.5 truncate">
+                🐔 {language === 'ta' ? 'மீதி கோழி' : 'Chicken Rem'}
               </span>
-              <span className="text-[8px] font-bold text-slate-400">
+              <span className="text-[7.5px] font-semibold text-slate-400">
                 {formatDateLabel(effectiveStock.date)}
               </span>
             </div>
-            <div className="flex items-baseline gap-1 mt-0.5">
-              <span className="text-base sm:text-lg font-black text-amber-950 tracking-tight">
+            <div className="flex items-baseline gap-0.5 mt-0.5">
+              <span className="text-sm sm:text-base font-black text-amber-950 tracking-tight">
                 {chickenRem}
               </span>
-              <span className="text-[10px] font-bold text-amber-700 uppercase">kg</span>
+              <span className="text-[9px] font-bold text-amber-700 uppercase">kg</span>
             </div>
-            <p className="text-[8px] text-slate-400 font-medium truncate mt-0.5">
+            <p className="text-[7.5px] text-slate-400 font-medium truncate mt-0.5">
               {language === 'ta'
                 ? `வரவு: ${effectiveStock.chickenIncomingKg} | விற்றது: ${effectiveStock.chickenSoldKg}`
                 : `In: ${effectiveStock.chickenIncomingKg} | Sold: ${effectiveStock.chickenSoldKg} kg`}
@@ -328,29 +328,29 @@ export const OpeningStockBanner: React.FC<OpeningStockBannerProps> = ({
           </div>
 
           {/* Right Card: Remaining Egg Stock */}
-          <div className="bg-white/95 rounded-xl p-2 border border-orange-200/80 shadow-2xs">
+          <div className="bg-white/95 rounded-lg p-1.5 border border-orange-200/80 shadow-2xs">
             <div className="flex items-center justify-between">
-              <span className="text-[9px] font-black uppercase tracking-wider text-orange-900 flex items-center gap-0.5">
-                🥚 {language === 'ta' ? 'மீதி முட்டை (Remind Me Eggs)' : 'Remind Me Eggs'}
+              <span className="text-[8.5px] font-black uppercase tracking-wide text-orange-900 flex items-center gap-0.5 truncate">
+                🥚 {language === 'ta' ? 'மீதி முட்டை' : 'Egg Rem'}
               </span>
-              <span className="text-[8px] font-bold text-slate-400">
+              <span className="text-[7.5px] font-semibold text-slate-400">
                 {formatDateLabel(effectiveStock.date)}
               </span>
             </div>
-            <div className="flex items-baseline gap-1 mt-0.5 flex-wrap">
-              <span className="text-base sm:text-lg font-black text-orange-950 tracking-tight">
+            <div className="flex items-baseline gap-0.5 mt-0.5 flex-wrap">
+              <span className="text-sm sm:text-base font-black text-orange-950 tracking-tight">
                 {eggTaresRem}
               </span>
-              <span className="text-[10px] font-bold text-orange-700 uppercase">
-                {language === 'ta' ? 'தட்டு' : 'Tares'}
+              <span className="text-[9px] font-bold text-orange-700 uppercase">
+                {language === 'ta' ? 'தட்டு' : 'T'}
               </span>
               {eggUnitRem > 0 && (
-                <span className="text-[9px] font-extrabold text-orange-800 bg-orange-100 px-1 py-0.2 rounded-sm">
+                <span className="text-[8px] font-extrabold text-orange-800 bg-orange-100 px-1 py-0.2 rounded-xs">
                   +{eggUnitRem}
                 </span>
               )}
             </div>
-            <p className="text-[8px] text-slate-400 font-medium truncate mt-0.5">
+            <p className="text-[7.5px] text-slate-400 font-medium truncate mt-0.5">
               {language === 'ta'
                 ? `வரவு: ${Math.round(effectiveStock.eggInwardNos / 30)} தட்டு | விற்றது: ${effectiveStock.eggSoldNos}`
                 : `In: ${Math.round(effectiveStock.eggInwardNos / 30)}T | Sold: ${effectiveStock.eggSoldNos}`}
@@ -360,17 +360,17 @@ export const OpeningStockBanner: React.FC<OpeningStockBannerProps> = ({
       )}
 
       {/* Action Footer: Add to Today's Stock or Exclude */}
-      <div className="mt-1.5 pt-1.5 border-t border-amber-200/70 flex items-center justify-between gap-1.5">
+      <div className="mt-1 pt-1 border-t border-amber-200/70 flex items-center justify-between gap-1">
         <div className="min-w-0 flex-1">
           {isApplied ? (
-            <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-100/90 border border-emerald-300/80 px-2 py-0.5 rounded-lg w-fit">
-              <CheckCircle2 className="w-3 h-3 text-emerald-700 shrink-0" />
+            <div className="flex items-center gap-1 text-[9px] font-bold text-emerald-800 bg-emerald-100/90 border border-emerald-300/80 px-1.5 py-0.5 rounded-md w-fit">
+              <CheckCircle2 className="w-2.5 h-2.5 text-emerald-700 shrink-0" />
               <span className="truncate">
-                {language === 'ta' ? 'இருப்பில் சேர்க்கப்பட்டது' : 'Added to Stock'}
+                {language === 'ta' ? 'சேர்க்கப்பட்டது' : 'Added to Stock'}
               </span>
             </div>
           ) : (
-            <span className="text-[10px] text-slate-600 font-medium truncate block">
+            <span className="text-[9px] text-slate-600 font-medium truncate block">
               {language === 'ta' ? 'இன்றைய லோடுடன் சேர்க்கவா?' : 'Include in today’s stock?'}
             </span>
           )}
@@ -379,7 +379,7 @@ export const OpeningStockBanner: React.FC<OpeningStockBannerProps> = ({
         <button
           type="button"
           onClick={handleToggleApply}
-          className={`py-1 px-2.5 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer shrink-0 active:scale-95 ${
+          className={`py-0.5 px-2 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer shrink-0 active:scale-95 ${
             isApplied
               ? 'bg-slate-200 hover:bg-slate-300 text-slate-700 border border-slate-300'
               : 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-2xs shadow-emerald-700/20'
@@ -387,12 +387,12 @@ export const OpeningStockBanner: React.FC<OpeningStockBannerProps> = ({
         >
           {isApplied ? (
             <>
-              <MinusCircle className="w-3 h-3 text-slate-600" />
+              <MinusCircle className="w-2.5 h-2.5 text-slate-600" />
               <span>{language === 'ta' ? 'நீக்கு' : 'Exclude'}</span>
             </>
           ) : (
             <>
-              <PlusCircle className="w-3 h-3 text-white" />
+              <PlusCircle className="w-2.5 h-2.5 text-white" />
               <span>{language === 'ta' ? 'சேர் (+)' : 'Add (+)'}</span>
             </>
           )}

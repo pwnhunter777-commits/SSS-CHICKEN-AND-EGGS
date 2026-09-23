@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Scale, IndianRupee, Layers } from 'lucide-react';
-import { Bill, getProductName, LanguageCode, ProductItem } from '../types';
+import { Bill, getProductName, LanguageCode, ProductItem, resolveItemDisplayName } from '../types';
 import { getTodayDateString } from '../utils/storage';
 import { TRANSLATIONS } from '../utils/translations';
 
@@ -49,7 +49,7 @@ export const TotalPage: React.FC<TotalPageProps> = ({
       map[p.id] = {
         id: p.id,
         product: p,
-        fallbackName: getProductName(p, language),
+        fallbackName: p.nameTa || getProductName(p, 'ta'),
         totalKg: 0,
         totalAmount: 0,
         count: 0,
@@ -164,7 +164,9 @@ export const TotalPage: React.FC<TotalPageProps> = ({
         {/* Product Breakdown List */}
         <div className="divide-y divide-slate-100">
           {productTotals.map((item, idx) => {
-            const displayName = item.product ? getProductName(item.product, language) : item.fallbackName;
+            const displayName = item.product
+              ? (item.product.nameTa || getProductName(item.product, 'ta'))
+              : resolveItemDisplayName({ productId: item.id, productName: item.fallbackName }, products, 'ta');
             return (
               <div
                 key={item.id}

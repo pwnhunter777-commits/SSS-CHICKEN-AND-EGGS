@@ -1,6 +1,6 @@
 import React from 'react';
 import { InvestmentBottomTab } from '../types';
-import { Truck, TrendingUp, Boxes, Settings } from 'lucide-react';
+import { Truck, TrendingUp, Boxes } from 'lucide-react';
 
 interface InvestmentBottomNavProps {
   activeTab: InvestmentBottomTab;
@@ -28,11 +28,6 @@ export const InvestmentBottomNav: React.FC<InvestmentBottomNavProps> = ({
       id: 'summary' as InvestmentBottomTab,
       label: language === 'ta' ? 'கடை இருப்பு' : 'Stock',
       icon: Boxes,
-    },
-    {
-      id: 'settings' as InvestmentBottomTab,
-      label: language === 'ta' ? 'அமைப்புகள்' : 'Settings',
-      icon: Settings,
     },
   ];
 
