@@ -564,108 +564,20 @@ export const BillingPage: React.FC<BillingPageProps> = ({
       </div>
 
       {/* Products Section Header Actions */}
-      {(onAddProduct || activeBillItems.length > 0) && (
+      {activeBillItems.length > 0 && (
         <div className="flex items-center justify-end mb-1.5 px-0.5 gap-1.5 flex-wrap">
           <div className="flex items-center gap-1.5 ml-auto">
-            {onAddProduct && (
-              <button
-                id="btn-add-product-billing"
-                type="button"
-                onClick={() => {
-                  setIsAddingProduct((prev) => !prev);
-                  setNewProductNameEn('');
-                  setNewProductNameTa('');
-                  setNewProductPrice('');
-                }}
-                className="min-h-[2.4rem] px-3 py-1 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white rounded-lg text-xs font-black flex items-center gap-1 transition-all active:scale-95 shadow-2xs cursor-pointer touch-manipulation"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span className="leading-normal">+ {language === 'ta' ? 'பொருள்' : 'Add Item'}</span>
-              </button>
-            )}
-            {activeBillItems.length > 0 && (
-              <button
-                id="btn-clear-all-billing"
-                type="button"
-                onClick={() => setShowClearAllConfirm(true)}
-                className="min-h-[2.4rem] text-xs font-black text-white bg-rose-600 hover:bg-rose-700 active:bg-rose-800 flex items-center gap-1 px-3 py-1 rounded-lg shadow-2xs transition-all active:scale-95 cursor-pointer touch-manipulation"
-              >
-                <RefreshCw className="w-3 h-3 text-white" />
-                <span className="leading-normal">{t.resetAll}</span>
-              </button>
-            )}
+            <button
+              id="btn-clear-all-billing"
+              type="button"
+              onClick={() => setShowClearAllConfirm(true)}
+              className="min-h-[2.4rem] text-xs font-black text-white bg-rose-600 hover:bg-rose-700 active:bg-rose-800 flex items-center gap-1 px-3 py-1 rounded-lg shadow-2xs transition-all active:scale-95 cursor-pointer touch-manipulation"
+            >
+              <RefreshCw className="w-3 h-3 text-white" />
+              <span className="leading-normal">{t.resetAll}</span>
+            </button>
           </div>
         </div>
-      )}
-
-      {/* Notification when product added */}
-      {productAddNotification && (
-        <div className="mb-2 bg-emerald-600 text-white p-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-2xs animate-in fade-in leading-normal break-words">
-          <Check className="w-4 h-4 flex-shrink-0" />
-          <span>{productAddNotification}</span>
-        </div>
-      )}
-
-      {/* Inline Add Product Form */}
-      {isAddingProduct && (
-        <form
-          onSubmit={handleSaveNewProduct}
-          className="mb-2 bg-emerald-50/95 border border-emerald-300 rounded-xl p-2.5 space-y-2 animate-in fade-in slide-in-from-top-1"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-emerald-950 uppercase tracking-wider leading-normal">
-              {language === 'ta' ? 'புதிய பொருள் சேர்க்க' : 'Add New Item / Product'}
-            </span>
-            <button
-              type="button"
-              onClick={() => setIsAddingProduct(false)}
-              className="text-gray-400 hover:text-gray-700 p-1 min-h-[2rem] min-w-[2rem] flex items-center justify-center cursor-pointer touch-manipulation"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="space-y-1.5">
-            <input
-              type="text"
-              value={newProductNameEn}
-              onChange={(e) => setNewProductNameEn(e.target.value)}
-              placeholder="Item name in English (e.g. Tandoori Chicken)"
-              className="w-full min-h-[2.4rem] px-2.5 py-1.5 bg-white border border-emerald-200 rounded-lg text-xs sm:text-sm font-bold text-gray-900 outline-none focus:border-emerald-600 leading-normal"
-            />
-            <input
-              type="text"
-              value={newProductNameTa}
-              onChange={(e) => setNewProductNameTa(e.target.value)}
-              placeholder="பொருள் பெயர் தமிழில் (உ.ம். தந்தூரி சிக்கன்)"
-              className="w-full min-h-[2.4rem] px-2.5 py-1.5 bg-white border border-emerald-200 rounded-lg text-xs sm:text-sm font-bold text-gray-900 outline-none focus:border-emerald-600 leading-normal"
-            />
-            <div className="relative">
-              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-500">₹</span>
-              <input
-                type="number"
-                value={newProductPrice}
-                onChange={(e) => setNewProductPrice(e.target.value)}
-                placeholder={language === 'ta' ? 'கிலோ விலை (₹)' : 'Price per KG (₹)'}
-                className="w-full min-h-[2.4rem] pl-6 pr-2.5 py-1.5 bg-white border border-emerald-200 rounded-lg text-xs sm:text-sm font-bold text-gray-900 outline-none focus:border-emerald-600 leading-normal"
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2 pt-0.5">
-            <button
-              type="button"
-              onClick={() => setIsAddingProduct(false)}
-              className="min-h-[2.4rem] px-3 py-1 text-xs font-black text-white bg-slate-700 hover:bg-slate-800 active:bg-slate-900 rounded-lg shadow-2xs transition-all active:scale-95 cursor-pointer touch-manipulation flex items-center justify-center"
-            >
-              <span className="leading-normal">{language === 'ta' ? 'ரத்து' : 'Cancel'}</span>
-            </button>
-            <button
-              type="submit"
-              className="min-h-[2.4rem] px-3.5 py-1 text-xs font-black text-white bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 rounded-lg shadow-2xs transition-all active:scale-95 cursor-pointer touch-manipulation flex items-center justify-center"
-            >
-              <span className="leading-normal">{language === 'ta' ? 'சேமி' : 'Add Item'}</span>
-            </button>
-          </div>
-        </form>
       )}
 
       {/* Chicken Products List - Compact Divs */}
