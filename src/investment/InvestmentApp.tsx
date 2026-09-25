@@ -56,17 +56,21 @@ export const InvestmentApp: React.FC<InvestmentAppProps> = ({ onBackToPortal }) 
     };
 
     // Always calculate load cost directly from chickenLoad + eggLoad so it stays in sync with 1st page
+    const chickenOldStock = Number(loaded.chickenLoad.oldStockKg || 0);
     const chickenQty = Number(loaded.chickenLoad.totalIncomeKg || 0);
+    const chickenCombinedGross = Math.round((chickenOldStock + chickenQty) * 100) / 100;
     const chickenRate = Number(loaded.chickenLoad.ratePerKg || 0);
     const chickenWastage = Number(loaded.chickenLoad.wastagePercent || 0);
-    const chickenNetKg = chickenWastage > 0 ? Math.round((chickenQty * (1 - chickenWastage / 100)) * 100) / 100 : chickenQty;
+    const chickenNetKg = chickenWastage > 0 ? Math.round((chickenCombinedGross * (1 - chickenWastage / 100)) * 100) / 100 : chickenCombinedGross;
     const calcChickenCost = Number(loaded.chickenLoad.totalAmount || 0) > 0
       ? Number(loaded.chickenLoad.totalAmount)
       : Math.round(chickenNetKg * chickenRate * 100) / 100;
 
+    const eggOldStockTares = Number(loaded.eggLoad.oldStockTares || 0);
     const tares = Number(loaded.eggLoad.totalTareIncome || (loaded.eggLoad.totalIncomeCount ? loaded.eggLoad.totalIncomeCount / 30 : 0));
+    const totalEggTares = eggOldStockTares + tares;
     const price = Number(loaded.eggLoad.pricePerTare || (loaded.eggLoad.ratePerUnit ? loaded.eggLoad.ratePerUnit * 30 : 0));
-    const calcEggCost = Math.round(tares * price * 100) / 100;
+    const calcEggCost = Math.round(totalEggTares * price * 100) / 100;
 
     const calculatedLoadCost = Math.round((calcChickenCost + calcEggCost) * 100) / 100;
     const calculatedIncomingKg = chickenNetKg;

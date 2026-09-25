@@ -46,7 +46,10 @@ export const StockRemainingPage: React.FC<StockRemainingPageProps> = ({
   const chickenCost = Number(data.chickenLoad.totalAmount || 0) > 0
     ? Number(data.chickenLoad.totalAmount)
     : Math.round(firstPageGross * Number(data.chickenLoad.ratePerKg || 0) * 100) / 100;
-  const eggCost = Math.round((Number(data.eggLoad.totalTareIncome) || 0) * (Number(data.eggLoad.pricePerTare) || 0) * 100) / 100;
+  const eggOldStockTares = Number(data.eggLoad?.oldStockTares || 0);
+  const eggTodayTares = Number(data.eggLoad?.totalTareIncome || 0);
+  const eggCombinedTares = eggOldStockTares + eggTodayTares;
+  const eggCost = Math.round(eggCombinedTares * (Number(data.eggLoad.pricePerTare) || 0) * 100) / 100;
   const combinedLoadCost = Math.round((chickenCost + eggCost) * 100) / 100;
 
   // Chicken Load Inward calculations
@@ -58,14 +61,16 @@ export const StockRemainingPage: React.FC<StockRemainingPageProps> = ({
   const incomingKg = chickenNet > 0 ? chickenNet : Number(data.sales?.totalIncomeKg || 0);
 
   // Opening stock from previous day (if applied)
-  const isOpeningApplied = Boolean(data.openingStock?.appliedToLoad) || chickenOldStock > 0;
+  const isOpeningApplied = Boolean(data.openingStock?.appliedToLoad) || chickenOldStock > 0 || eggOldStockTares > 0;
   const openingChickenKg = chickenOldStock > 0 ? chickenOldStock : (isOpeningApplied ? Number(data.openingStock?.chickenKg || 0) : 0);
   const totalAvailableChickenKg = Math.round((incomingKg + openingChickenKg) * 1000) / 1000;
 
   // Egg Load Inward calculations
   const eggInwardTares = Number(data.eggLoad?.totalTareIncome || 0);
   const eggInwardNos = eggInwardTares * 30;
-  const openingEggNos = isOpeningApplied ? Number(data.openingStock?.eggNos || 0) : 0;
+  const openingEggNos = eggOldStockTares > 0
+    ? (eggOldStockTares * 30)
+    : (isOpeningApplied ? Number(data.openingStock?.eggNos || 0) : 0);
   const totalAvailableEggNos = eggInwardNos + openingEggNos;
 
   const loadCostSpend = combinedLoadCost > 0 ? combinedLoadCost : Number(data.sales?.loadPriceSpend || 0);

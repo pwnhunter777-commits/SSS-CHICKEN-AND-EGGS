@@ -32,10 +32,13 @@ export const DailySalesProfitPage: React.FC<DailySalesProfitPageProps> = ({
     : Math.round(chickenCombinedNetKg * chickenRate * 100) / 100;
 
   // 1st Page values (Load Entry) - Egg Load
+  const eggOldStockTares = Number(data.eggLoad.oldStockTares || 0);
   const eggTareIncome = Number(data.eggLoad.totalTareIncome || 0);
+  const eggTodayTares = eggTareIncome;
+  const eggTotalCombinedTares = eggOldStockTares + eggTodayTares;
   const eggPricePerTare = Number(data.eggLoad.pricePerTare || 0);
-  const eggLoadCount = Math.round(eggTareIncome * 30);
-  const eggLoadCost = Math.round(eggTareIncome * eggPricePerTare * 100) / 100;
+  const eggLoadCount = Math.round(eggTotalCombinedTares * 30);
+  const eggLoadCost = Math.round(eggTotalCombinedTares * eggPricePerTare * 100) / 100;
 
   // Combined Load Total Amount: Chicken Load Price + Egg Load Price
   const totalCombinedLoadCost = Math.round((chickenLoadCost + eggLoadCost) * 100) / 100;
@@ -170,8 +173,13 @@ export const DailySalesProfitPage: React.FC<DailySalesProfitPageProps> = ({
                 {language === 'ta' ? 'முட்டை லோடு வரவு' : 'Egg Load Inward'}
               </span>
               <span className="text-lg font-black text-neutral-900 tracking-tight">
-                {eggTareIncome} <span className="text-xs font-bold text-neutral-400 uppercase">{language === 'ta' ? 'தட்டு' : 'tares'}</span>
+                {eggTotalCombinedTares} <span className="text-xs font-bold text-neutral-400 uppercase">{language === 'ta' ? 'தட்டு' : 'tares'}</span>
               </span>
+              {eggOldStockTares > 0 && (
+                <span className="text-[10px] font-bold text-amber-700 mt-0.5">
+                  ({eggTodayTares} + {eggOldStockTares} {language === 'ta' ? 'பழைய தட்டு' : 'old'})
+                </span>
+              )}
             </div>
           </div>
         </div>

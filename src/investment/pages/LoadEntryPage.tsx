@@ -40,10 +40,16 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
         nextSales.loadPriceSpend = totalAmt;
         nextSales.totalIncomeKg = totalNet;
       } else {
+        const oldStockTares = data.eggLoad.oldStockTares !== undefined
+          ? Number(data.eggLoad.oldStockTares)
+          : (data.openingStock?.eggTares !== undefined
+              ? Number(data.openingStock.eggTares)
+              : (data.openingStock?.eggNos ? Math.floor(Number(data.openingStock.eggNos) / 30) : 0));
         const tares = data.eggLoad.totalTareIncome ?? (data.eggLoad.totalIncomeCount ? data.eggLoad.totalIncomeCount / 30 : 0);
+        const totalCombinedTares = oldStockTares + tares;
         const price = data.eggLoad.pricePerTare ?? (data.eggLoad.ratePerUnit ? data.eggLoad.ratePerUnit * 30 : 0);
-        nextSales.loadPriceSpend = tares * price;
-        nextSales.totalIncomeKg = tares * 30;
+        nextSales.loadPriceSpend = totalCombinedTares * price;
+        nextSales.totalIncomeKg = totalCombinedTares * 30;
       }
     }
 
@@ -76,10 +82,16 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
   const chickenNetCost = chickenTotalCost;
 
   // Egg Values (Tare based: 1 Tare = 30 Eggs)
+  const eggOldStockTares = data.eggLoad.oldStockTares !== undefined
+    ? Number(data.eggLoad.oldStockTares)
+    : (data.openingStock?.eggTares !== undefined
+        ? Number(data.openingStock.eggTares)
+        : (data.openingStock?.eggNos !== undefined ? Math.floor(Number(data.openingStock.eggNos) / 30) : 0));
   const eggTareIncome = Math.round(data.eggLoad.totalTareIncome ?? (data.eggLoad.totalIncomeCount ? data.eggLoad.totalIncomeCount / 30 : 0));
   const eggPricePerTare = Math.round(data.eggLoad.pricePerTare ?? (data.eggLoad.ratePerUnit ? data.eggLoad.ratePerUnit * 30 : 0));
-  const eggTotalCount = Math.round(eggTareIncome * 30);
-  const eggTotalPrice = Math.round(eggTareIncome * eggPricePerTare);
+  const eggTotalCombinedTares = Math.round(eggOldStockTares + eggTareIncome);
+  const eggTotalCount = Math.round(eggTotalCombinedTares * 30);
+  const eggTotalPrice = Math.round(eggTotalCombinedTares * eggPricePerTare);
 
   // Handlers for Chicken updates
   const handleUpdateChicken = (field: 'wastage' | 'quantity' | 'rate' | 'oldStock', value: number) => {
@@ -128,30 +140,44 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
     });
   };
 
-  // Handlers for Egg updates (Only ask total tare income & price of a tare)
-  const handleUpdateEgg = (field: 'tareIncome' | 'pricePerTare', value: number) => {
+  // Handlers for Egg updates (Old stock tares, today inward tares & price per tare)
+  const handleUpdateEgg = (field: 'oldStock' | 'tareIncome' | 'pricePerTare', value: number) => {
     const validVal = isNaN(value) ? 0 : Math.max(0, Math.round(value));
+    const currentOldStock = field === 'oldStock' ? validVal : eggOldStockTares;
     const currentTares = field === 'tareIncome' ? validVal : eggTareIncome;
     const currentPrice = field === 'pricePerTare' ? validVal : eggPricePerTare;
 
+    const totalCombinedTares = currentOldStock + currentTares;
+    const totalCombinedCount = totalCombinedTares * 30;
+
     const nextEgg = {
       ...data.eggLoad,
+      oldStockTares: currentOldStock,
+      oldStockNos: currentOldStock * 30,
       totalTareIncome: currentTares,
       pricePerTare: currentPrice,
-      totalIncomeCount: currentTares * 30,
-      ratePerUnit: currentTares > 0 ? Math.round(currentPrice / 30) : 0,
+      totalIncomeCount: totalCombinedCount,
+      ratePerUnit: currentPrice > 0 ? Math.round(currentPrice / 30) : 0,
       wastagePercent: 0,
     };
 
-    const nextMultiplied = Math.round(currentTares * currentPrice);
+    const nextMultiplied = Math.round(totalCombinedTares * currentPrice);
     const nextSales = { ...data.sales };
     nextSales.loadPriceSpend = nextMultiplied;
-    nextSales.totalIncomeKg = currentTares * 30; // total egg units
+    nextSales.totalIncomeKg = totalCombinedCount; // total egg units
+
+    const nextOpening = {
+      ...(data.openingStock || { chickenKg: 0 }),
+      eggNos: currentOldStock * 30,
+      eggTares: currentOldStock,
+      appliedToLoad: true,
+    };
 
     onChangeData({
       ...data,
       eggLoad: nextEgg,
       sales: nextSales,
+      openingStock: nextOpening,
     });
   };
 
@@ -274,12 +300,36 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
               </div>
             </div>
 
-            {/* Inputs: 1. Total Tare Income & 2. Price of a Tare */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
-              {/* Total Tare Income */}
+            {/* Inputs: 1. Old Stock (Tares), 2. Today Inward (Tares) & 3. Price per Tare */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+              {/* 1. Old Stock (Tares) */}
               <div className="space-y-1.5">
-                <label className="text-xs font-black text-slate-800 block">
-                  {language === 'ta' ? 'மொத்த தட்டு' : 'Total Tares'}
+                <label htmlFor="input-egg-old-stock" className="text-xs font-black text-slate-800 block">
+                  {language === 'ta' ? 'பழைய இருப்பு (தட்டு)' : 'Old Stock (Tares)'}
+                </label>
+                <div className="relative">
+                  <input
+                    id="input-egg-old-stock"
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={eggOldStockTares === 0 ? '' : eggOldStockTares}
+                    onChange={(e) => handleUpdateEgg('oldStock', parseFloat(e.target.value))}
+                    placeholder="0"
+                    className="w-full font-black text-2xl bg-amber-50/40 hover:bg-white focus:bg-white text-slate-900 border-2 border-amber-300 focus:border-amber-600 focus:ring-2 focus:ring-amber-500/20 rounded-2xl py-3 px-4 outline-hidden transition-all shadow-2xs"
+                  />
+                  <div className="absolute right-3.5 top-3.5 flex items-center gap-1 pointer-events-none">
+                    <span className="text-xs font-black text-amber-700 uppercase">
+                      {language === 'ta' ? 'தட்டு' : 'Tares'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Today Inward (Tares) */}
+              <div className="space-y-1.5">
+                <label htmlFor="input-egg-tare-income" className="text-xs font-black text-slate-800 block">
+                  {language === 'ta' ? 'இன்றைய லோடு (தட்டு)' : 'Today Inward (Tares)'}
                 </label>
                 <div className="relative">
                   <input
@@ -300,9 +350,9 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
                 </div>
               </div>
 
-              {/* Price of a Tare */}
+              {/* 3. Price per Tare */}
               <div className="space-y-1.5">
-                <label className="text-xs font-black text-slate-800 block">
+                <label htmlFor="input-egg-price-per-tare" className="text-xs font-black text-slate-800 block">
                   {language === 'ta' ? 'ஒரு தட்டு விலை' : 'Price per Tare'}
                 </label>
                 <div className="relative">
@@ -330,14 +380,22 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
             <div className="pt-2">
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xs font-black text-emerald-950">
-                  {language === 'ta' ? 'லோடு தொகை' : 'Load Cost'}
+                  {language === 'ta' ? 'லோடு தொகை கணக்கீடு' : 'Load Cost Calculation'}
                 </span>
               </div>
               <div className="w-full rounded-2xl border-2 border-emerald-700 bg-gradient-to-r from-emerald-800 via-emerald-900 to-emerald-950 text-white p-4 shadow-md shadow-emerald-950/20">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-xs font-semibold text-emerald-200 font-mono">
-                      {eggTareIncome || 0} {language === 'ta' ? 'தட்டு' : 'Tares'} × ₹{eggPricePerTare || 0}
+                      {eggOldStockTares > 0 ? (
+                        <span>
+                          ({eggOldStockTares} + {eggTareIncome} = {eggTotalCombinedTares} {language === 'ta' ? 'தட்டு' : 'tares'}) × ₹{eggPricePerTare || 0}
+                        </span>
+                      ) : (
+                        <span>
+                          {eggTotalCombinedTares || 0} {language === 'ta' ? 'தட்டு' : 'tares'} × ₹{eggPricePerTare || 0}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="text-2xl sm:text-3xl font-black tracking-tight text-white">
@@ -350,28 +408,22 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
 
           {/* Two Prominent Summary Cards for Egg Tare and Total Price */}
           <div className="grid grid-cols-2 gap-3">
-            {/* Card 1: Total Tare & Egg Count */}
+            {/* Card 1: Total Tare */}
             <div className="bg-white rounded-3xl p-5 border-2 border-emerald-200 shadow-xs flex flex-col justify-between min-h-[145px]">
               <div className="mb-2">
                 <span className="text-xs font-bold text-neutral-700 uppercase tracking-wide">
-                  {language === 'ta' ? 'மொத்த தட்டு' : 'Total Tares'}
+                  {eggOldStockTares > 0
+                    ? (language === 'ta' ? 'மொத்த தட்டு (இருப்புடன்)' : 'Total Tares (with Stock)')
+                    : (language === 'ta' ? 'மொத்த தட்டு' : 'Total Tares')}
                 </span>
               </div>
 
               <div className="my-auto">
                 <div className="text-3xl font-black text-emerald-950 tracking-tight">
-                  {eggTareIncome}
+                  {eggTotalCombinedTares}
                   <span className="text-xs font-bold text-amber-700 ml-1">
                     {language === 'ta' ? 'தட்டு' : 'Tares'}
                   </span>
-                </div>
-                <div className="text-xs font-bold text-neutral-600 mt-1 space-y-0.5">
-                  <div>{eggTotalCount.toLocaleString()} {language === 'ta' ? 'முட்டை' : 'Eggs'}</div>
-                  {data.openingStock?.appliedToLoad && Number(data.openingStock.eggNos || 0) > 0 && (
-                    <div className="text-[11px] font-black text-orange-800 bg-orange-50 px-2 py-0.5 rounded-md border border-orange-200 inline-block">
-                      + {Math.floor((data.openingStock.eggNos || 0) / 30)} {language === 'ta' ? 'தட்டு தொடக்க இருப்பு' : 'Opening Tares'} ({data.openingStock.eggNos} {language === 'ta' ? 'முட்டை' : 'Eggs'})
-                    </div>
-                  )}
                 </div>
               </div>
             </div>

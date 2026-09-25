@@ -15,6 +15,8 @@ export interface EggLoadRecord {
   wastagePercent?: number;
   totalIncomeCount?: number;
   ratePerUnit?: number;
+  oldStockTares?: number; // old stock / opening stock in tares
+  oldStockNos?: number; // old stock / opening stock in count
 }
 
 export interface ExpenseItem {

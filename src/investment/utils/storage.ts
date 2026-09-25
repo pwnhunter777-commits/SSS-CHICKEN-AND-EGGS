@@ -239,13 +239,16 @@ export function calculateDayStockRemaining(dateStr: string): {
   const chickenRemainingKg = Math.round((totalAvailableChicken - chickenSoldKg) * 1000) / 1000;
 
   // Egg incoming
+  const eggOldStockTares = Number(dayData.eggLoad?.oldStockTares || 0);
   const eggInwardTares = Number(dayData.eggLoad?.totalTareIncome || (dayData.eggLoad?.totalIncomeCount ? dayData.eggLoad.totalIncomeCount / 30 : 0));
   const eggInwardNos = Math.round(eggInwardTares * 30);
 
   // Egg sold
   const eggSoldNos = billSummary.eggQty > 0 ? billSummary.eggQty : Number(dayData.sales?.eggQty || 0);
 
-  const openingEggNos = dayData.openingStock?.appliedToLoad ? (Number(dayData.openingStock.eggNos) || 0) : 0;
+  const openingEggNos = eggOldStockTares > 0
+    ? (eggOldStockTares * 30)
+    : (dayData.openingStock?.appliedToLoad ? (Number(dayData.openingStock.eggNos) || 0) : 0);
   const totalAvailableEggs = eggInwardNos + openingEggNos;
 
   const eggRemainingNos = totalAvailableEggs - eggSoldNos;
@@ -374,7 +377,8 @@ export function getDailyHistoryRecords(currentDateStr: string = getTodayDateKey(
     const billSummary = fetchDailyBillsSummary(dStr);
 
     // Chicken Load Inward calculations
-    const chickenGross = Number(dayData.chickenLoad?.totalIncomeKg || 0);
+    const chickenOldStock = Number(dayData.chickenLoad?.oldStockKg || 0);
+    const chickenGross = Math.round((Number(dayData.chickenLoad?.totalIncomeKg || 0) + chickenOldStock) * 100) / 100;
     const chickenWastage = Number(dayData.chickenLoad?.wastagePercent || 0);
     const chickenRate = Number(dayData.chickenLoad?.ratePerKg || 0);
     const chickenNet = chickenWastage > 0
@@ -385,10 +389,12 @@ export function getDailyHistoryRecords(currentDateStr: string = getTodayDateKey(
       : Math.round(chickenNet * chickenRate * 100) / 100;
 
     // Egg Load Inward calculations
+    const eggOldStockTares = Number(dayData.eggLoad?.oldStockTares || 0);
     const eggTares = Number(dayData.eggLoad?.totalTareIncome || (dayData.eggLoad?.totalIncomeCount ? dayData.eggLoad.totalIncomeCount / 30 : 0));
+    const eggCombinedTares = eggOldStockTares + eggTares;
     const eggPrice = Number(dayData.eggLoad?.pricePerTare || (dayData.eggLoad?.ratePerUnit ? dayData.eggLoad.ratePerUnit * 30 : 0));
-    const eggCost = Math.round(eggTares * eggPrice * 100) / 100;
-    const eggInwardNos = Math.round(eggTares * 30);
+    const eggCost = Math.round(eggCombinedTares * eggPrice * 100) / 100;
+    const eggInwardNos = Math.round(eggCombinedTares * 30);
 
     const combinedLoadCost = Math.round((chickenCost + eggCost) * 100) / 100;
     const loadCostSpend = combinedLoadCost > 0 ? combinedLoadCost : Number(dayData.sales?.loadPriceSpend || 0);
@@ -414,9 +420,9 @@ export function getDailyHistoryRecords(currentDateStr: string = getTodayDateKey(
     const profit = Math.round((grossProfit - expenses) * 100) / 100;
 
     // Opening Stock
-    const isOpeningApplied = Boolean(dayData.openingStock?.appliedToLoad);
-    const openingChickenKg = isOpeningApplied ? Number(dayData.openingStock?.chickenKg || 0) : 0;
-    const openingEggNos = isOpeningApplied ? Number(dayData.openingStock?.eggNos || 0) : 0;
+    const isOpeningApplied = Boolean(dayData.openingStock?.appliedToLoad) || chickenOldStock > 0 || eggOldStockTares > 0;
+    const openingChickenKg = chickenOldStock > 0 ? chickenOldStock : (isOpeningApplied ? Number(dayData.openingStock?.chickenKg || 0) : 0);
+    const openingEggNos = eggOldStockTares > 0 ? (eggOldStockTares * 30) : (isOpeningApplied ? Number(dayData.openingStock?.eggNos || 0) : 0);
 
     // Remaining Stock ("Everyday Remind Me Chicken and Egg")
     const incomingChickenKg = chickenNet > 0 ? chickenNet : Number(dayData.sales?.totalIncomeKg || 0);
