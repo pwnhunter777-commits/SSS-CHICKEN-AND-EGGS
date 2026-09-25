@@ -245,27 +245,90 @@ export function resolveItemDisplayName(
   return item.productName;
 }
 
-// Helper function to resolve hotel name to the current active bill language
+// Helper function to resolve hotel name to the target language (defaults to Tamil)
 export function resolveHotelDisplayName(
   hotelName: string,
   hotelId: string | undefined,
   hotels: HotelItem[] = [],
-  lang: LanguageCode
+  lang: LanguageCode = 'ta'
 ): string {
+  const targetLang = lang || 'ta';
+
   if (hotelId) {
     const h = hotels.find((x) => x.id === hotelId);
-    if (h) return getHotelName(h, lang);
+    if (h) {
+      if (targetLang === 'ta' && h.nameTa) return h.nameTa;
+      return getHotelName(h, targetLang);
+    }
     const defH = DEFAULT_HOTELS.find((x) => x.id === hotelId);
-    if (defH) return getHotelName(defH, lang);
+    if (defH) {
+      if (targetLang === 'ta' && defH.nameTa) return defH.nameTa;
+      return getHotelName(defH, targetLang);
+    }
   }
+
+  const cleanName = (hotelName || '').trim().toLowerCase();
 
   const matched = (hotels.length > 0 ? hotels : DEFAULT_HOTELS).find(
     (x) =>
-      x.nameEn?.trim().toLowerCase() === hotelName?.trim().toLowerCase() ||
-      x.nameTa?.trim().toLowerCase() === hotelName?.trim().toLowerCase()
+      x.nameEn?.trim().toLowerCase() === cleanName ||
+      x.nameTa?.trim().toLowerCase() === cleanName ||
+      x.id?.trim().toLowerCase() === cleanName
   );
   if (matched) {
-    return getHotelName(matched, lang);
+    if (targetLang === 'ta' && matched.nameTa) return matched.nameTa;
+    return getHotelName(matched, targetLang);
+  }
+
+  const defMatched = DEFAULT_HOTELS.find(
+    (x) =>
+      x.nameEn?.trim().toLowerCase() === cleanName ||
+      x.nameTa?.trim().toLowerCase() === cleanName ||
+      x.id?.trim().toLowerCase() === cleanName
+  );
+  if (defMatched) {
+    if (targetLang === 'ta' && defMatched.nameTa) return defMatched.nameTa;
+    return getHotelName(defMatched, targetLang);
+  }
+
+  // Alias lookup for English -> Tamil hotel translations
+  const aliasMap: Record<string, string> = {
+    'kn': 'கே.என். ஹோட்டல்',
+    'k.n': 'கே.என். ஹோட்டல்',
+    'kn hotel': 'கே.என். ஹோட்டல்',
+    'k.n. hotel': 'கே.என். ஹோட்டல்',
+    'dj': 'டி.ஜே. ஹோட்டல்',
+    'dj hotel': 'டி.ஜே. ஹோட்டல்',
+    'babu': 'பாபு பிரியாணி',
+    'babu biriyani': 'பாபு பிரியாணி',
+    'sss': 'எஸ்.எஸ்.எஸ். பிரியாணி',
+    's.s.s': 'எஸ்.எஸ்.எஸ். பிரியாணி',
+    'sss biriyani': 'எஸ்.எஸ்.எஸ். பிரியாணி',
+    's.s.s. biriyani': 'எஸ்.எஸ்.எஸ். பிரியாணி',
+    'kadhar': 'காதர் ஹோட்டல்',
+    'kadhar hotel': 'காதர் ஹோட்டல்',
+    'rahmath': 'ரஹ்மத் ஹோட்டல்',
+    'rahmath hotel': 'ரஹ்மத் ஹோட்டல்',
+    'dhaba': 'தாபா',
+    'santhosh': 'சந்தோஷ் பாஸ்ட் புட்',
+    'santhosh fast food': 'சந்தோஷ் பாஸ்ட் புட்',
+    'savitha': 'சவிதா',
+    'ibrahim': 'இப்ராஹிம் பிரியாணி',
+    'ibrahim biriyani': 'இப்ராஹிம் பிரியாணி',
+    'hope': 'ஹோப் (HOPE)',
+    'murugan': 'முருகன் வடை கடை',
+    'murugan vada': 'முருகன் வடை கடை',
+    'saravana': 'சரவணா ஹோட்டல்',
+    'saravana hotel': 'சரவணா ஹோட்டல்',
+    'muniyandi': 'முனியாண்டி விலாஸ்',
+    'muniyandi vilas': 'முனியாண்டி விலாஸ்',
+    'hotel': 'ஹோட்டல்',
+    'customer': 'வாடிக்கையாளர்',
+    'other customer': 'வாடிக்கையாளர்',
+  };
+
+  if (targetLang === 'ta' && aliasMap[cleanName]) {
+    return aliasMap[cleanName];
   }
 
   return hotelName;

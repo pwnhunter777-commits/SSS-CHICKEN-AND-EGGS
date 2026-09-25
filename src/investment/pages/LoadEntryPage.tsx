@@ -27,12 +27,18 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
     const nextSales = { ...data.sales };
     if (!data.isCustomOverridden) {
       if (isNextChicken) {
+        const oldStock = data.chickenLoad.oldStockKg !== undefined
+          ? Number(data.chickenLoad.oldStockKg)
+          : (Number(data.openingStock?.chickenKg) || 0);
         const qty = data.chickenLoad.totalIncomeKg;
         const rate = data.chickenLoad.ratePerKg;
         const wastage = data.chickenLoad.wastagePercent;
-        const totalAmt = data.chickenLoad.totalAmount || (qty * rate);
+        const totalGross = Math.round((oldStock + qty) * 100) / 100;
+        const wKg = wastage > 0 ? Math.round((totalGross * (wastage / 100)) * 100) / 100 : 0;
+        const totalNet = Math.max(0, Math.round((totalGross - wKg) * 100) / 100);
+        const totalAmt = data.chickenLoad.totalAmount || Math.round(totalNet * rate * 100) / 100;
         nextSales.loadPriceSpend = totalAmt;
-        nextSales.totalIncomeKg = wastage > 0 ? qty * (1 - wastage / 100) : qty;
+        nextSales.totalIncomeKg = totalNet;
       } else {
         const tares = data.eggLoad.totalTareIncome ?? (data.eggLoad.totalIncomeCount ? data.eggLoad.totalIncomeCount / 30 : 0);
         const price = data.eggLoad.pricePerTare ?? (data.eggLoad.ratePerUnit ? data.eggLoad.ratePerUnit * 30 : 0);
@@ -52,13 +58,22 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
   const chickenWastage = data.chickenLoad.wastagePercent;
   const chickenQuantity = data.chickenLoad.totalIncomeKg;
   const chickenRate = data.chickenLoad.ratePerKg;
+  const chickenOldStock = data.chickenLoad.oldStockKg !== undefined
+    ? Number(data.chickenLoad.oldStockKg)
+    : (data.openingStock?.chickenKg !== undefined ? Number(data.openingStock.chickenKg) : 0);
 
-  // Calculation of KG after reducing wastage (Net stock)
-  const wastageKg = Math.round((chickenQuantity * (chickenWastage / 100)) * 100) / 100;
-  const chickenNetKg = chickenWastage > 0
-    ? Math.max(0, Math.round((chickenQuantity - wastageKg) * 100) / 100)
-    : chickenQuantity;
-  const chickenNetCost = Math.round(chickenNetKg * chickenRate * 100) / 100;
+  // Total gross weight: Old stock + Today total weight (e.g. 100 + 200 = 300 kg)
+  const chickenTotalGrossKg = Math.round((chickenOldStock + chickenQuantity) * 100) / 100;
+
+  // Calculation of KG after reducing wastage from combined gross weight (e.g. 300 with 20% wastage = 60 kg -> 240 kg)
+  const wastageKg = Math.round((chickenTotalGrossKg * (chickenWastage / 100)) * 100) / 100;
+  const chickenNetTotalKg = chickenWastage > 0
+    ? Math.max(0, Math.round((chickenTotalGrossKg - wastageKg) * 100) / 100)
+    : chickenTotalGrossKg;
+
+  // Total cost: (Old stock + Today weight - Wastage) × Price per KG
+  const chickenTotalCost = Math.round(chickenNetTotalKg * chickenRate * 100) / 100;
+  const chickenNetCost = chickenTotalCost;
 
   // Egg Values (Tare based: 1 Tare = 30 Eggs)
   const eggTareIncome = Math.round(data.eggLoad.totalTareIncome ?? (data.eggLoad.totalIncomeCount ? data.eggLoad.totalIncomeCount / 30 : 0));
@@ -67,12 +82,16 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
   const eggTotalPrice = Math.round(eggTareIncome * eggPricePerTare);
 
   // Handlers for Chicken updates
-  const handleUpdateChicken = (field: 'wastage' | 'quantity' | 'rate', value: number) => {
+  const handleUpdateChicken = (field: 'wastage' | 'quantity' | 'rate' | 'oldStock', value: number) => {
     const nextChicken = { ...data.chickenLoad };
     let newQty = chickenQuantity;
     let newRate = chickenRate;
+    let newOldStock = chickenOldStock;
 
-    if (field === 'quantity') {
+    if (field === 'oldStock') {
+      newOldStock = typeof value === 'number' && !isNaN(value) ? Math.max(0, value) : 0;
+      nextChicken.oldStockKg = newOldStock;
+    } else if (field === 'quantity') {
       newQty = typeof value === 'number' && !isNaN(value) ? Math.max(0, value) : 0;
       nextChicken.totalIncomeKg = newQty;
     } else if (field === 'rate') {
@@ -82,21 +101,30 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
       nextChicken.wastagePercent = typeof value === 'number' && !isNaN(value) ? Math.max(0, Math.min(100, value)) : 0;
     }
 
-    const netKg = nextChicken.wastagePercent > 0
-      ? Math.max(0, Math.round((nextChicken.totalIncomeKg * (1 - nextChicken.wastagePercent / 100)) * 100) / 100)
-      : nextChicken.totalIncomeKg;
-    const netCost = Math.round(netKg * nextChicken.ratePerKg * 100) / 100;
+    const totalCombinedGross = Math.round((newQty + newOldStock) * 100) / 100;
+    const calcWastageKg = nextChicken.wastagePercent > 0
+      ? Math.round((totalCombinedGross * (nextChicken.wastagePercent / 100)) * 100) / 100
+      : 0;
+    const totalCombinedNet = Math.max(0, Math.round((totalCombinedGross - calcWastageKg) * 100) / 100);
+    const totalCost = Math.round(totalCombinedNet * nextChicken.ratePerKg * 100) / 100;
 
-    nextChicken.totalAmount = netCost;
+    nextChicken.totalAmount = totalCost;
 
     const nextSales = { ...data.sales };
-    nextSales.loadPriceSpend = netCost;
-    nextSales.totalIncomeKg = netKg;
+    nextSales.loadPriceSpend = totalCost;
+    nextSales.totalIncomeKg = totalCombinedNet;
+
+    const nextOpening = {
+      ...(data.openingStock || { eggNos: 0 }),
+      chickenKg: newOldStock,
+      appliedToLoad: true,
+    };
 
     onChangeData({
       ...data,
       chickenLoad: nextChicken,
       sales: nextSales,
+      openingStock: nextOpening,
     });
   };
 
@@ -129,16 +157,19 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
 
   // Explicit Save Everything handler for Investment Load Inward
   const handleSaveEverything = () => {
-    const cNetKg = chickenWastage > 0
-      ? Math.max(0, Math.round((chickenQuantity * (1 - chickenWastage / 100)) * 100) / 100)
-      : chickenQuantity;
-    const cNetCost = Math.round(cNetKg * chickenRate * 100) / 100;
+    const cTotalGross = Math.round((chickenOldStock + chickenQuantity) * 100) / 100;
+    const cWastageKg = chickenWastage > 0
+      ? Math.round((cTotalGross * (chickenWastage / 100)) * 100) / 100
+      : 0;
+    const cTotalNet = Math.max(0, Math.round((cTotalGross - cWastageKg) * 100) / 100);
+    const cTotalCost = Math.round(cTotalNet * chickenRate * 100) / 100;
     const nextChicken = {
       ...data.chickenLoad,
+      oldStockKg: chickenOldStock,
       totalIncomeKg: chickenQuantity,
       ratePerKg: chickenRate,
       wastagePercent: chickenWastage,
-      totalAmount: cNetCost,
+      totalAmount: cTotalCost,
     };
 
     const nextEgg = {
@@ -151,11 +182,17 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
     };
 
     // Calculate spend across chicken + egg loads
-    const calcCost = Math.round((cNetCost + eggTotalPrice) * 100) / 100;
+    const calcCost = Math.round((cTotalCost + eggTotalPrice) * 100) / 100;
     const nextSales = {
       ...data.sales,
       loadPriceSpend: calcCost > 0 ? calcCost : data.sales.loadPriceSpend,
-      totalIncomeKg: cNetKg > 0 ? cNetKg : data.sales.totalIncomeKg,
+      totalIncomeKg: cTotalNet > 0 ? cTotalNet : data.sales.totalIncomeKg,
+    };
+
+    const nextOpening = {
+      ...(data.openingStock || { eggNos: 0 }),
+      chickenKg: chickenOldStock,
+      appliedToLoad: true,
     };
 
     const updatedData: InvestmentDayData = {
@@ -163,6 +200,7 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
       chickenLoad: nextChicken,
       eggLoad: nextEgg,
       sales: nextSales,
+      openingStock: nextOpening,
     };
 
     onChangeData(updatedData);
@@ -383,12 +421,36 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
               </div>
             </div>
 
-            {/* Inputs: 1. Total Weight (KG) & 2. KG Price (₹/kg) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
-              {/* Total KG Income */}
+            {/* Inputs: 1. Old Stock (KG), 2. Today Total Weight (KG) & 3. KG Price (₹/kg) */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+              {/* 1. Old Stock (KG) */}
+              <div className="space-y-1.5">
+                <label htmlFor="input-chicken-old-stock" className="text-xs font-black text-slate-800 block">
+                  {language === 'ta' ? 'பழைய இருப்பு (கிலோ)' : 'Old Stock (KG)'}
+                </label>
+                <div className="relative">
+                  <input
+                    id="input-chicken-old-stock"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={chickenOldStock === 0 ? '' : chickenOldStock}
+                    onChange={(e) => handleUpdateChicken('oldStock', parseFloat(e.target.value))}
+                    placeholder="00.00"
+                    className="w-full font-black text-2xl bg-amber-50/40 hover:bg-white focus:bg-white text-slate-900 border-2 border-amber-300 focus:border-amber-600 focus:ring-2 focus:ring-amber-500/20 rounded-2xl py-3 px-4 outline-hidden transition-all shadow-2xs"
+                  />
+                  <div className="absolute right-3.5 top-3.5 flex items-center gap-1 pointer-events-none">
+                    <span className="text-xs font-black text-amber-700 uppercase">
+                      kg
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Today Total Weight (KG) */}
               <div className="space-y-1.5">
                 <label htmlFor="input-chicken-kg" className="text-xs font-black text-slate-800 block">
-                  {language === 'ta' ? 'மொத்த எடை (கிலோ)' : 'Total Weight (KG)'}
+                  {language === 'ta' ? 'இன்றைய லோடு (கிலோ)' : 'Today Weight (KG)'}
                 </label>
                 <div className="relative">
                   <input
@@ -409,10 +471,11 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
                 </div>
               </div>
 
-              {/* KG Price in ₹/kg */}
+              {/* 3. KG Price in ₹/kg */}
               <div className="space-y-1.5">
-                <label htmlFor="input-chicken-total-amount" className="text-xs font-black text-slate-800 block">
-                  {language === 'ta' ? 'கிலோ விலை (ரூபாய்)' : 'Price per KG'}
+                <label htmlFor="input-chicken-total-amount" className="text-xs font-black text-slate-800 flex items-center justify-between">
+                  <span>{language === 'ta' ? 'கிலோ விலை (ரூபாய்)' : 'Price per KG'}</span>
+                  <span className="text-[10px] text-slate-500 font-bold">₹/kg</span>
                 </label>
                 <div className="relative">
                   <div className="absolute left-3.5 top-3.5 text-base font-black text-slate-400 pointer-events-none">
@@ -435,22 +498,38 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
               </div>
             </div>
 
-            {/* Multiplied Calculation Bar (identical to Egg form) */}
+            {/* Multiplied Calculation Bar */}
             <div className="pt-2">
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xs font-black text-slate-800">
-                  {language === 'ta' ? 'லோடு தொகை' : 'Load Cost'}
+                  {language === 'ta' ? 'மொத்த தொகை' : 'Total Amount'}
                 </span>
               </div>
               <div className="w-full rounded-2xl border border-emerald-700 bg-emerald-800 text-white p-4 shadow-md shadow-emerald-950/20">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div>
                     <div className="text-xs font-semibold text-emerald-200 font-mono">
-                      {chickenQuantity || 0} kg × ₹{chickenRate || 0}
+                      {chickenOldStock > 0 && chickenWastage > 0 ? (
+                        <span>
+                          ({chickenOldStock} kg + {chickenQuantity || 0} kg = {chickenTotalGrossKg} kg - {wastageKg} kg = {chickenNetTotalKg} kg) × ₹{chickenRate || 0}
+                        </span>
+                      ) : chickenOldStock > 0 ? (
+                        <span>
+                          ({chickenOldStock} kg + {chickenQuantity || 0} kg = {chickenNetTotalKg} kg) × ₹{chickenRate || 0}
+                        </span>
+                      ) : chickenWastage > 0 ? (
+                        <span>
+                          ({chickenQuantity || 0} kg - {wastageKg} kg = {chickenNetTotalKg} kg) × ₹{chickenRate || 0}
+                        </span>
+                      ) : (
+                        <span>
+                          {chickenQuantity || 0} kg × ₹{chickenRate || 0}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-                    ₹{chickenNetCost.toLocaleString('en-IN')}
+                    ₹{chickenTotalCost.toLocaleString('en-IN')}
                   </div>
                 </div>
               </div>
@@ -459,34 +538,20 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
 
           {/* Two Large Summary Cards at Bottom (identical to Egg form) */}
           <div className="grid grid-cols-2 gap-3">
-            {/* Total KG after reducing wastage */}
+            {/* Total KG */}
             <div className="bg-white rounded-3xl p-5 border-2 border-emerald-200 shadow-xs flex flex-col justify-between min-h-[145px]">
               <div className="mb-2">
                 <span className="text-xs font-bold text-neutral-700 uppercase tracking-wide">
-                  {language === 'ta' ? 'நிகர எடை' : 'Net Weight'}
+                  {chickenOldStock > 0
+                    ? (language === 'ta' ? 'மொத்த எடை (இருப்புடன்)' : 'Total Weight (with Stock)')
+                    : (language === 'ta' ? 'நிகர எடை' : 'Net Weight')}
                 </span>
               </div>
 
               <div className="my-auto">
                 <div className="text-3xl font-black text-emerald-950 tracking-tight">
-                  {chickenNetKg}
+                  {chickenNetTotalKg}
                   <span className="text-xs font-bold text-amber-700 ml-1">kg</span>
-                </div>
-                <div className="text-xs font-bold text-neutral-600 mt-1 space-y-0.5">
-                  <div>
-                    {chickenWastage > 0 ? (
-                      <span>
-                        {chickenQuantity} kg - {wastageKg} kg ({chickenWastage}%)
-                      </span>
-                    ) : (
-                      <span>{chickenQuantity} kg {language === 'ta' ? 'புதிய லோடு' : 'New Load'}</span>
-                    )}
-                  </div>
-                  {data.openingStock?.appliedToLoad && Number(data.openingStock.chickenKg || 0) > 0 && (
-                    <div className="text-[11px] font-black text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 inline-block">
-                      + {data.openingStock.chickenKg} kg {language === 'ta' ? 'தொடக்க இருப்பு' : 'Opening'} = {(chickenNetKg + Number(data.openingStock.chickenKg)).toFixed(1)} kg
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -501,7 +566,7 @@ export const LoadEntryPage: React.FC<LoadEntryPageProps> = ({
 
               <div className="my-auto">
                 <div className="text-3xl font-black text-emerald-700 tracking-tight">
-                  ₹{chickenNetCost.toLocaleString('en-IN')}
+                  ₹{chickenTotalCost.toLocaleString('en-IN')}
                 </div>
               </div>
             </div>

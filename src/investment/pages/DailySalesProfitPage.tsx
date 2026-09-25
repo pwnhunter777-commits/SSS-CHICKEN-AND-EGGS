@@ -18,15 +18,18 @@ export const DailySalesProfitPage: React.FC<DailySalesProfitPageProps> = ({
   const unitLabel = isChicken ? 'kg' : 'nos';
 
   // 1st Page values (Load Entry) - Chicken Load
+  const chickenOldStock = Number(data.chickenLoad.oldStockKg || 0);
   const chickenGrossKg = Number(data.chickenLoad.totalIncomeKg || 0);
+  const chickenCombinedGrossKg = Math.round((chickenOldStock + chickenGrossKg) * 100) / 100;
   const chickenWastage = Number(data.chickenLoad.wastagePercent || 0);
   const chickenRate = Number(data.chickenLoad.ratePerKg || 0);
-  const chickenNetKg = chickenWastage > 0
-    ? Math.max(0, Math.round((chickenGrossKg * (1 - chickenWastage / 100)) * 100) / 100)
-    : chickenGrossKg;
+  const calcWastageKg = chickenWastage > 0
+    ? Math.round((chickenCombinedGrossKg * (chickenWastage / 100)) * 100) / 100
+    : 0;
+  const chickenCombinedNetKg = Math.max(0, Math.round((chickenCombinedGrossKg - calcWastageKg) * 100) / 100);
   const chickenLoadCost = Number(data.chickenLoad.totalAmount || 0) > 0
     ? Number(data.chickenLoad.totalAmount)
-    : Math.round(chickenNetKg * chickenRate * 100) / 100;
+    : Math.round(chickenCombinedNetKg * chickenRate * 100) / 100;
 
   // 1st Page values (Load Entry) - Egg Load
   const eggTareIncome = Number(data.eggLoad.totalTareIncome || 0);
@@ -39,7 +42,7 @@ export const DailySalesProfitPage: React.FC<DailySalesProfitPageProps> = ({
 
   // Active load cost and incoming chicken weight: Prioritize 1st page calculation
   const currentLoadSpend = totalCombinedLoadCost > 0 ? totalCombinedLoadCost : (Number(data.sales.loadPriceSpend) || 0);
-  const currentIncomingKg = chickenNetKg > 0 ? chickenNetKg : (Number(data.sales.totalIncomeKg) || 0);
+  const currentIncomingKg = chickenCombinedNetKg > 0 ? chickenCombinedNetKg : (Number(data.sales.totalIncomeKg) || 0);
 
   // Wholesale values (from today's wholesale bills summary or saved state)
   const billSummary = fetchDailyBillsSummary(data.date);
@@ -78,7 +81,7 @@ export const DailySalesProfitPage: React.FC<DailySalesProfitPageProps> = ({
       sales: {
         ...data.sales,
         loadPriceSpend: totalCombinedLoadCost,
-        totalIncomeKg: chickenNetKg,
+        totalIncomeKg: chickenCombinedNetKg,
         wholesaleAmount,
         wholesaleKg,
         retailAmount,
@@ -97,7 +100,7 @@ export const DailySalesProfitPage: React.FC<DailySalesProfitPageProps> = ({
       sales: {
         ...data.sales,
         loadPriceSpend: totalCombinedLoadCost > 0 ? totalCombinedLoadCost : currentLoadSpend,
-        totalIncomeKg: chickenNetKg > 0 ? chickenNetKg : currentIncomingKg,
+        totalIncomeKg: chickenCombinedNetKg > 0 ? chickenCombinedNetKg : currentIncomingKg,
         wholesaleAmount: summary.wholesaleAmount,
         wholesaleKg: summary.wholesaleKg,
         retailAmount: summary.retailAmount,
@@ -157,7 +160,7 @@ export const DailySalesProfitPage: React.FC<DailySalesProfitPageProps> = ({
                 {language === 'ta' ? 'கோழி லோடு வரவு' : 'Chicken Load Inward'}
               </span>
               <span className="text-lg font-black text-neutral-900 tracking-tight">
-                {chickenNetKg} <span className="text-xs font-bold text-neutral-400 uppercase">kg</span>
+                {chickenCombinedNetKg} <span className="text-xs font-bold text-neutral-400 uppercase">kg</span>
               </span>
             </div>
 

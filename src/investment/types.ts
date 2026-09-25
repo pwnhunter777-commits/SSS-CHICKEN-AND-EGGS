@@ -6,6 +6,7 @@ export interface ChickenLoadRecord {
   ratePerKg: number; // 5: rate of per kg
   totalAmount?: number; // total load amount in ₹
   costBasis?: 'gross' | 'net'; // calculation basis: gross (800 kg) or net (after wastage)
+  oldStockKg?: number; // old stock / opening stock in kg
 }
 
 export interface EggLoadRecord {

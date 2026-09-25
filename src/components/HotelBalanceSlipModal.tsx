@@ -69,6 +69,14 @@ export const HotelBalanceSlipModal: React.FC<HotelBalanceSlipModalProps> = ({
   const balanceInt = Math.round(hotelStats.balance);
   const hotelDisplayName = language === 'ta' && hotel.nameTa ? hotel.nameTa : hotel.nameEn;
 
+  const sortedPayments = [...hotelStats.hotelPayments]
+    .sort((a, b) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime());
+  const actualPayments = sortedPayments.filter((p) => p.type !== 'balance_add');
+  const lastTwoPayments = (actualPayments.length > 0 ? actualPayments : sortedPayments).slice(0, 2);
+
+  const now = new Date();
+  const statementTime = formatDisplayTime(now.toISOString(), language);
+
   const statementData: HotelBalanceShareData = {
     hotelName: hotel.nameEn,
     hotelNameTa: hotel.nameTa,
@@ -80,16 +88,19 @@ export const HotelBalanceSlipModal: React.FC<HotelBalanceSlipModalProps> = ({
     totalKg: hotelStats.totalKg,
     billCount: hotelStats.hotelBills.length,
     paymentCount: hotelStats.hotelPayments.filter((p) => p.type !== 'balance_add').length,
+    statementTime,
     recentBills: hotelStats.hotelBills.slice(0, 4).map((b) => ({
       billNumber: b.billNumber,
       date: b.date,
       amount: b.totalAmount,
       kg: b.totalKg,
     })),
-    recentPayments: hotelStats.hotelPayments.slice(0, 3).map((p) => ({
+    recentPayments: lastTwoPayments.map((p) => ({
       date: p.date,
+      createdAt: p.createdAt,
+      time: p.createdAt ? formatDisplayTime(p.createdAt, language) : '',
       amount: p.amount,
-      mode: p.paymentMode,
+      mode: p.paymentMode || 'cash',
     })),
   };
 
@@ -256,7 +267,7 @@ export const HotelBalanceSlipModal: React.FC<HotelBalanceSlipModalProps> = ({
               </span>
             </div>
 
-            {/* Hotel Name & Date */}
+            {/* Hotel Name, Date & Time */}
             <div className="py-2 border-b border-dashed border-slate-300 flex justify-between items-center text-xs font-bold text-gray-800 gap-2">
               <div className="min-w-0 flex-1">
                 <span className="text-xs sm:text-sm font-black text-gray-900 block truncate">
@@ -268,9 +279,14 @@ export const HotelBalanceSlipModal: React.FC<HotelBalanceSlipModalProps> = ({
                   </span>
                 )}
               </div>
-              <span className="text-[11px] text-gray-500 font-medium shrink-0">
-                {formatDisplayDate(new Date().toISOString().slice(0, 10))}
-              </span>
+              <div className="text-right shrink-0">
+                <span className="text-[11px] text-gray-800 font-bold block">
+                  {formatDisplayDate(new Date().toISOString().slice(0, 10), language)}
+                </span>
+                <span className="text-[10px] text-gray-500 font-semibold block">
+                  {statementTime}
+                </span>
+              </div>
             </div>
 
             {/* Balance Amount Box */}
@@ -304,6 +320,46 @@ export const HotelBalanceSlipModal: React.FC<HotelBalanceSlipModalProps> = ({
                   <span>{Math.abs(balanceInt).toLocaleString('en-IN')}</span>
                 </div>
               </div>
+            </div>
+
+            {/* Last 2 Payments History */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-2.5 space-y-1.5">
+              <div className="flex items-center justify-between text-[10px] font-black uppercase text-slate-700 pb-1 border-b border-slate-200">
+                <span>{language === 'ta' ? 'கடைசி 2 வரவுகள்' : 'LAST 2 PAYMENTS'}</span>
+                <span className="text-[9px] font-bold text-emerald-700">{language === 'ta' ? 'வரவு வரலாறு' : 'History'}</span>
+              </div>
+              {statementData.recentPayments && statementData.recentPayments.length > 0 ? (
+                <div className="divide-y divide-slate-200/70 text-xs">
+                  {statementData.recentPayments.slice(0, 2).map((p, idx) => (
+                    <div key={idx} className="py-1 flex items-center justify-between gap-1.5">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-mono text-[10.5px] font-bold text-slate-800">
+                            {formatDisplayDate(p.date, language)}
+                          </span>
+                          {p.time && (
+                            <span className="text-[9px] font-medium text-slate-500">
+                              {p.time}
+                            </span>
+                          )}
+                          {p.mode && (
+                            <span className="px-1 py-0.2 bg-emerald-100 text-emerald-800 rounded text-[9px] font-bold uppercase">
+                              {p.mode}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="font-mono font-black text-emerald-800 text-right text-xs">
+                        ₹{Math.round(p.amount).toLocaleString('en-IN')}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-[10px] text-slate-400 py-1 text-center font-medium">
+                  {language === 'ta' ? 'முந்தைய வரவு எதுவும் இல்லை' : 'No previous payments recorded'}
+                </div>
+              )}
             </div>
 
             {/* UPI Payment strip if due */}

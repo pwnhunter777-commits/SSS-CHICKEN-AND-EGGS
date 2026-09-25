@@ -329,8 +329,8 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const englishPhone = settings.phoneNumber || '8680000003';
   const englishGst = settings.gstNumber || '34AQPN8846J2ZF';
 
-  // Customer / Hotel Name and Bill Meta (in English as requested)
-  const displayHotelName = resolveHotelDisplayName(bill.hotelName, bill.hotelId, hotels, 'en');
+  // Customer / Hotel Name: ALWAYS in Tamil in both English and Tamil modes as requested
+  const displayHotelName = resolveHotelDisplayName(bill.hotelName, bill.hotelId, hotels, 'ta');
   const billDateStr = formatDisplayDate(bill.date, 'en');
   const billTimeStr = formatDisplayTime(bill.createdAt, 'en');
   const billAmountInt = Math.round(bill.totalAmount);

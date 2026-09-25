@@ -23,6 +23,7 @@ import { Bill, getHotelName, HotelItem, HotelPayment, LanguageCode, ShopSettings
 import {
   exportHotelStatementToCSV,
   formatDisplayDate,
+  formatDisplayTime,
   getTodayDateString,
 } from '../utils/storage';
 import { TRANSLATIONS } from '../utils/translations';
@@ -179,6 +180,14 @@ export const HotelPage: React.FC<HotelPageProps> = ({
     if (!currentSelectedHotel) return;
     setIsSharingBalance(true);
     try {
+      const sortedPayments = [...hotelStats.hotelPayments]
+        .sort((a, b) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime());
+      const actualPayments = sortedPayments.filter((p) => p.type !== 'balance_add');
+      const lastTwoPayments = (actualPayments.length > 0 ? actualPayments : sortedPayments).slice(0, 2);
+
+      const now = new Date();
+      const statementTime = formatDisplayTime(now.toISOString(), language);
+
       const data: HotelBalanceShareData = {
         hotelName: currentSelectedHotel.nameEn,
         hotelNameTa: currentSelectedHotel.nameTa,
@@ -190,20 +199,20 @@ export const HotelPage: React.FC<HotelPageProps> = ({
         totalKg: hotelStats.totalKg,
         billCount: hotelStats.hotelBills.length,
         paymentCount: hotelStats.hotelPayments.filter((p) => p.type !== 'balance_add').length,
+        statementTime,
         recentBills: hotelStats.hotelBills.slice(0, 3).map((b) => ({
           billNumber: b.billNumber,
           date: b.date,
           amount: b.totalAmount,
           kg: b.totalKg,
         })),
-        recentPayments: hotelStats.hotelPayments
-          .filter((p) => p.type !== 'balance_add')
-          .slice(0, 3)
-          .map((p) => ({
-            date: p.date,
-            amount: p.amount,
-            mode: p.paymentMode || 'cash',
-          })),
+        recentPayments: lastTwoPayments.map((p) => ({
+          date: p.date,
+          createdAt: p.createdAt,
+          time: p.createdAt ? formatDisplayTime(p.createdAt, language) : '',
+          amount: p.amount,
+          mode: p.paymentMode || 'cash',
+        })),
       };
       const res = await shareHotelStatementAsPdfToWhatsApp(
         data,

@@ -98,7 +98,7 @@ export async function generateBillPdfBlob(
     const gst = settings.gstNumber || '34AQPN8846J2ZF';
 
     const finalPhone = (recipientPhone || bill.hotelPhone || getHotelPhone(bill.hotelName, hotels) || '').trim();
-    const hotelName = resolveHotelDisplayName(bill.hotelName, bill.hotelId, hotels, lang);
+    const hotelName = resolveHotelDisplayName(bill.hotelName, bill.hotelId, hotels, 'ta');
 
     const prevBalance = Math.round(bill.previousBalance || 0);
     const hasPrevBal = prevBalance !== 0;
@@ -458,8 +458,9 @@ export interface HotelBalanceShareData {
   totalKg: number;
   billCount: number;
   paymentCount: number;
+  statementTime?: string;
   recentBills?: { billNumber: number; date: string; amount: number; kg: number }[];
-  recentPayments?: { date: string; amount: number; mode?: string }[];
+  recentPayments?: { date: string; time?: string; createdAt?: string; amount: number; mode?: string }[];
 }
 
 export function generateHotelBalanceWhatsAppText(
@@ -470,11 +471,13 @@ export function generateHotelBalanceWhatsAppText(
   const isTa = lang === 'ta';
   const rawShopName = settings.shopName || settings.shopNameEn || (isTa && settings.shopNameTa ? settings.shopNameTa : 'SSS CHICKEN AND EGG AGENCY');
   const shopName = rawShopName.trim();
-  const dateStr = new Date().toLocaleDateString(isTa ? 'ta-IN' : 'en-IN', {
+  const now = new Date();
+  const dateStr = now.toLocaleDateString(isTa ? 'ta-IN' : 'en-IN', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
   });
+  const timeStr = data.statementTime || formatDisplayTime(now.toISOString(), lang);
 
   const hotelDisplayName = (isTa && data.hotelNameTa ? data.hotelNameTa : data.hotelName) || 'Customer';
   const balanceInt = Math.round(data.balance);
@@ -482,7 +485,7 @@ export function generateHotelBalanceWhatsAppText(
   let msg = `*${shopName.toUpperCase()}*\n`;
   msg += `━━━━━━━━━━━━━━━━━━━━\n`;
   msg += `🏨 *${isTa ? 'ஹோட்டல்' : 'Hotel'}:* ${hotelDisplayName}\n`;
-  msg += `📅 *${isTa ? 'தேதி' : 'Date'}:* ${dateStr}\n`;
+  msg += `📅 *${isTa ? 'தேதி' : 'Date'}:* ${dateStr}  ⏰ *${isTa ? 'நேரம்' : 'Time'}:* ${timeStr}\n`;
   msg += `━━━━━━━━━━━━━━━━━━━━\n`;
 
   if (balanceInt > 0) {
@@ -495,6 +498,19 @@ export function generateHotelBalanceWhatsAppText(
   } else {
     msg += `🌟 *${isTa ? 'முன்பணம்' : 'ADVANCE CREDIT'}:* ₹${Math.abs(balanceInt).toLocaleString('en-IN')}\n`;
   }
+
+  // Last 2 Payments History
+  if (data.recentPayments && data.recentPayments.length > 0) {
+    msg += `━━━━━━━━━━━━━━━━━━━━\n`;
+    msg += `🧾 *${isTa ? 'கடைசி 2 வரவுகள் (Last 2 Payments)' : 'LAST 2 PAYMENTS'}:*\n`;
+    data.recentPayments.slice(0, 2).forEach((p, idx) => {
+      const pDate = formatDisplayDate(p.date, lang);
+      const pTime = p.time ? ` ${p.time}` : '';
+      const pMode = p.mode ? ` (${p.mode.toUpperCase()})` : '';
+      msg += `${idx + 1}. ₹${Math.round(p.amount).toLocaleString('en-IN')} - ${pDate}${pTime}${pMode}\n`;
+    });
+  }
+
   msg += `━━━━━━━━━━━━━━━━━━━━\n`;
   msg += `${isTa ? 'நன்றி! மீண்டும் வருக!' : 'Thank you for your business!'}`;
   return msg;
@@ -503,10 +519,67 @@ export function generateHotelBalanceWhatsAppText(
 export async function generateHotelStatementPdfBlob(
   data: HotelBalanceShareData,
   settings: ShopSettings,
-  _elementId: string = 'printable-hotel-statement',
+  elementId: string = 'printable-hotel-statement',
   lang: LanguageCode = 'en'
 ): Promise<Blob | null> {
-  // Ultra-crisp Vector PDF generator (Standard 80mm slip format, guaranteed no text cut-off, razor sharp at any zoom)
+  // 1. High-Fidelity DOM Capture (Preserves Exact Tamil Typography & Screenshot Layout if available)
+  const receiptElem = document.getElementById(elementId);
+  if (receiptElem) {
+    try {
+      const naturalWidth = Math.max(340, receiptElem.scrollWidth || 0, receiptElem.offsetWidth || 0);
+      const naturalHeight = Math.max(receiptElem.scrollHeight || 0, receiptElem.offsetHeight || 0);
+
+      const dataUrl = await toPng(receiptElem, {
+        pixelRatio: 3,
+        backgroundColor: '#ffffff',
+        cacheBust: true,
+        quality: 1,
+        width: naturalWidth,
+        height: naturalHeight,
+        style: {
+          width: `${naturalWidth}px`,
+          minWidth: `${naturalWidth}px`,
+          maxWidth: 'none',
+          boxSizing: 'border-box',
+          margin: '0',
+          transform: 'none',
+        },
+      });
+
+      let imgWidthPx = 0;
+      let imgHeightPx = 0;
+      await new Promise<void>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          imgWidthPx = img.naturalWidth || img.width;
+          imgHeightPx = img.naturalHeight || img.height;
+          resolve();
+        };
+        img.onerror = (err) => reject(err);
+        img.src = dataUrl;
+      });
+
+      const pdfWidth = 80;
+      const margin = 4;
+      const printableWidth = pdfWidth - margin * 2;
+      const imgHeightMm = (imgHeightPx * printableWidth) / (imgWidthPx || 1);
+      const dynamicPageHeight = Math.max(115, Math.ceil(imgHeightMm + margin * 2));
+
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: [pdfWidth, dynamicPageHeight],
+        compress: true,
+      });
+
+      pdf.addImage(dataUrl, 'PNG', margin, margin, printableWidth, imgHeightMm, undefined, 'FAST');
+      return pdf.output('blob');
+    } catch (domErr) {
+      console.warn('DOM rasterization of hotel statement failed, proceeding to vector generator:', domErr);
+    }
+  }
+
+  // 2. Ultra-crisp Vector PDF generator (Standard 80mm slip format, guaranteed no text cut-off, razor sharp at any zoom)
   try {
     const isTa = lang === 'ta';
     const pageWidth = 80; // Standard 80mm slip width
@@ -521,15 +594,21 @@ export async function generateHotelStatementPdfBlob(
 
     const rawHotel = data.hotelName || 'Customer';
     const cleanHotel = rawHotel.replace(/[^\x20-\x7E]/g, '').trim() || 'Hotel Customer';
-    const todayStr = formatDisplayDate(new Date().toISOString().slice(0, 10), 'en');
+    const now = new Date();
+    const todayStr = formatDisplayDate(now.toISOString().slice(0, 10), 'en');
+    const currentTimeStr = data.statementTime || formatDisplayTime(now.toISOString(), 'en');
 
     const isDue = data.balance > 0;
     const isSettled = data.balance === 0;
     const balAmtStr = `Rs. ${Math.abs(Math.round(data.balance)).toLocaleString('en-IN')}`;
 
-    // Estimated height with generous safety margin:
-    // Outer border requires height >= 105mm so jsPDF portrait mode never swaps width and height
-    const pageHeight = 112;
+    const paymentsList = (data.recentPayments || []).slice(0, 2);
+    const hasPayments = paymentsList.length > 0;
+    const paymentsSectionH = hasPayments ? (7 + paymentsList.length * 6) : 10;
+    const upiH = (isDue && (settings.phoneNumber || settings.upiId)) ? 8.5 : 2;
+
+    const dynamicHeight = 100 + paymentsSectionH + upiH;
+    const pageHeight = Math.max(128, Math.ceil(dynamicHeight));
 
     const pdf = new jsPDF({
       orientation: 'portrait',
@@ -594,17 +673,17 @@ export async function generateHotelStatementPdfBlob(
     pdf.text('BALANCE STATEMENT', pageWidth / 2, curY + 3.5, { align: 'center' });
     curY += 7.5;
 
-    // 5. Hotel Name & Statement Date
+    // 5. Hotel Name & Statement Date + Time
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(9);
     pdf.setTextColor(15, 23, 42);
-    const hotelLines = pdf.splitTextToSize(cleanHotel, contentWidth - 28);
+    const hotelLines = pdf.splitTextToSize(cleanHotel, contentWidth - 36);
     pdf.text(hotelLines[0] || cleanHotel, margin + 3.5, curY);
 
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(7);
-    pdf.setTextColor(100, 116, 139);
-    pdf.text(todayStr, pageWidth - margin - 3.5, curY, { align: 'right' });
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(6.8);
+    pdf.setTextColor(71, 85, 105);
+    pdf.text(`${todayStr}  ${currentTimeStr}`, pageWidth - margin - 3.5, curY, { align: 'right' });
     curY += 4.5;
 
     if (data.hotelPhone) {
@@ -618,7 +697,7 @@ export async function generateHotelStatementPdfBlob(
     }
 
     // 6. Prominent Balance Amount Due Box
-    const boxH = 19;
+    const boxH = 18;
     if (isDue) {
       pdf.setFillColor(254, 242, 242);
       pdf.setDrawColor(248, 113, 113);
@@ -633,21 +712,72 @@ export async function generateHotelStatementPdfBlob(
     pdf.roundedRect(margin + 3, curY, contentWidth - 6, boxH, 2, 2, 'FD');
 
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(7.5);
+    pdf.setFontSize(7.2);
     pdf.setTextColor(
       isDue ? 185 : isSettled ? 22 : 30,
       isDue ? 28 : isSettled ? 101 : 64,
       isDue ? 28 : isSettled ? 52 : 175
     );
     const balTitle = isDue ? 'NET BALANCE DUE' : isSettled ? 'ACCOUNT FULLY SETTLED' : 'ADVANCE CREDIT';
-    pdf.text(balTitle, pageWidth / 2, curY + 5.5, { align: 'center' });
+    pdf.text(balTitle, pageWidth / 2, curY + 5, { align: 'center' });
 
-    pdf.setFontSize(14.5);
+    pdf.setFontSize(14);
     pdf.setTextColor(15, 23, 42);
-    pdf.text(balAmtStr, pageWidth / 2, curY + 14, { align: 'center' });
-    curY += boxH + 4.5;
+    pdf.text(balAmtStr, pageWidth / 2, curY + 13.5, { align: 'center' });
+    curY += boxH + 3.5;
 
-    // 7. UPI / GPay quick pay strip if due
+    // 7. Last 2 Payments History Section
+    const payBoxH = hasPayments ? (6.5 + paymentsList.length * 6) : 9.5;
+    pdf.setFillColor(248, 250, 252);
+    pdf.setDrawColor(226, 232, 240);
+    pdf.setLineWidth(0.3);
+    pdf.roundedRect(margin + 3, curY, contentWidth - 6, payBoxH, 1.5, 1.5, 'FD');
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(6.8);
+    pdf.setTextColor(51, 65, 85);
+    pdf.text('LAST 2 PAYMENTS', margin + 5.5, curY + 4);
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(6);
+    pdf.setTextColor(100, 116, 139);
+    pdf.text('HISTORY', pageWidth - margin - 5.5, curY + 4, { align: 'right' });
+
+    if (hasPayments) {
+      let payY = curY + 8.5;
+      paymentsList.forEach((p, idx) => {
+        const pDate = formatDisplayDate(p.date, 'en');
+        const pTime = p.time || (p.createdAt ? formatDisplayTime(p.createdAt, 'en') : '');
+        const pDateDisplay = pTime ? `${pDate} ${pTime}` : pDate;
+        const pMode = (p.mode || 'CASH').toUpperCase();
+        const pAmt = `Rs. ${Math.round(p.amount).toLocaleString('en-IN')}`;
+
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(6.5);
+        pdf.setTextColor(15, 23, 42);
+        pdf.text(`${idx + 1}. ${pDateDisplay}`, margin + 5.5, payY);
+
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(6);
+        pdf.setTextColor(71, 85, 105);
+        pdf.text(`(${pMode})`, margin + 36, payY);
+
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(7);
+        pdf.setTextColor(5, 150, 105);
+        pdf.text(pAmt, pageWidth - margin - 5.5, payY, { align: 'right' });
+
+        payY += 5.5;
+      });
+    } else {
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(6.2);
+      pdf.setTextColor(148, 163, 184);
+      pdf.text('No previous payments recorded', margin + 5.5, curY + 7.5);
+    }
+    curY += payBoxH + 3.5;
+
+    // 8. UPI / GPay quick pay strip if due
     if (isDue && (settings.phoneNumber || settings.upiId)) {
       pdf.setFillColor(254, 243, 199);
       pdf.roundedRect(margin + 3, curY, contentWidth - 6, 6, 1.2, 1.2, 'F');
@@ -661,16 +791,16 @@ export async function generateHotelStatementPdfBlob(
       curY += 2;
     }
 
-    // 8. Footer
+    // 9. Footer
+    const footerY = pageHeight - margin - 4;
     pdf.setDrawColor(226, 232, 240);
     pdf.setLineWidth(0.25);
-    pdf.line(margin + 3, curY, pageWidth - margin - 3, curY);
-    curY += 4.5;
+    pdf.line(margin + 3, footerY - 3, pageWidth - margin - 3, footerY - 3);
 
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(6.8);
     pdf.setTextColor(148, 163, 184);
-    pdf.text('Thank you for your business!', pageWidth / 2, curY, { align: 'center' });
+    pdf.text('Thank you for your business!', pageWidth / 2, footerY, { align: 'center' });
 
     return pdf.output('blob');
   } catch (e) {

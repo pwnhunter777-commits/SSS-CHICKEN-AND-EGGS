@@ -37,14 +37,15 @@ export const StockRemainingPage: React.FC<StockRemainingPageProps> = ({
   const isChicken = data.itemType === 'chicken';
   const unitLabel = isChicken ? 'kg' : 'nos';
 
-  const firstPageGross = isChicken ? Number(data.chickenLoad.totalIncomeKg || 0) : Number(data.eggLoad.totalTareIncome || 0);
+  const chickenOldStock = Number(data.chickenLoad?.oldStockKg || 0);
+  const firstPageGross = isChicken ? Math.round((Number(data.chickenLoad.totalIncomeKg || 0) + chickenOldStock) * 100) / 100 : Number(data.eggLoad.totalTareIncome || 0);
   const firstPageWastage = isChicken ? Number(data.chickenLoad.wastagePercent || 0) : 0;
   const firstPageNet = isChicken
     ? (firstPageWastage > 0 ? Math.max(0, Math.round((firstPageGross * (1 - firstPageWastage / 100)) * 100) / 100) : firstPageGross)
     : (data.eggLoad.totalTareIncome ? Number(data.eggLoad.totalTareIncome) * 30 : 0);
   const chickenCost = Number(data.chickenLoad.totalAmount || 0) > 0
     ? Number(data.chickenLoad.totalAmount)
-    : Math.round(firstPageNet * Number(data.chickenLoad.ratePerKg || 0) * 100) / 100;
+    : Math.round(firstPageGross * Number(data.chickenLoad.ratePerKg || 0) * 100) / 100;
   const eggCost = Math.round((Number(data.eggLoad.totalTareIncome) || 0) * (Number(data.eggLoad.pricePerTare) || 0) * 100) / 100;
   const combinedLoadCost = Math.round((chickenCost + eggCost) * 100) / 100;
 
@@ -57,8 +58,8 @@ export const StockRemainingPage: React.FC<StockRemainingPageProps> = ({
   const incomingKg = chickenNet > 0 ? chickenNet : Number(data.sales?.totalIncomeKg || 0);
 
   // Opening stock from previous day (if applied)
-  const isOpeningApplied = Boolean(data.openingStock?.appliedToLoad);
-  const openingChickenKg = isOpeningApplied ? Number(data.openingStock?.chickenKg || 0) : 0;
+  const isOpeningApplied = Boolean(data.openingStock?.appliedToLoad) || chickenOldStock > 0;
+  const openingChickenKg = chickenOldStock > 0 ? chickenOldStock : (isOpeningApplied ? Number(data.openingStock?.chickenKg || 0) : 0);
   const totalAvailableChickenKg = Math.round((incomingKg + openingChickenKg) * 1000) / 1000;
 
   // Egg Load Inward calculations
