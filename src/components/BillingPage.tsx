@@ -312,9 +312,16 @@ export const BillingPage: React.FC<BillingPageProps> = ({
       netTotalWithBalance: prevBal !== 0 ? netTotalWithBal : totalAmount,
     };
 
-    onSaveBill(newBill);
-    setBillingInputs({});
-    onOpenReceipt(newBill, false, undefined, _triggerBluetooth);
+    // Open receipt modal as a DRAFT.
+    // It will ONLY be saved in the history of wholesale when the user sends the PDF in WhatsApp (or prints via Bluetooth)!
+    onOpenReceipt(
+      newBill,
+      true, // isDraft: true
+      () => {
+        setBillingInputs({});
+      },
+      _triggerBluetooth
+    );
   };
 
   const handleClearAll = () => {

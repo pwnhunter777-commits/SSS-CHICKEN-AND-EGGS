@@ -108,7 +108,7 @@ export async function generateBillPdfBlob(
 
     const itemCount = Math.max(1, bill.items.length);
     const tableHeight = 10 + itemCount * 7.5;
-    const metaBoxH = hasPrevBal ? (finalPhone ? 19 : 17) : (finalPhone ? 15 : 13);
+    const metaBoxH = hasPrevBal ? 17 : 13;
     const calcBoxH = hasPrevBal ? 14 : 8; // Row for bill amount + old balance if present
     const estimatedContentH =
       22 +
@@ -174,18 +174,11 @@ export async function generateBillPdfBlob(
     pdf.setFontSize(11);
     pdf.setTextColor(15, 23, 42);
     pdf.text(hotelName, margin + 5, metaBoxY + 8.5, { maxWidth: 68 });
-    if (finalPhone) {
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(8);
-      pdf.setTextColor(5, 150, 105);
-      pdf.text(`Ph: ${finalPhone}`, margin + 5, metaBoxY + 12.5);
-    }
     if (hasPrevBal) {
-      const prevBalY = finalPhone ? metaBoxY + 16.5 : metaBoxY + 13;
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(8);
       pdf.setTextColor(225, 29, 72);
-      pdf.text(`Old Bal: ${curr}${prevBalance.toLocaleString('en-IN')}`, margin + 5, prevBalY);
+      pdf.text(`Old Bal: ${curr}${prevBalance.toLocaleString('en-IN')}`, margin + 5, metaBoxY + 13);
     }
 
     pdf.setDrawColor(203, 213, 225);
@@ -389,8 +382,8 @@ export async function shareBillAsPdfToWhatsApp(
       } catch (shareErr: any) {
         if (shareErr?.name === 'AbortError') {
           return {
-            success: true,
-            sharedDirectly: true,
+            success: false,
+            sharedDirectly: false,
             message: 'Share cancelled by user.',
           };
         }
@@ -417,17 +410,32 @@ export async function shareBillAsPdfToWhatsApp(
 }
 
 export function openWhatsAppChatWithoutText(phoneNumber?: string): void {
-  let url = '';
+  let cleanNumber = '';
   if (phoneNumber && phoneNumber.trim().length > 0) {
-    let cleanNumber = phoneNumber.replace(/\D/g, '');
+    cleanNumber = phoneNumber.replace(/\D/g, '');
     if (cleanNumber.length === 10) {
       cleanNumber = '91' + cleanNumber;
     }
-    url = `https://wa.me/${cleanNumber}`;
-  } else {
-    url = `https://api.whatsapp.com/send`;
   }
-  window.open(url, '_blank');
+
+  const isMobile =
+    typeof navigator !== 'undefined' &&
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+
+  if (cleanNumber) {
+    if (isMobile) {
+      window.location.href = `whatsapp://send?phone=${cleanNumber}`;
+    } else {
+      window.open(`https://wa.me/${cleanNumber}`, '_blank');
+    }
+  } else {
+    // Directly go to WhatsApp without asking for a phone number
+    if (isMobile) {
+      window.location.href = 'whatsapp://send';
+    } else {
+      window.open('https://web.whatsapp.com', '_blank');
+    }
+  }
 }
 
 export function openWhatsAppChatWithText(text: string, phoneNumber?: string): void {
@@ -438,13 +446,25 @@ export function openWhatsAppChatWithText(text: string, phoneNumber?: string): vo
       cleanNumber = '91' + cleanNumber;
     }
   }
-  let url = '';
+
+  const encodedText = encodeURIComponent(text);
+  const isMobile =
+    typeof navigator !== 'undefined' &&
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+
   if (cleanNumber) {
-    url = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(text)}`;
+    if (isMobile) {
+      window.location.href = `whatsapp://send?phone=${cleanNumber}&text=${encodedText}`;
+    } else {
+      window.open(`https://wa.me/${cleanNumber}?text=${encodedText}`, '_blank');
+    }
   } else {
-    url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    if (isMobile) {
+      window.location.href = `whatsapp://send?text=${encodedText}`;
+    } else {
+      window.open(`https://web.whatsapp.com/send?text=${encodedText}`, '_blank');
+    }
   }
-  window.open(url, '_blank');
 }
 
 export interface HotelBalanceShareData {
@@ -876,8 +896,8 @@ export async function shareHotelStatementAsPdfToWhatsApp(
       } catch (shareErr: any) {
         if (shareErr?.name === 'AbortError') {
           return {
-            success: true,
-            sharedDirectly: true,
+            success: false,
+            sharedDirectly: false,
             message: 'Share cancelled by user.',
           };
         }

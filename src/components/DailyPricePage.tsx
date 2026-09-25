@@ -71,6 +71,9 @@ export const DailyPricePage: React.FC<DailyPricePageProps> = ({
     setTimeout(() => {
       setFeedback(null);
     }, 4000);
+    if (onNavigateToBilling) {
+      onNavigateToBilling();
+    }
   };
 
   const handleAddProductSubmit = (e: React.FormEvent) => {

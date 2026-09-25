@@ -222,6 +222,15 @@ export function getTodayDailyPrices(): DailyPriceRecord | null {
   return all[today] || null;
 }
 
+export function isWholesaleDailyPriceSavedToday(): boolean {
+  try {
+    const record = getTodayDailyPrices();
+    return Boolean(record && record.prices && Object.keys(record.prices).length > 0);
+  } catch {
+    return false;
+  }
+}
+
 export function saveTodayDailyPrices(prices: Record<string, number>): DailyPriceRecord {
   const today = getTodayDateString();
   const all = loadAllDailyPrices();

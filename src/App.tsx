@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MainScreen } from './components/MainScreen';
 import { LoginScreen } from './components/LoginScreen';
 import { AppHeader } from './components/AppHeader';
@@ -25,12 +25,15 @@ import {
   ShopSettings,
   StoreConfig,
 } from './types';
+import { Page as RetailPage } from './retail/types';
+import { isTodayPriceSaved } from './retail/utils/storage';
 import {
   addBill,
   addHotelPayment,
   deleteBill,
   deleteHotelPayment,
   getTodayDailyPrices,
+  isWholesaleDailyPriceSavedToday,
   getTodayDateString,
   loadBills,
   loadHotelPayments,
@@ -57,7 +60,17 @@ const DEFAULT_STORE_CONFIG: StoreConfig = {
 
 export default function App() {
   const [activeScreen, setActiveScreen] = useState<ActiveScreen>('main');
-  const [currentPage, setCurrentPage] = useState<AppPage>('billing');
+  
+  // Wholesale page state: starts at daily-price if not saved yet today, else starts at billing
+  const [currentPage, setCurrentPage] = useState<AppPage>(() => {
+    return isWholesaleDailyPriceSavedToday() ? 'billing' : 'daily-price';
+  });
+
+  // Retail page state: starts at daily-price if not saved yet today, else starts at billing
+  const [retailCurrentPage, setRetailCurrentPage] = useState<RetailPage>(() => {
+    return isTodayPriceSaved() ? 'billing' : 'daily-price';
+  });
+  const [showRetailInstallModal, setShowRetailInstallModal] = useState<boolean>(false);
 
   // Stored state for branding
   const [storeConfig, setStoreConfig] = useState<StoreConfig>(() => {
@@ -269,6 +282,7 @@ export default function App() {
   const handleSaveDailyPrices = (prices: Record<string, number>) => {
     const newRecord = saveTodayDailyPrices(prices);
     setDailyPrices(newRecord);
+    setCurrentPage('billing');
   };
 
   // Save New Bill
@@ -372,9 +386,142 @@ export default function App() {
       if (receiptState.onSaved) {
         receiptState.onSaved();
       }
+      setReceiptState((prev) => ({ ...prev, isDraft: false }));
     }
-    handleCloseReceipt();
   };
+
+  // Track navigation state in a ref for popstate handler
+  const appNavRef = useRef({
+    activeScreen,
+    currentPage,
+    retailCurrentPage,
+    isReceiptOpen: receiptState.isOpen,
+    isCleanupOpen: cleanupModalState.isOpen,
+    isRetailInstallOpen: showRetailInstallModal,
+    language,
+  });
+
+  useEffect(() => {
+    appNavRef.current = {
+      activeScreen,
+      currentPage,
+      retailCurrentPage,
+      isReceiptOpen: receiptState.isOpen,
+      isCleanupOpen: cleanupModalState.isOpen,
+      isRetailInstallOpen: showRetailInstallModal,
+      language,
+    };
+  }, [
+    activeScreen,
+    currentPage,
+    retailCurrentPage,
+    receiptState.isOpen,
+    cleanupModalState.isOpen,
+    showRetailInstallModal,
+    language,
+  ]);
+
+  const isExitingRef = useRef(false);
+  const lastBackPressRef = useRef(0);
+  const [exitToastMessage, setExitToastMessage] = useState<string | null>(null);
+
+  // Setup history trap for Android / mobile browser hardware/gesture back navigation
+  useEffect(() => {
+    try {
+      if (!window.history.state || !window.history.state.__app_base) {
+        window.history.replaceState({ __app_base: true }, '');
+      }
+      window.history.pushState({ __app_trap: true }, '');
+    } catch {
+      // Ignore History API errors if blocked by iframe sandbox
+    }
+
+    const handlePopState = () => {
+      if (isExitingRef.current) {
+        return;
+      }
+
+      const current = appNavRef.current;
+
+      // 1. If Receipt Modal is open, close it first
+      if (current.isReceiptOpen) {
+        setReceiptState((prev) => ({ ...prev, isOpen: false }));
+        try {
+          window.history.pushState({ __app_trap: true }, '');
+        } catch {}
+        return;
+      }
+
+      // 2. If Data Cleanup Modal is open, close it
+      if (current.isCleanupOpen) {
+        setCleanupModalState((prev) => ({ ...prev, isOpen: false }));
+        try {
+          window.history.pushState({ __app_trap: true }, '');
+        } catch {}
+        return;
+      }
+
+      // 3. If Retail Install Modal is open, close it
+      if (current.isRetailInstallOpen) {
+        setShowRetailInstallModal(false);
+        try {
+          window.history.pushState({ __app_trap: true }, '');
+        } catch {}
+        return;
+      }
+
+      // 4. In Wholesale: If on a sub-page (register, total, hotel, daily-price), navigate back to billing
+      if (current.activeScreen === 'wholesale' && current.currentPage !== 'billing') {
+        setCurrentPage('billing');
+        try {
+          window.history.pushState({ __app_trap: true }, '');
+        } catch {}
+        return;
+      }
+
+      // 5. In Retail: If on a sub-page (register, total, daily-price), navigate back to billing
+      if (current.activeScreen === 'retail' && current.retailCurrentPage !== 'billing') {
+        setRetailCurrentPage('billing');
+        try {
+          window.history.pushState({ __app_trap: true }, '');
+        } catch {}
+        return;
+      }
+
+      // 6. If inside any sub-module (wholesale, retail, investment, login), reach the main interface of the app
+      if (current.activeScreen !== 'main') {
+        setActiveScreen('main');
+        try {
+          window.history.pushState({ __app_trap: true }, '');
+        } catch {}
+        return;
+      }
+
+      // 7. Reached the main interface of the app:
+      // Pressing back again within 2.5s goes out of the app
+      const now = Date.now();
+      if (now - lastBackPressRef.current < 2500) {
+        isExitingRef.current = true;
+        window.history.back();
+      } else {
+        lastBackPressRef.current = now;
+        const msg =
+          current.language === 'ta'
+            ? 'வெளியேற மீண்டும் பின் அழுத்தவும்'
+            : 'Press back again to exit the app';
+        setExitToastMessage(msg);
+        setTimeout(() => setExitToastMessage(null), 2500);
+        try {
+          window.history.pushState({ __app_trap: true }, '');
+        } catch {}
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
 
   return (
     <div className="h-screen h-[100dvh] bg-slate-100 flex flex-col items-center justify-center p-0 font-sans overflow-hidden">
@@ -389,8 +536,12 @@ export default function App() {
             onUpdateStoreConfig={setStoreConfig}
             onSelectSector={(sectorId) => {
               if (sectorId === 'wholesale') {
+                const wholesalePricesSaved = isWholesaleDailyPriceSavedToday();
+                setCurrentPage(wholesalePricesSaved ? 'billing' : 'daily-price');
                 setActiveScreen('wholesale');
               } else if (sectorId === 'retail') {
+                const retailPricesSaved = isTodayPriceSaved();
+                setRetailCurrentPage(retailPricesSaved ? 'billing' : 'daily-price');
                 setActiveScreen('retail');
               } else if (sectorId === 'investment') {
                 setActiveScreen('investment');
@@ -517,7 +668,14 @@ export default function App() {
         {/* VIEW 4: Retail Billing & POS System */}
         {activeScreen === 'retail' && (
           <div id="retail-billing-app" className="flex-1 flex flex-col w-full h-full min-h-0 overflow-hidden">
-            <RetailApp onBackToPortal={() => setActiveScreen('main')} />
+            <RetailApp
+              currentPage={retailCurrentPage}
+              onPageChange={setRetailCurrentPage}
+              showInstallModal={showRetailInstallModal}
+              onCloseInstallModal={() => setShowRetailInstallModal(false)}
+              onOpenInstallModal={() => setShowRetailInstallModal(true)}
+              onBackToPortal={() => setActiveScreen('main')}
+            />
           </div>
         )}
 
@@ -562,6 +720,13 @@ export default function App() {
 
         {/* PWA Offline Banner */}
         <OfflineIndicator />
+
+        {/* Exit Toast Notification Banner */}
+        {exitToastMessage && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] bg-neutral-900/95 text-white text-xs sm:text-sm font-black px-4 py-2.5 rounded-full shadow-2xl backdrop-blur-md pointer-events-none animate-in fade-in slide-in-from-bottom-3 duration-200 border border-white/20 max-w-[90vw] text-center">
+            {exitToastMessage}
+          </div>
+        )}
       </div>
     </div>
   );

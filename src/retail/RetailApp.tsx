@@ -7,6 +7,7 @@ import {
   loadLanguage,
   saveLanguage,
   saveFontSizeScale,
+  isTodayPriceSaved,
 } from './utils/storage';
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
@@ -18,14 +19,49 @@ import { InstallAppModal } from './components/InstallAppModal';
 
 interface RetailAppProps {
   onBackToPortal?: () => void;
+  currentPage?: Page;
+  onPageChange?: (page: Page) => void;
+  showInstallModal?: boolean;
+  onCloseInstallModal?: () => void;
+  onOpenInstallModal?: () => void;
 }
 
-export const RetailApp: React.FC<RetailAppProps> = ({ onBackToPortal }) => {
-  const [currentPage, setCurrentPage] = useState<Page>('billing');
+export const RetailApp: React.FC<RetailAppProps> = ({
+  onBackToPortal,
+  currentPage: propCurrentPage,
+  onPageChange: propOnPageChange,
+  showInstallModal: propShowInstallModal,
+  onCloseInstallModal: propOnCloseInstallModal,
+  onOpenInstallModal: propOnOpenInstallModal,
+}) => {
+  const [internalPage, setInternalPage] = useState<Page>(() => {
+    return isTodayPriceSaved() ? 'billing' : 'daily-price';
+  });
+  const currentPage = propCurrentPage !== undefined ? propCurrentPage : internalPage;
+  const setCurrentPage = (page: Page) => {
+    if (propOnPageChange) {
+      propOnPageChange(page);
+    } else {
+      setInternalPage(page);
+    }
+  };
+
   const [language, setLanguage] = useState<Language>(() => loadLanguage());
   const [settings, setSettings] = useState<ShopSettings>(() => loadSettings());
   const [products, setProducts] = useState<Product[]>(() => loadProducts());
-  const [showInstallModal, setShowInstallModal] = useState<boolean>(false);
+  
+  const [internalInstallModal, setInternalInstallModal] = useState<boolean>(false);
+  const showInstallModal =
+    propShowInstallModal !== undefined ? propShowInstallModal : internalInstallModal;
+  const setShowInstallModal = (show: boolean) => {
+    if (show) {
+      if (propOnOpenInstallModal) propOnOpenInstallModal();
+      else setInternalInstallModal(true);
+    } else {
+      if (propOnCloseInstallModal) propOnCloseInstallModal();
+      else setInternalInstallModal(false);
+    }
+  };
 
   useEffect(() => {
     if (currentPage === ('settings' as Page)) {

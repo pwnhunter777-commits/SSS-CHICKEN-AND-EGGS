@@ -254,14 +254,8 @@ export const HotelGiveDuesView: React.FC<HotelGiveDuesViewProps> = ({
   };
 
   const handleShareHotel = (item: HotelStatsItem) => {
-    if (item.hotel.phone && item.hotel.phone.trim().length > 0) {
-      // Hotel has phone number -> go directly to WhatsApp for that hotel number
-      sendWhatsAppDirect(item);
-    } else {
-      // No phone saved -> open quick prompt to enter phone number
-      setPhonePromptHotel(item);
-      setPromptPhoneInput('');
-    }
+    // Directly go to WhatsApp without asking for a phone number
+    sendWhatsAppDirect(item);
   };
 
   return (

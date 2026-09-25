@@ -8,7 +8,6 @@ import {
   Building2,
   Calendar,
   Layers,
-  Phone,
 } from 'lucide-react';
 import {
   Bill,
@@ -244,7 +243,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
         products
       );
       setPrintStatus(res.message);
-      if (isDraft && onConfirmSave) {
+      if (res.success && isDraft && onConfirmSave) {
         onConfirmSave();
       }
     } catch {
@@ -390,14 +389,6 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   <h3 className="text-sm sm:text-base font-black text-slate-950 break-words mt-0.5 leading-tight">
                     {displayHotelName}
                   </h3>
-                  {hotelPhone && (
-                    <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
-                      <span className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-black text-emerald-950 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-300">
-                        <Phone className="w-3 h-3 text-emerald-700 shrink-0 stroke-[2.5]" />
-                        <span>Ph: {hotelPhone}</span>
-                      </span>
-                    </div>
-                  )}
                 </div>
 
                 {/* Right: Bill No, Date, Time */}
@@ -550,6 +541,24 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               </span>
             </button>
           </div>
+
+          {/* Row 3: Optional Direct Save to History when Draft */}
+          {isDraft && onConfirmSave && (
+            <div>
+              <button
+                id="btn-modal-save-draft"
+                type="button"
+                onClick={onConfirmSave}
+                disabled={isProcessing}
+                className="w-full min-h-[2.4rem] py-1.5 px-2.5 bg-slate-900 hover:bg-slate-800 active:bg-black disabled:opacity-50 text-white rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-98 cursor-pointer touch-manipulation"
+              >
+                <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 stroke-[3]" />
+                <span className="leading-normal">
+                  {language === 'ta' ? 'பதிவேட்டில் சேமி' : 'Save to History'}
+                </span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

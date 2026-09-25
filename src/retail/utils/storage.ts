@@ -192,6 +192,17 @@ export function saveDailyPrices(prices: DailyPriceMap): void {
   }
 }
 
+export function isTodayPriceSaved(): boolean {
+  try {
+    const allPrices = loadDailyPrices();
+    const todayKey = getTodayKey();
+    const savedToday = allPrices[todayKey];
+    return Boolean(savedToday && Object.keys(savedToday).length > 0);
+  } catch {
+    return false;
+  }
+}
+
 export function getTodayPrices(products: Product[]): { [productId: string]: number } {
   const allPrices = loadDailyPrices();
   const todayKey = getTodayKey();
