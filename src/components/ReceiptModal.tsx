@@ -9,7 +9,6 @@ import {
   Calendar,
   Layers,
   Phone,
-  AlertCircle,
 } from 'lucide-react';
 import {
   Bill,
@@ -22,7 +21,7 @@ import {
   resolveItemDisplayName,
   ShopSettings,
 } from '../types';
-import { formatDisplayDate, formatDisplayTime, getHotelPhone, saveOrUpdateHotelPhone } from '../utils/storage';
+import { formatDisplayDate, formatDisplayTime, getHotelPhone } from '../utils/storage';
 import { TRANSLATIONS } from '../utils/translations';
 import { downloadBillPdf, shareBillAsPdfToWhatsApp } from '../utils/whatsapp';
 import { printViaBluetooth } from '../utils/bluetoothPrinter';
@@ -64,9 +63,6 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
   // Hotel Phone Management State
   const [hotelPhone, setHotelPhone] = useState<string>('');
-  const [showPhonePrompt, setShowPhonePrompt] = useState<boolean>(false);
-  const [phoneInput, setPhoneInput] = useState<string>('');
-  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   useEffect(() => {
     setBillLang(language);
@@ -95,7 +91,6 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
         ''
       ).trim();
       setHotelPhone(p);
-      setPhoneInput(p);
     }
   }, [bill, matchedHotel, hotels]);
 
@@ -263,54 +258,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const handleWhatsAppShareClick = () => {
     if (!bill) return;
     const cur = (hotelPhone || bill.hotelPhone || matchedHotel?.phone || '').trim();
-    const cleanDigits = cur.replace(/\D/g, '');
-    if (cleanDigits.length < 10) {
-      // Prompt user to enter hotel WhatsApp phone number
-      setPhoneInput(cleanDigits);
-      setPhoneError(null);
-      setShowPhonePrompt(true);
-      return;
-    }
     executeWhatsAppShare(cur);
-  };
-
-  const handleSavePhoneAndShare = (skipSave = false) => {
-    if (!bill) return;
-    if (skipSave) {
-      setShowPhonePrompt(false);
-      setPhoneError(null);
-      executeWhatsAppShare('');
-      return;
-    }
-
-    const cleaned = phoneInput.replace(/\D/g, '');
-    if (cleaned.length < 10) {
-      setPhoneError(
-        billLang === 'ta'
-          ? 'சரியான 10 இலக்க செல்போன் எண்ணை உள்ளிடவும்.'
-          : 'Please enter a valid 10-digit mobile number.'
-      );
-      return;
-    }
-
-    const phone10 = cleaned.slice(-10);
-    // 1. Save in storage (updates hotel item in STORAGE_KEYS.HOTELS and all bills for this hotel)
-    const targetIdOrName = bill.hotelId || bill.hotelName;
-    const updatedHotels = saveOrUpdateHotelPhone(targetIdOrName, phone10);
-
-    // 2. Notify parent so memory state updates everywhere (Investment Settings, Billing, Register)
-    if (onUpdateHotels) {
-      onUpdateHotels(updatedHotels);
-    }
-
-    // 3. Update local state
-    setHotelPhone(phone10);
-    bill.hotelPhone = phone10;
-    setShowPhonePrompt(false);
-    setPhoneError(null);
-
-    // 4. Trigger WhatsApp Share with the new phone number
-    executeWhatsAppShare(phone10);
   };
 
   // Auto trigger Bluetooth print if requested from quick print action
@@ -593,129 +541,17 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               title={
                 hotelPhone
                   ? `Share WhatsApp PDF to ${hotelPhone}`
-                  : 'Ask hotel phone & send WhatsApp PDF'
+                  : (language === 'ta' ? 'வாட்ஸ்அப் PDF அனுப்பு' : 'Share WhatsApp PDF')
               }
             >
               <MessageCircle className="w-3.5 h-3.5 fill-white shrink-0" />
               <span className="leading-normal">
-                {hotelPhone ? `WhatsApp PDF (${hotelPhone})` : 'WhatsApp PDF'}
+                {language === 'ta' ? 'வாட்ஸ்அப் PDF' : 'WhatsApp PDF'}
               </span>
             </button>
           </div>
         </div>
       </div>
-
-      {/* Ask for Hotel Phone Number Prompt Dialog */}
-      {showPhonePrompt && (
-        <div className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 animate-in fade-in">
-          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl border-2 border-emerald-600 animate-in zoom-in-95 duration-150">
-            {/* Modal Header */}
-            <div className="bg-emerald-800 text-white px-3.5 py-2.5 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-emerald-200" />
-                <span className="text-xs sm:text-sm font-black">
-                  Hotel WhatsApp Number
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowPhonePrompt(false);
-                  setPhoneError(null);
-                }}
-                className="w-7 h-7 rounded-lg bg-white/15 hover:bg-white/25 flex items-center justify-center text-white cursor-pointer touch-manipulation"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Modal Content */}
-            <div className="p-3.5 space-y-3 text-left">
-              <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-2.5">
-                <span className="text-[10px] font-bold text-slate-500 uppercase block tracking-wider">
-                  Customer / Hotel:
-                </span>
-                <span className="text-sm font-black text-slate-900 block mt-0.5">
-                  {displayHotelName}
-                </span>
-                <span className="text-[11px] text-emerald-900 font-semibold block mt-1 leading-snug">
-                  This number will be saved in Investment Settings and used for all future bills & statements.
-                </span>
-              </div>
-
-              {/* Phone Input with +91 Prefix */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-black text-slate-700 block">
-                  Mobile / WhatsApp Number (10 digits):
-                </label>
-                <div className="flex items-center border-2 border-slate-300 focus-within:border-emerald-600 rounded-xl overflow-hidden shadow-2xs">
-                  <span className="bg-slate-100 text-slate-700 text-xs font-black px-2.5 py-2 border-r border-slate-300 select-none font-mono">
-                    +91
-                  </span>
-                  <input
-                    type="tel"
-                    value={phoneInput}
-                    onChange={(e) => {
-                      setPhoneInput(e.target.value);
-                      setPhoneError(null);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleSavePhoneAndShare(false);
-                      }
-                    }}
-                    placeholder="9876543210"
-                    maxLength={10}
-                    autoFocus
-                    className="flex-1 px-3 py-2 text-sm font-black text-slate-900 outline-none placeholder:text-slate-400 font-mono"
-                  />
-                </div>
-                {phoneError && (
-                  <div className="text-[11px] font-bold text-red-600 flex items-center gap-1 mt-1 animate-in fade-in">
-                    <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
-                    <span>{phoneError}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="space-y-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => handleSavePhoneAndShare(false)}
-                  className="w-full py-2.5 px-3 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-98 cursor-pointer touch-manipulation"
-                >
-                  <MessageCircle className="w-4 h-4 fill-white shrink-0" />
-                  <span>
-                    Save & Send WhatsApp Bill
-                  </span>
-                </button>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleSavePhoneAndShare(true)}
-                    className="flex-1 py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[11px] font-bold transition-all cursor-pointer text-center"
-                  >
-                    Open Without Saving
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowPhonePrompt(false);
-                      setPhoneError(null);
-                    }}
-                    className="py-1.5 px-3 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl text-[11px] font-bold transition-all cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

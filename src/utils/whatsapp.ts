@@ -425,7 +425,7 @@ export function openWhatsAppChatWithoutText(phoneNumber?: string): void {
     }
     url = `https://wa.me/${cleanNumber}`;
   } else {
-    url = `https://api.whatsapp.com/`;
+    url = `https://api.whatsapp.com/send`;
   }
   window.open(url, '_blank');
 }
